@@ -21,7 +21,7 @@ export const NotificationsPage = () => {
     setError(null);
     
     try {
-      // IMPORTANTE: A query usa !notifications_actor_id_fkey para garantir que o Supabase entenda a relação
+      // IMPORTANTE: Esta query depende do SQL de correção ter sido rodado.
       const { data, error: fetchError } = await supabase
         .from('notifications')
         .select(`
@@ -39,19 +39,26 @@ export const NotificationsPage = () => {
       if (fetchError) throw fetchError;
 
       if (data) {
-        setNotifications(data);
+        // FILTRO DE SEGURANÇA: Remove notificações onde 'actor' é null (usuário deletado)
+        const validNotifications = data.filter((n: any) => !!n.actor);
+        setNotifications(validNotifications);
         
-        // Marca como lidas silenciosamente
-        const unreadIds = data.filter((n: any) => !n.is_read).map((n: any) => n.id);
+        // Limpa notificações fantasmas do banco silenciosamente
+        const ghostIds = data.filter((n: any) => !n.actor).map((n: any) => n.id);
+        if (ghostIds.length > 0) {
+           await supabase.from('notifications').delete().in('id', ghostIds);
+        }
+        
+        // Marca como lidas
+        const unreadIds = validNotifications.filter((n: any) => !n.is_read).map((n: any) => n.id);
         if (unreadIds.length > 0) {
           await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
         }
       }
     } catch (err: any) {
       console.error("Erro ao buscar notificações:", err);
-      // Se for erro de relação, avisa o dev/usuário
-      if (err.message?.includes("relationship")) {
-        setError("Erro de estrutura: Rode o SQL de correção no Supabase.");
+      if (err.message?.includes("relationship") || err.message?.includes("fkey")) {
+        setError("Erro crítico: Banco de dados desatualizado. Rode o SQL de correção.");
       } else {
         setError("Não foi possível carregar as notificações.");
       }
@@ -76,7 +83,7 @@ export const NotificationsPage = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          // Busca os dados do ator para montar o card completo
+          // Busca os dados do ator
           const { data: actorData } = await supabase
             .from('profiles')
             .select('username, avatar_url, full_name')
@@ -90,7 +97,6 @@ export const NotificationsPage = () => {
             };
             
             setNotifications((prev) => [newNotification, ...prev]);
-            // Marca como lida na hora
             supabase.from('notifications').update({ is_read: true }).eq('id', payload.new.id);
           }
         }
