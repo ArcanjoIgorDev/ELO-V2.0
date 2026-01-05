@@ -14,6 +14,7 @@ import { ChatList } from './pages/ChatList';
 import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
+import { CookieConsent } from './components/ui/CookieConsent';
 import { Loader2 } from 'lucide-react';
 
 // Componente Layout que gerencia animações e estrutura protegida
@@ -86,6 +87,9 @@ export default function App() {
           
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        
+        {/* Cookie Consent Global */}
+        <CookieConsent />
       </HashRouter>
     </AuthProvider>
   );

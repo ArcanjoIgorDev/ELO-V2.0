@@ -26,26 +26,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função segura para limpar tudo
+  // Limpeza segura (mantém preferências locais importantes, limpa auth)
   const clearAuthState = () => {
     setSession(null);
     setUser(null);
     setProfile(null);
-    localStorage.clear(); 
-  };
-
-  // VERIFICAÇÃO DE VERSÃO (RESET GLOBAL)
-  const checkAppVersion = async () => {
-    const storedVersion = localStorage.getItem('elo_app_version');
-    
-    if (storedVersion !== APP_VERSION) {
-      console.warn(`Nova versão detectada (${APP_VERSION}). Executando limpeza global.`);
-      await supabase.auth.signOut();
-      localStorage.clear();
-      localStorage.setItem('elo_app_version', APP_VERSION);
-      return false; // Indica que houve reset
-    }
-    return true;
+    // Remove apenas chaves de auth do Supabase, mantém 'has_seen_tutorial' etc se estiver no local
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-') || key === 'supabase.auth.token') {
+        localStorage.removeItem(key);
+      }
+    });
   };
 
   const fetchProfile = async (userId: string) => {
@@ -66,15 +57,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Timeout de Segurança: Se o Supabase demorar muito (ex: rede lenta ao voltar), libera o app
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth timeout reached. Forcing loading false.");
+        setLoading(false);
+      }
+    }, 4000);
+
     const initializeAuth = async () => {
-      // 1. Verifica versão antes de tudo
-      const versionValid = await checkAppVersion();
-      if (!versionValid) {
-        if (mounted) setLoading(false);
-        return;
+      // Verifica versão para reset global se necessário
+      const storedVersion = localStorage.getItem('elo_app_version');
+      if (storedVersion !== APP_VERSION) {
+        console.log(`Atualizando versão para ${APP_VERSION}`);
+        await supabase.auth.signOut();
+        localStorage.clear();
+        localStorage.setItem('elo_app_version', APP_VERSION);
       }
 
       try {
+        // Tenta recuperar sessão
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) throw sessionError;
@@ -82,33 +84,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (initialSession?.user) {
           const userProfile = await fetchProfile(initialSession.user.id);
           
-          if (!userProfile) {
-            // Perfil não encontrado (possível inconsistência), logout forçado
-            await supabase.auth.signOut();
-            throw new Error("Sessão sem perfil correspondente.");
-          }
-
           if (mounted) {
             setSession(initialSession);
             setUser(initialSession.user);
-            setProfile(userProfile);
+            // Se não tiver perfil (bug raro), o app vai lidar na UI ou criar depois
+            if (userProfile) setProfile(userProfile);
           }
-        } else {
-          if (mounted) clearAuthState();
         }
       } catch (error) {
-        console.error("Auth recovery:", error);
-        await supabase.auth.signOut();
+        console.error("Auth init error:", error);
+        // Em caso de erro grave, limpa para forçar login limpo
         if (mounted) clearAuthState();
       } finally {
         if (mounted) setLoading(false);
+        clearTimeout(safetyTimeout);
       }
     };
 
     initializeAuth();
 
+    // Listener de mudanças de Auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
+      
+      console.log(`Auth event: ${event}`);
 
       if (event === 'SIGNED_OUT' || !newSession) {
         clearAuthState();
@@ -116,25 +115,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession.user);
-        const userProfile = await fetchProfile(newSession.user.id);
-        setProfile(userProfile);
+        
+        // Só busca perfil se não tiver ou se mudou o usuário
+        if (!profile || profile.id !== newSession.user.id) {
+            const userProfile = await fetchProfile(newSession.user.id);
+            setProfile(userProfile);
+        }
         setLoading(false);
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
     try {
+      setLoading(true);
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
       clearAuthState();
+      setLoading(false);
     }
   };
 
