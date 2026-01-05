@@ -12,63 +12,66 @@ export const NotificationsPage = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
-    setError(null);
     
     try {
-      // 1. Busca Notificações
+      // 1. Busca notificações tradicionais
       const { data: notifsData } = await supabase
         .from('notifications')
-        .select(`*, actor:profiles!notifications_actor_id_fkey(username, avatar_url, full_name)`)
+        .select(`*, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url, full_name)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(40);
 
-      // 2. Busca Pedidos Pendentes (Garante que nada seja perdido)
+      // 2. Busca solicitações de amizade PENDENTES reais na tabela connections
+      // Isso é a fonte da verdade, ignorando se a notificação existe ou não
       const { data: pendingRequests } = await supabase
         .from('connections')
         .select(`id, created_at, requester:profiles!requester_id(id, username, avatar_url, full_name)`)
         .eq('receiver_id', user.id)
         .eq('status', 'pending');
 
-      // 3. Mesclagem Inteligente
+      // 3. Merge Inteligente
       let combined = [...(notifsData || [])];
       
+      // Adiciona solicitações pendentes que talvez não tenham notificação visual
       pendingRequests?.forEach((req: any) => {
-        // Verifica se já existe notificação visual para este pedido
-        const exists = combined.some(n => n.type === 'request_received' && (n.reference_id === req.id || n.actor_id === req.requester.id));
+        const alreadyHasNotification = combined.some(n => 
+          n.type === 'request_received' && 
+          (n.reference_id === req.id || n.actor_id === req.requester.id)
+        );
         
-        if (!exists) {
+        if (!alreadyHasNotification) {
           combined.unshift({
-            id: `synth-${req.id}`,
+            id: `sys-${req.id}`, // ID temporário para UI
             type: 'request_received',
             user_id: user.id,
             actor_id: req.requester.id,
             actor: req.requester,
             reference_id: req.id,
             is_read: false,
-            created_at: req.created_at
+            created_at: req.created_at,
+            is_virtual: true // Marca como gerado pelo sistema
           });
         }
       });
 
+      // Ordenar por data
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
-      // Remove notificações órfãs (usuários deletados)
-      setNotifications(combined.filter(n => !!n.actor));
+      setNotifications(combined.filter(n => !!n.actor)); // Remove nulos
 
-      // Marca lidas
-      const unreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
-      if (unreadIds.length > 0) {
-        supabase.from('notifications').update({ is_read: true }).in('id', unreadIds).then(() => {});
+      // Marcar como lidas em background
+      const realUnreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
+      if (realUnreadIds.length > 0) {
+        supabase.from('notifications').update({ is_read: true }).in('id', realUnreadIds).then(() => {});
       }
 
     } catch (err) {
-      console.warn("Sync warning:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -79,89 +82,76 @@ export const NotificationsPage = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('notifications_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
-        () => fetchData()
-      )
+      .channel('notifications_feed')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const handleConnection = async (notification: any, action: 'accepted' | 'declined') => {
+  // Lógica Blindada de Aceitação
+  const handleFriendRequest = async (notification: any, action: 'accepted' | 'declined') => {
     if (processingId || !user) return;
     setProcessingId(notification.id);
 
-    // Estratégia Dupla: Tenta ID da conexão OU par de usuários
-    const connectionId = notification.reference_id;
-    const requesterId = notification.actor_id;
+    const targetUserId = notification.actor_id;
 
     try {
-      let updateSuccessful = false;
+      // Passo 1: Encontrar a conexão exata no banco de dados
+      // Não confiamos apenas no ID da notificação, buscamos a relação ativa
+      const { data: connection, error: fetchError } = await supabase
+        .from('connections')
+        .select('id, status')
+        .eq('requester_id', targetUserId)
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle();
 
-      // Tentativa 1: Via ID direto (mais rápido)
-      if (connectionId && !connectionId.startsWith('synth-')) {
-        const { error, count } = await supabase
-          .from('connections')
-          .update({ status: action, updated_at: new Date().toISOString() })
-          .eq('id', connectionId)
-          .select('id', { count: 'exact' }); // Confirma se atualizou algo
-        
-        if (!error) updateSuccessful = true;
+      if (fetchError) throw fetchError;
+
+      if (!connection) {
+        // Se não achou conexão pendente, talvez já tenha sido aceita ou cancelada
+        alert("Esta solicitação não está mais disponível.");
+        // Atualiza UI para remover o botão
+        setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        return;
       }
 
-      // Tentativa 2: Via Requester + Receiver (Fallback de segurança)
-      if (!updateSuccessful && requesterId) {
-        const { error } = await supabase
-          .from('connections')
-          .update({ status: action, updated_at: new Date().toISOString() })
-          .eq('requester_id', requesterId)
-          .eq('receiver_id', user.id)
-          .eq('status', 'pending');
-        
-        if (!error) updateSuccessful = true;
-      }
+      // Passo 2: Executar a ação na conexão encontrada
+      const { error: updateError } = await supabase
+        .from('connections')
+        .update({ 
+          status: action,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.id);
 
-      // Se falhou tudo, lança erro
-      if (!updateSuccessful) {
-        // Verifica se JÁ foi aceito antes (evita erro falso)
-        const { data: check } = await supabase
-           .from('connections')
-           .select('status')
-           .or(`and(requester_id.eq.${requesterId},receiver_id.eq.${user.id}),and(requester_id.eq.${user.id},receiver_id.eq.${requesterId})`)
-           .maybeSingle();
-        
-        if (check?.status !== action) {
-           throw new Error("Não foi possível localizar o pedido.");
-        }
-      }
+      if (updateError) throw updateError;
 
-      // Atualiza UI Otimista
+      // Passo 3: Feedback Visual Otimista e Notificação Reversa
       setNotifications(prev => prev.map(n => {
-         // Atualiza todos os itens relacionados a este usuário
-         if ((n.reference_id === connectionId || n.actor_id === requesterId) && n.type === 'request_received') {
-             return { 
-               ...n, 
-               type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' 
-             };
-         }
-         return n;
+        if (n.actor_id === targetUserId && n.type === 'request_received') {
+          return {
+            ...n,
+            type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me'
+          };
+        }
+        return n;
       }));
 
-      // Notifica o outro usuário (apenas se aceitou)
-      if (action === 'accepted' && requesterId) {
-        // Ignora erro de RLS aqui para não bloquear o fluxo principal
-        supabase.from('notifications').insert({
-          user_id: requesterId,
+      if (action === 'accepted') {
+        // Envia notificação para quem pediu, avisando que aceitamos
+        await supabase.from('notifications').insert({
+          user_id: targetUserId,
           actor_id: user.id,
           type: 'request_accepted',
-          reference_id: connectionId
-        }).then(() => {}); 
+          reference_id: connection.id
+        });
       }
 
     } catch (error: any) {
-      console.error("Erro handleConnection:", error);
-      alert("Houve um problema ao processar. Tente atualizar a página.");
+      console.error("Erro ao processar amizade:", error);
+      alert("Erro ao processar. Tente novamente.");
     } finally {
       setProcessingId(null);
     }
@@ -189,20 +179,13 @@ export const NotificationsPage = () => {
           {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
         </div>
 
-        {error && (
-          <div className="mx-4 mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
-             <AlertCircle className="text-red-400" size={16} />
-             <p className="text-xs text-red-200">{error}</p>
-          </div>
-        )}
-
         <div className="divide-y divide-white/5">
           {!loading && notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
                  <Bell size={24} />
               </div>
-              <p className="text-slate-400 font-medium">Tudo tranquilo por aqui.</p>
+              <p className="text-slate-400 font-medium">Você não tem novas notificações.</p>
             </div>
           ) : (
             notifications.map(n => (
@@ -217,11 +200,11 @@ export const NotificationsPage = () => {
                   <p className="text-[15px] text-slate-300">
                     <span className="font-bold text-slate-100">{n.actor?.username}</span>
                     {n.type === 'like_post' && ' curtiu seu post.'}
-                    {n.type === 'comment' && ' comentou: "..."'}
-                    {n.type === 'request_received' && ' quer conectar.'}
-                    {n.type === 'request_accepted' && ' aceitou seu pedido!'}
+                    {n.type === 'comment' && ' comentou na sua publicação.'}
+                    {n.type === 'request_received' && ' quer conectar com você.'}
+                    {n.type === 'request_accepted' && ' agora é sua conexão!'}
                     {n.type === 'request_accepted_by_me' && ' • Conexão aceita.'}
-                    {n.type === 'request_declined_by_me' && ' • Pedido removido.'}
+                    {n.type === 'request_declined_by_me' && ' • Solicitação removida.'}
                   </p>
                   
                   <span className="text-xs text-slate-500 mt-1 block">
@@ -231,18 +214,18 @@ export const NotificationsPage = () => {
                   {n.type === 'request_received' && (
                     <div className="flex gap-3 mt-3 animate-fade-in">
                       <button 
-                        onClick={() => handleConnection(n, 'accepted')}
+                        onClick={() => handleFriendRequest(n, 'accepted')}
                         disabled={!!processingId}
-                        className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-ocean/20 flex items-center justify-center"
+                        className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-ocean/20 flex items-center justify-center gap-2"
                       >
-                        {processingId === n.id ? <Loader2 size={16} className="animate-spin" /> : 'Aceitar'}
+                        {processingId === n.id ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar'}
                       </button>
                       <button 
-                        onClick={() => handleConnection(n, 'declined')}
+                        onClick={() => handleFriendRequest(n, 'declined')}
                         disabled={!!processingId}
                         className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50 border border-white/5"
                       >
-                        Recusar
+                        Excluir
                       </button>
                     </div>
                   )}

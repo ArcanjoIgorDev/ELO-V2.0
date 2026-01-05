@@ -27,15 +27,14 @@ export const Discover = () => {
         .from('profiles')
         .select('*')
         .ilike('username', `%${query}%`)
-        .neq('id', user.id) // Não mostrar a si mesmo
+        .neq('id', user.id) 
         .limit(20);
 
       if (error) throw error;
       
       if (profiles) {
-        // 2. Para cada perfil, busca o STATUS REAL da conexão
+        // 2. Busca status de conexão para cada perfil
         const profilesWithStatus = await Promise.all(profiles.map(async (p) => {
-          // Busca conexão onde sou requester OU receiver
           const { data: conn } = await supabase
             .from('connections')
             .select('*')
@@ -47,7 +46,7 @@ export const Discover = () => {
         setResults(profilesWithStatus);
       }
     } catch (err) {
-      console.error("Erro na busca:", err);
+      console.error(err);
     } finally {
       setSearching(false);
     }
@@ -58,34 +57,21 @@ export const Discover = () => {
     setProcessingId(receiverId);
     
     try {
-      // 1. Verificação Definitiva de Estado
-      const { data: existingConn } = await supabase
-        .from('connections')
-        .select('*')
-        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`)
-        .maybeSingle();
+      // Verifica limpeza antes de inserir
+      const { data: existing } = await supabase
+         .from('connections')
+         .select('id, status')
+         .or(`and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`)
+         .maybeSingle();
 
-      if (existingConn) {
-        if (existingConn.status === 'blocked') {
-          alert('Não é possível conectar com este usuário.');
-          return;
-        }
-        if (existingConn.status === 'accepted') {
-          updateLocalResult(receiverId, existingConn);
-          return;
-        }
-        if (existingConn.status === 'pending') {
-          // Se já está pendente, apenas atualiza UI
-          updateLocalResult(receiverId, existingConn);
-          return;
-        }
-        
-        // Se for 'declined' ou estado inválido, limpa tudo para recomeçar do zero
-        await supabase.from('connections').delete().eq('id', existingConn.id);
+      if (existing) {
+         if (existing.status === 'blocked') { alert("Não permitido."); return; }
+         // Se já existe e não está bloqueado, deleta para recriar (reset limpo)
+         await supabase.from('connections').delete().eq('id', existing.id);
       }
 
-      // 2. Criação Limpa (Fresh Insert)
-      const { data: newConn, error: insertError } = await supabase
+      // Inserção Limpa
+      const { data: newConn, error } = await supabase
         .from('connections')
         .insert({
             requester_id: user.id,
@@ -95,40 +81,26 @@ export const Discover = () => {
         .select()
         .single();
       
-      if (insertError) {
-        console.error("Erro insert conexão:", insertError);
-        throw new Error("Não foi possível enviar o pedido.");
-      }
+      if (error) throw error;
 
-      // 3. Notificação (Crucial) - Tenta enviar, mas não falha se der erro de RLS
       if (newConn) {
-         await supabase.from('notifications').insert({
+         // Notificação (Fire & Forget)
+         supabase.from('notifications').insert({
            user_id: receiverId,
            actor_id: user.id,
            type: 'request_received',
            reference_id: newConn.id
-         });
+         }).then(() => {});
          
-         // Atualiza UI com sucesso imediato
-         updateLocalResult(receiverId, newConn);
+         // Update UI
+         setResults(prev => prev.map(r => r.id === receiverId ? { ...r, connection: newConn } : r));
       }
 
-    } catch (err: any) {
-      console.error("Erro ao enviar pedido:", err);
-      alert("Falha ao conectar: " + (err.message || "Erro desconhecido"));
+    } catch (err) {
+      alert("Erro ao conectar.");
     } finally {
       setProcessingId(null);
     }
-  };
-
-  const updateLocalResult = (id: string, connection: any) => {
-    setResults(prev => prev.map(r => r.id === id ? { ...r, connection } : r));
-  };
-
-  const checkCooldown = (updatedAt: string) => {
-    if (!updatedAt) return false;
-    const diff = new Date().getTime() - new Date(updatedAt).getTime();
-    return diff < 60000; // 1 minuto de cooldown visual
   };
 
   return (
@@ -139,7 +111,7 @@ export const Discover = () => {
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-ocean transition-colors" size={20} />
           <input
             type="text"
-            placeholder="Encontrar pessoas..."
+            placeholder="Buscar usuários..."
             className="w-full bg-midnight-900 border border-white/10 rounded-2xl pl-11 pr-4 py-3.5 text-white focus:outline-none focus:ring-2 focus:ring-ocean/50 focus:border-ocean/50 transition-all font-medium placeholder:text-slate-600"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -150,14 +122,13 @@ export const Discover = () => {
       <div className="px-5 space-y-4 mt-2">
         {searching ? (
           <div className="text-slate-500 text-center py-12 flex flex-col items-center justify-center gap-4 animate-pulse">
-             <div className="w-12 h-12 rounded-full border-2 border-slate-700 border-t-ocean animate-spin"></div>
-             <span className="text-sm font-medium">Buscando conexões...</span>
+             <Loader2 className="animate-spin text-ocean" size={32} />
+             <span className="text-sm font-medium">Buscando...</span>
           </div>
         ) : results.length > 0 ? (
           results.map(profile => {
             const status = profile.connection?.status;
             const isMyRequest = profile.connection?.requester_id === user?.id;
-            const isCooldown = status === 'declined' && checkCooldown(profile.connection.updated_at);
 
             return (
               <div key={profile.id} className="flex items-center justify-between p-4 bg-midnight-900/60 rounded-3xl border border-white/5 shadow-sm hover:bg-midnight-900 transition-colors">
@@ -182,14 +153,12 @@ export const Discover = () => {
                     </button>
                   ) : status === 'blocked' ? (
                     <span className="text-xs text-red-400 font-medium flex items-center gap-1 bg-red-500/10 px-3 py-1.5 rounded-lg">
-                        <Ban size={12}/> Bloqueado
+                        <Ban size={12}/>
                     </span>
                   ) : status === 'pending' ? (
                     <span className="text-xs text-slate-500 font-medium flex items-center gap-1 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
-                        <Clock size={12}/> {isMyRequest ? 'Enviado' : 'Pendente'}
+                        <Clock size={12}/> {isMyRequest ? 'Enviado' : 'Recebido'}
                     </span>
-                  ) : isCooldown ? (
-                    <span className="text-xs text-slate-600 font-medium px-2">Aguarde...</span>
                   ) : (
                     <button 
                       onClick={() => sendRequest(profile.id)}
@@ -208,7 +177,7 @@ export const Discover = () => {
              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-midnight-900 text-slate-600 mb-4 shadow-sm border border-white/5">
                 <SearchIcon size={32} />
              </div>
-             <p className="text-slate-500 font-medium">Nenhum usuário encontrado.</p>
+             <p className="text-slate-500 font-medium">Nenhum resultado.</p>
           </div>
         ) : null}
       </div>

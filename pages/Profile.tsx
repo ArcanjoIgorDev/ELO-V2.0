@@ -3,10 +3,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban, X } from 'lucide-react';
+import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban, X, UserMinus } from 'lucide-react';
 import { PostCard } from '../components/PostCard';
 import { PostWithAuthor } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
+
+type ConnectionState = 'none' | 'sent_pending' | 'received_pending' | 'accepted' | 'blocked';
 
 export const ProfilePage = () => {
   const { profile: myProfile, signOut, user, refreshProfile } = useAuth();
@@ -22,63 +24,46 @@ export const ProfilePage = () => {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'info'>('posts');
   
-  // Estados de Ação
-  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'declined' | 'blocked'>('none');
+  // Estados de Conexão
+  const [connectionState, setConnectionState] = useState<ConnectionState>('none');
   const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [isMyRequest, setIsMyRequest] = useState(false);
   const [processingConnect, setProcessingConnect] = useState(false);
+  const [showUnfriendMenu, setShowUnfriendMenu] = useState(false);
+
+  // Upload/Deleção
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Lógica: Se userId na URL existir e for diferente do meu ID -> É Perfil de Outro
   const isOwnProfile = !userId || (user && userId === user.id);
+  const targetId = isOwnProfile ? user?.id : userId;
 
   // 1. CARREGAR DADOS DO PERFIL
   useEffect(() => {
+    if (!targetId) return;
+
     const loadProfileData = async () => {
       setLoadingProfile(true);
       
       try {
-        if (isOwnProfile) {
-          // MEU PERFIL
-          if (myProfile) {
-            setDisplayProfile(myProfile);
-            await loadStats(myProfile.id);
-            await loadPosts(myProfile.id);
-          }
+        let profileData = null;
+
+        if (isOwnProfile && myProfile) {
+           profileData = myProfile;
         } else {
-          // PERFIL DE OUTRO
-          if (!userId) return;
-
-          const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-          if (error || !data) {
-             console.error(error);
-             alert("Usuário não encontrado.");
-             navigate('/feed');
-             return;
-          }
-          setDisplayProfile(data);
-          await loadStats(userId);
-          await loadPosts(userId);
-
-          // Checar Conexão
-          if (user) {
-             const { data: conn } = await supabase
-              .from('connections')
-              .select('*')
-              .or(`and(requester_id.eq.${user.id},receiver_id.eq.${userId}),and(requester_id.eq.${userId},receiver_id.eq.${user.id})`)
-              .maybeSingle();
-
-             if (conn) {
-               setConnectionStatus(conn.status);
-               setIsMyRequest(conn.requester_id === user.id);
-               setConnectionId(conn.id);
-             } else {
-               setConnectionStatus('none');
-             }
-          }
+           const { data } = await supabase.from('profiles').select('*').eq('id', targetId).single();
+           profileData = data;
         }
+
+        if (!profileData) {
+           alert("Perfil não encontrado.");
+           navigate('/feed');
+           return;
+        }
+
+        setDisplayProfile(profileData);
+        await Promise.all([loadStats(targetId), loadPosts(targetId), checkConnectionStatus(targetId)]);
+
       } catch (err) {
         console.error("Erro carregando perfil:", err);
       } finally {
@@ -87,14 +72,40 @@ export const ProfilePage = () => {
     };
 
     loadProfileData();
-  }, [userId, isOwnProfile, myProfile, user]); 
+  }, [targetId, isOwnProfile, myProfile, user]); 
 
-  const loadStats = async (targetId: string) => {
-    const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', targetId);
+  const checkConnectionStatus = async (otherId: string) => {
+    if (!user || isOwnProfile) return;
+
+    // Busca qualquer conexão entre eu e ele
+    const { data } = await supabase
+      .from('connections')
+      .select('*')
+      .or(`and(requester_id.eq.${user.id},receiver_id.eq.${otherId}),and(requester_id.eq.${otherId},receiver_id.eq.${user.id})`)
+      .maybeSingle();
+
+    if (!data) {
+      setConnectionState('none');
+      setConnectionId(null);
+    } else {
+      setConnectionId(data.id);
+      if (data.status === 'accepted') {
+        setConnectionState('accepted');
+      } else if (data.status === 'blocked') {
+        setConnectionState('blocked');
+      } else if (data.status === 'pending') {
+        // Se eu sou o requester, é sent_pending. Se sou receiver, é received_pending
+        setConnectionState(data.requester_id === user.id ? 'sent_pending' : 'received_pending');
+      }
+    }
+  };
+
+  const loadStats = async (id: string) => {
+    const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', id);
     const connReq = await supabase
       .from('connections')
       .select('id', { count: 'exact' })
-      .or(`requester_id.eq.${targetId},receiver_id.eq.${targetId}`)
+      .or(`requester_id.eq.${id},receiver_id.eq.${id}`)
       .eq('status', 'accepted');
 
     setStats({
@@ -103,17 +114,12 @@ export const ProfilePage = () => {
     });
   };
 
-  const loadPosts = async (targetId: string) => {
+  const loadPosts = async (id: string) => {
     setLoadingPosts(true);
     const { data } = await supabase
       .from('posts')
-      .select(`
-        *,
-        author:profiles(*),
-        likes(user_id),
-        comments(count)
-      `)
-      .eq('user_id', targetId)
+      .select(`*, author:profiles(*), likes(user_id), comments(count)`)
+      .eq('user_id', id)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -128,139 +134,122 @@ export const ProfilePage = () => {
     setLoadingPosts(false);
   };
 
-  // 2. AÇÕES DE CONEXÃO (ROBUSTAS)
-  const handleConnect = async () => {
-    if (!user || !displayProfile || processingConnect) return;
+  // --- ACTIONS ---
+
+  const sendFriendRequest = async () => {
+    if (!user || !targetId || processingConnect) return;
     setProcessingConnect(true);
 
     try {
-      // Verifica conexão existente
-      const { data: existingConn } = await supabase
-        .from('connections')
-        .select('*')
-        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${displayProfile.id}),and(requester_id.eq.${displayProfile.id},receiver_id.eq.${user.id})`)
-        .maybeSingle();
-
-      if (existingConn) {
-         // Se já for amigo ou bloqueado, para.
-         if (existingConn.status === 'accepted') return;
-         if (existingConn.status === 'blocked') { alert('Não permitido'); return; }
-         if (existingConn.status === 'pending' && existingConn.requester_id === user.id) return;
-
-         // HARD DELETE para limpar qualquer estado 'declined' ou confuso
-         await supabase.from('connections').delete().eq('id', existingConn.id);
+      // Limpa qualquer lixo anterior antes de inserir
+      if (connectionId) {
+        await supabase.from('connections').delete().eq('id', connectionId);
       }
 
-      // INSERT FRESH
-      const { data: newConn, error: insertError } = await supabase
+      const { data, error } = await supabase
         .from('connections')
-        .insert({
-           requester_id: user.id,
-           receiver_id: displayProfile.id,
-           status: 'pending'
-        })
+        .insert({ requester_id: user.id, receiver_id: targetId, status: 'pending' })
         .select()
         .single();
-      
-      if (insertError) throw insertError;
 
-      if (newConn) {
-          // Tenta criar notificação, ignora erro se RLS bloquear
-          try {
-            await supabase.from('notifications').insert({
-              user_id: displayProfile.id,
-              actor_id: user.id,
-              type: 'request_received',
-              reference_id: newConn.id
-            });
-          } catch (e) { console.warn("Notificação falhou, mas pedido enviado."); }
-          
-          setConnectionStatus('pending');
-          setIsMyRequest(true);
-          setConnectionId(newConn.id);
-      }
+      if (error) throw error;
 
-    } catch (err: any) {
-      console.error(err);
-      alert("Erro ao conectar: " + err.message);
-    } finally {
-      setProcessingConnect(false);
-    }
-  };
-
-  const handleResponse = async (action: 'accepted' | 'declined') => {
-    if (!connectionId || processingConnect) return;
-    setProcessingConnect(true);
-    
-    try {
-      await supabase
-        .from('connections')
-        .update({ status: action, updated_at: new Date().toISOString() })
-        .eq('id', connectionId);
-      
-      setConnectionStatus(action);
-      
-      if (action === 'accepted') {
-        try {
-          await supabase.from('notifications').insert({
-            user_id: displayProfile.id,
-            actor_id: user?.id,
-            type: 'request_accepted',
-            reference_id: connectionId
-          });
-        } catch (e) {}
+      if (data) {
+        setConnectionState('sent_pending');
+        setConnectionId(data.id);
+        
+        // Notificação
+        supabase.from('notifications').insert({
+           user_id: targetId,
+           actor_id: user.id,
+           type: 'request_received',
+           reference_id: data.id
+        }).then(() => {});
       }
     } catch (err) {
-      alert("Erro ao responder.");
+      alert("Erro ao enviar pedido.");
     } finally {
       setProcessingConnect(false);
     }
   };
 
-  // 3. UPLOAD DE FOTO
+  const acceptRequest = async () => {
+    if (!connectionId || processingConnect) return;
+    setProcessingConnect(true);
+    try {
+      await supabase.from('connections').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', connectionId);
+      setConnectionState('accepted');
+      // Notifica volta
+      supabase.from('notifications').insert({
+         user_id: targetId!,
+         actor_id: user!.id,
+         type: 'request_accepted',
+         reference_id: connectionId
+      }).then(() => {});
+    } catch (err) {
+      alert("Erro ao aceitar.");
+    } finally {
+      setProcessingConnect(false);
+    }
+  };
+
+  const removeConnection = async () => {
+    if (!connectionId || processingConnect) return;
+    if (!window.confirm("Tem certeza que deseja remover esta conexão?")) return;
+    
+    setProcessingConnect(true);
+    try {
+      await supabase.from('connections').delete().eq('id', connectionId);
+      setConnectionState('none');
+      setConnectionId(null);
+      setShowUnfriendMenu(false);
+    } catch (err) {
+      alert("Erro ao remover.");
+    } finally {
+      setProcessingConnect(false);
+    }
+  };
+
+  const cancelRequest = async () => {
+    if (!connectionId || processingConnect) return;
+    setProcessingConnect(true);
+    try {
+      await supabase.from('connections').delete().eq('id', connectionId);
+      setConnectionState('none');
+      setConnectionId(null);
+    } catch (err) {
+      alert("Erro ao cancelar.");
+    } finally {
+      setProcessingConnect(false);
+    }
+  };
+
+  // --- UPLOAD ---
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0 || !user) return;
-    
     setUploadingAvatar(true);
     const file = event.target.files[0];
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
-      if (updateError) throw updateError;
-
-      await refreshProfile(); // Atualiza contexto
-      setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl })); // Atualiza local
-      
-    } catch (error: any) {
-      console.error(error);
-      alert('Erro no upload. Tente uma imagem menor.');
+      await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
+      await refreshProfile();
+      setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+    } catch (error) {
+      alert('Erro no upload.');
     } finally {
       setUploadingAvatar(false);
     }
   };
 
-  const handlePostDeleted = (postId: string) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
-    setStats(prev => ({ ...prev, posts: prev.posts - 1 }));
-  };
-
   const handleDeleteAccount = async () => {
-    if (window.confirm("Isso apagará sua conta e dados para sempre. Continuar?")) {
+    if (window.confirm("Isso apagará sua conta para sempre. Continuar?")) {
       setIsDeleting(true);
-      try {
-        await supabase.from('profiles').delete().eq('id', user?.id);
-        await signOut();
-      } catch (err) {
-        setIsDeleting(false);
-      }
+      await supabase.from('profiles').delete().eq('id', user?.id);
+      await signOut();
     }
   };
 
@@ -269,7 +258,7 @@ export const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-full pb-24 bg-midnight-950 animate-fade-in">
+    <div className="min-h-full pb-24 bg-midnight-950 animate-fade-in" onClick={() => setShowUnfriendMenu(false)}>
       {/* Header Visual */}
       <div className="h-40 bg-gradient-to-b from-ocean-900 to-midnight-950 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
@@ -285,7 +274,7 @@ export const ProfilePage = () => {
 
       <div className="px-5 -mt-16 relative z-10">
         <div className="flex justify-between items-end mb-4">
-           {/* Avatar Area */}
+           {/* Avatar */}
            <div className="relative group">
              <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
                 <Avatar url={displayProfile.avatar_url} alt={displayProfile.username} size="xl" />
@@ -294,7 +283,7 @@ export const ProfilePage = () => {
              {isOwnProfile && (
                <>
                  <button 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                     disabled={uploadingAvatar}
                     className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95 disabled:opacity-50"
                  >
@@ -308,69 +297,79 @@ export const ProfilePage = () => {
            {/* Action Buttons */}
            <div className="mb-2">
              {isOwnProfile ? (
-               <button 
-                 onClick={() => signOut()} 
-                 className="bg-white/5 hover:bg-white/10 text-white px-5 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors"
-               >
+               <button onClick={() => signOut()} className="bg-white/5 hover:bg-white/10 text-white px-5 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors">
                   Sair
                </button>
              ) : (
-                <>
-                  {connectionStatus === 'accepted' ? (
-                     <button 
-                        onClick={() => navigate(`/chat/${displayProfile.id}`)} 
-                        className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 border border-white/10 transition-colors"
-                     >
-                         <MessageCircle size={18} /> Mensagem
-                     </button>
-                  ) : connectionStatus === 'pending' ? (
-                     isMyRequest ? (
-                       <button className="bg-white/5 text-slate-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-default border border-white/5">
-                           <Clock size={18} /> Enviado
+                <div className="flex gap-2 relative">
+                  {connectionState === 'accepted' ? (
+                     <>
+                       <button onClick={() => navigate(`/chat/${displayProfile.id}`)} className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-lg">
+                           <MessageCircle size={18} /> Mensagem
                        </button>
-                     ) : (
-                       <div className="flex gap-2">
-                         <button 
-                           onClick={() => handleResponse('accepted')}
-                           disabled={processingConnect}
-                           className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
-                         >
-                            {processingConnect ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />} Aceitar
-                         </button>
-                         <button 
-                           onClick={() => handleResponse('declined')}
-                           disabled={processingConnect}
-                           className="bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-full"
-                         >
-                            <X size={18} />
-                         </button>
-                       </div>
-                     )
-                  ) : connectionStatus === 'blocked' ? (
-                     <button className="bg-red-500/10 text-red-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-not-allowed border border-red-500/20">
+                       <button 
+                          onClick={(e) => { e.stopPropagation(); setShowUnfriendMenu(!showUnfriendMenu); }}
+                          className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full"
+                        >
+                          <MoreHorizontal size={20} />
+                       </button>
+
+                       {/* Unfriend Menu */}
+                       {showUnfriendMenu && (
+                         <div className="absolute right-0 top-12 bg-midnight-900 border border-white/10 rounded-xl shadow-xl z-20 w-48 overflow-hidden animate-fade-in">
+                            <button 
+                              onClick={removeConnection}
+                              className="w-full text-left px-4 py-3 text-red-400 hover:bg-white/5 text-sm font-bold flex items-center gap-2"
+                            >
+                               <UserMinus size={16} /> Desfazer amizade
+                            </button>
+                         </div>
+                       )}
+                     </>
+                  ) : connectionState === 'sent_pending' ? (
+                     <button 
+                        onClick={cancelRequest}
+                        disabled={processingConnect}
+                        className="bg-white/5 text-slate-300 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 border border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all group"
+                      >
+                         {processingConnect ? <Loader2 size={18} className="animate-spin" /> : <><Clock size={18} className="group-hover:hidden" /><X size={18} className="hidden group-hover:block" /></>} 
+                         <span className="group-hover:hidden">Enviado</span>
+                         <span className="hidden group-hover:block">Cancelar</span>
+                     </button>
+                  ) : connectionState === 'received_pending' ? (
+                     <div className="flex gap-2">
+                       <button onClick={acceptRequest} disabled={processingConnect} className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-lg">
+                          {processingConnect ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />} Aceitar
+                       </button>
+                       <button onClick={removeConnection} disabled={processingConnect} className="bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-full">
+                          <X size={18} />
+                       </button>
+                     </div>
+                  ) : connectionState === 'blocked' ? (
+                     <button disabled className="bg-red-500/10 text-red-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-not-allowed">
                          <Ban size={18} /> Bloqueado
                      </button>
                   ) : (
                      <button 
-                       onClick={handleConnect}
+                       onClick={sendFriendRequest}
                        disabled={processingConnect}
-                       className="bg-ocean hover:bg-ocean-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                       className="bg-white text-black hover:bg-slate-200 px-6 py-2.5 rounded-full text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                      >
                          {processingConnect ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
                          Conectar
                      </button>
                   )}
-                </>
+                </div>
              )}
            </div>
         </div>
         
         {/* Info */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white tracking-tight">{displayProfile.full_name || displayProfile.username}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{displayProfile.full_name}</h1>
           <p className="text-slate-500 font-medium text-sm">@{displayProfile.username}</p>
-          <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-sm">
-            {displayProfile.bio || (isOwnProfile ? "Toque em Editar para adicionar uma bio." : "Membro do ELO.")}
+          <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-sm whitespace-pre-line">
+            {displayProfile.bio || (isOwnProfile ? "Edite seu perfil para adicionar uma bio." : "Membro do ELO.")}
           </p>
         </div>
 
@@ -392,8 +391,7 @@ export const ProfilePage = () => {
             onClick={() => setActiveTab('posts')}
             className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors relative ${activeTab === 'posts' ? 'text-white' : 'text-slate-500'}`}
           >
-            <Grid size={16} />
-            Publicações
+            <Grid size={16} /> Publicações
             {activeTab === 'posts' && <div className="absolute bottom-0 w-full h-0.5 bg-ocean rounded-t-full"></div>}
           </button>
           
@@ -402,18 +400,17 @@ export const ProfilePage = () => {
                 onClick={() => setActiveTab('info')}
                 className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors relative ${activeTab === 'info' ? 'text-white' : 'text-slate-500'}`}
              >
-               <Activity size={16} />
-               Conta
+               <Activity size={16} /> Conta
                {activeTab === 'info' && <div className="absolute bottom-0 w-full h-0.5 bg-ocean rounded-t-full"></div>}
              </button>
           )}
         </div>
 
-        {/* Content Area */}
+        {/* Content */}
         <div className="min-h-[300px]">
           {activeTab === 'posts' ? (
              loadingPosts ? (
-               <div className="py-20 text-center text-slate-500"><Loader2 className="animate-spin mx-auto mb-2" />Carregando posts...</div>
+               <div className="py-20 text-center text-slate-500"><Loader2 className="animate-spin mx-auto mb-2" />Carregando...</div>
              ) : posts.length === 0 ? (
                <div className="py-20 text-center">
                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-600">
@@ -424,7 +421,7 @@ export const ProfilePage = () => {
              ) : (
                <div className="divide-y divide-white/5 border-t border-white/5">
                  {posts.map(post => (
-                    <PostCard key={post.id} post={post} onDelete={handlePostDeleted} />
+                    <PostCard key={post.id} post={post} onDelete={(pid) => setPosts(p => p.filter(x => x.id !== pid))} />
                  ))}
                </div>
              )
@@ -433,14 +430,13 @@ export const ProfilePage = () => {
                 <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
                    <h3 className="text-white font-bold mb-1 text-sm">Zona de Perigo</h3>
                    <p className="text-xs text-slate-400 mb-4">Ações irreversíveis.</p>
-                   
                    <button 
                     onClick={handleDeleteAccount}
                     disabled={isDeleting}
                     className="w-full text-red-400 hover:text-red-300 text-sm font-bold py-3 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
                   >
                     {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                    Excluir conta permanentemente
+                    Excluir conta
                   </button>
                 </div>
              </div>
