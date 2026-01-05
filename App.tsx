@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BottomNav } from './components/layout/BottomNav';
 import { Header } from './components/layout/Header';
@@ -15,8 +14,10 @@ import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { Loader2 } from 'lucide-react';
 
+// Componente Layout que gerencia animações
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -33,8 +34,14 @@ const ProtectedLayout = () => {
   return (
     <div className="fixed inset-0 flex flex-col w-full bg-midnight-950 overflow-hidden">
       <Header />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-lg mx-auto bg-midnight-950 relative scroll-smooth no-scrollbar">
-        <Outlet />
+      {/* Wrapper de Animação - Chave única baseada no pathname força o React a recriar e re-animar */}
+      <main className="flex-1 w-full max-w-lg mx-auto bg-midnight-950 relative overflow-hidden">
+        <div 
+          key={location.pathname} 
+          className="absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar page-enter"
+        >
+           <Outlet />
+        </div>
       </main>
       <BottomNav />
     </div>

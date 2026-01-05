@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { LogOut, Edit3, Grid, Users } from 'lucide-react';
+import { LogOut, Grid, Users, Trash2, AlertTriangle } from 'lucide-react';
 
 export const ProfilePage = () => {
   const { profile, signOut } = useAuth();
   const [stats, setStats] = useState({ posts: 0, connections: 0 });
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
@@ -33,6 +34,34 @@ export const ProfilePage = () => {
       loadStats();
     }
   }, [profile]);
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm("ATENÇÃO: Isso excluirá PERMANENTEMENTE sua conta, posts, conexões e mensagens.\n\nEsta ação é irreversível. Deseja continuar?");
+    
+    if (confirmed) {
+      setIsDeleting(true);
+      try {
+        // Tenta chamar a função segura do banco
+        const { error } = await supabase.rpc('delete_own_profile');
+        
+        if (error) throw error;
+        
+        // Se sucesso, desloga
+        await signOut();
+      } catch (err: any) {
+        console.error("Delete Error:", err);
+        // Fallback: se RPC falhar, tentar deletar diretamente a tabela profiles (se RLS permitir)
+        const { error: deleteError } = await supabase.from('profiles').delete().eq('id', profile?.id);
+        
+        if (deleteError) {
+           alert("Erro ao excluir conta. Contate o suporte ou tente novamente mais tarde.");
+           setIsDeleting(false);
+        } else {
+           await signOut();
+        }
+      }
+    }
+  };
 
   if (!profile) return null;
 
@@ -91,14 +120,34 @@ export const ProfilePage = () => {
             <p className="text-slate-500 font-medium text-sm">O histórico está submerso...</p>
           </div>
           
-          <div className="mt-8 mb-4 flex justify-center">
+          <div className="mt-8 mb-8 space-y-4">
              <button 
               onClick={() => signOut()}
-              className="text-red-400 hover:text-red-300 text-sm font-bold py-3 px-6 rounded-2xl hover:bg-red-500/10 transition-colors flex items-center gap-2"
+              className="w-full text-slate-300 hover:text-white text-sm font-bold py-4 px-6 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
             >
               <LogOut size={18} />
               Desconectar
             </button>
+
+            <button 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="w-full text-red-400 hover:text-red-300 text-sm font-bold py-4 px-6 rounded-2xl border border-red-500/20 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+            >
+              {isDeleting ? (
+                <span className="animate-pulse">Excluindo...</span>
+              ) : (
+                <>
+                  <Trash2 size={18} />
+                  Excluir minha conta
+                </>
+              )}
+            </button>
+            
+            <p className="text-center text-[10px] text-slate-600 px-4">
+              <AlertTriangle size={10} className="inline mr-1" />
+              Ao excluir sua conta, todos os seus dados serão removidos permanentemente e seu nome de usuário ficará disponível para outros.
+            </p>
           </div>
         </div>
       </div>
