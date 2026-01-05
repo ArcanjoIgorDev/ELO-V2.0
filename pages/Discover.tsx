@@ -50,45 +50,69 @@ export const Discover = () => {
     setProcessingId(receiverId);
     
     try {
-      // 1. Cria a conexão
-      const { data: connectionData, error: connError } = await supabase.from('connections').insert({
-        requester_id: user.id,
-        receiver_id: receiverId,
-        status: 'pending'
-      })
-      .select()
-      .single();
+      // 1. Verifica se já existe uma conexão (recusada ou antiga)
+      const { data: existingConn } = await supabase
+        .from('connections')
+        .select('id, status')
+        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`)
+        .single();
 
-      if (connError) throw connError;
+      let connectionId = existingConn?.id;
+      let isNew = false;
 
-      if (connectionData) {
-         // 2. Tenta criar a notificação
-         const { error: notifError } = await supabase.from('notifications').insert({
+      if (existingConn) {
+        if (existingConn.status === 'blocked') {
+            alert('Não é possível conectar com este usuário.');
+            setProcessingId(null);
+            return;
+        }
+        // Se já existe mas foi recusada ou cancelada, atualiza para pending
+        const { error: updateError } = await supabase
+            .from('connections')
+            .update({ status: 'pending', requester_id: user.id, receiver_id: receiverId, updated_at: new Date().toISOString() })
+            .eq('id', existingConn.id);
+        
+        if (updateError) throw updateError;
+      } else {
+        // Se não existe, cria nova
+        isNew = true;
+        const { data: newConn, error: insertError } = await supabase
+            .from('connections')
+            .insert({
+                requester_id: user.id,
+                receiver_id: receiverId,
+                status: 'pending'
+            })
+            .select()
+            .single();
+        
+        if (insertError) throw insertError;
+        connectionId = newConn.id;
+      }
+
+      // 2. Envia notificação
+      if (connectionId) {
+         await supabase.from('notifications').insert({
            user_id: receiverId,
            actor_id: user.id,
            type: 'request_received',
-           reference_id: connectionData.id
+           reference_id: connectionId
          });
 
-         if (notifError) {
-             console.error("Erro ao criar notificação. Fazendo rollback...", notifError);
-             // ROLLBACK: Se a notificação falhar, apagamos o pedido para o usuário poder tentar de novo
-             await supabase.from('connections').delete().eq('id', connectionData.id);
-             alert("Erro de conexão. Tente enviar o pedido novamente.");
-         } else {
-             // SUCESSO COMPLETO
-             setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id } } : r));
-         }
+         // Atualiza UI local
+         setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id, updated_at: new Date().toISOString() } } : r));
       }
+
     } catch (err: any) {
-      console.error("Erro fatal ao enviar pedido:", err);
-      alert("Falha ao enviar pedido: " + err.message);
+      console.error("Erro ao enviar pedido:", err);
+      // alert("Falha ao enviar pedido: " + err.message);
     } finally {
       setProcessingId(null);
     }
   };
 
   const checkCooldown = (updatedAt: string) => {
+    if (!updatedAt) return false;
     const diff = new Date().getTime() - new Date(updatedAt).getTime();
     return diff < 60000; // 1 minuto
   };
@@ -118,12 +142,16 @@ export const Discover = () => {
         ) : results.length > 0 ? (
           results.map(profile => {
             const status = profile.connection?.status;
-            const amIRequester = profile.connection?.requester_id === user?.id;
+            // Se eu sou o requester e está pending -> aguardando
+            // Se o outro é o requester e está pending -> tenho que aceitar (mas aqui mostra pendente)
             const isCooldown = status === 'declined' && checkCooldown(profile.connection.updated_at);
 
             return (
               <div key={profile.id} className="flex items-center justify-between p-4 bg-midnight-900/60 rounded-3xl border border-white/5 shadow-sm">
-                <div className="flex items-center space-x-3.5">
+                <div 
+                   className="flex items-center space-x-3.5 cursor-pointer"
+                   onClick={() => navigate(`/profile/${profile.id}`)}
+                >
                   <Avatar url={profile.avatar_url} alt={profile.username} />
                   <div>
                     <div className="font-bold text-white text-[15px]">{profile.username}</div>

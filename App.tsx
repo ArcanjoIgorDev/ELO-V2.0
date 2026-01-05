@@ -73,7 +73,11 @@ export default function App() {
           <Route element={<ProtectedLayout />}>
             <Route path="/feed" element={<Feed />} />
             <Route path="/create" element={<CreatePost />} />
+            
+            {/* Rotas de Perfil */}
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/:userId" element={<ProfilePage />} />
+
             <Route path="/discover" element={<Discover />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/messages" element={<ChatList />} />

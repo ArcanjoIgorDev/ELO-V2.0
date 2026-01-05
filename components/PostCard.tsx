@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 interface PostCardProps {
   post: PostWithAuthor;
@@ -15,6 +16,7 @@ interface PostCardProps {
 
 export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   
   if (!post || !post.author) return null;
 
@@ -33,6 +35,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isAuthor = user?.id === post.user_id;
+
+  const goToProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (post.user_id === user?.id) {
+      navigate('/profile');
+    } else {
+      navigate(`/profile/${post.user_id}`);
+    }
+  };
 
   const handleLike = async () => {
     if (!user || isLiking) return;
@@ -156,8 +167,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   return (
     <article className="border-b border-white/5 bg-midnight-950 py-4 px-4 hover:bg-white/[0.01] transition-colors">
       <div className="flex space-x-3">
-        {/* Avatar Col */}
-        <div className="flex-shrink-0">
+        {/* Avatar Col - Clicável */}
+        <div className="flex-shrink-0 cursor-pointer" onClick={goToProfile}>
           <Avatar url={post.author.avatar_url} alt={post.author.username} size="md" />
         </div>
         
@@ -166,18 +177,21 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 overflow-hidden">
-              <span className="font-bold text-slate-100 text-[15px] truncate hover:underline cursor-pointer">
+              <span 
+                onClick={goToProfile}
+                className="font-bold text-slate-100 text-[15px] truncate hover:underline cursor-pointer"
+              >
                 {post.author.username}
               </span>
               <span className="text-slate-500 text-sm">·</span>
-              <time className="text-slate-500 text-sm hover:text-slate-400 whitespace-nowrap">
+              <time className="text-slate-500 text-sm whitespace-nowrap">
                 {formatDistanceToNow(new Date(post.created_at), { addSuffix: false, locale: ptBR }).replace('aproximadamente ', '').replace(' horas', 'h').replace(' minutos', 'm')}
               </time>
             </div>
             
             <div className="relative">
               <button 
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
                 className="text-slate-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
               >
                 <MoreHorizontal size={18} />
