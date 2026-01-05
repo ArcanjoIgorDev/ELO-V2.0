@@ -3,85 +3,104 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft } from 'lucide-react';
+import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban } from 'lucide-react';
 import { PostCard } from '../components/PostCard';
 import { PostWithAuthor } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
 
 export const ProfilePage = () => {
   const { profile: myProfile, signOut, user, refreshProfile } = useAuth();
-  const { userId } = useParams(); // Se existir, estamos vendo outro perfil
+  const { userId } = useParams(); 
   const navigate = useNavigate();
 
+  // Estados
   const [displayProfile, setDisplayProfile] = useState<any>(null);
   const [stats, setStats] = useState({ posts: 0, connections: 0 });
-  const [loading, setLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'info'>('posts');
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'declined' | 'blocked'>('none');
-  const [processingConnect, setProcessingConnect] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'info'>('posts');
   
-  // Upload States
+  // Estados de Ação
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'declined' | 'blocked'>('none');
+  const [isMyRequest, setIsMyRequest] = useState(false); // Para saber se FUI EU que enviei o pendente
+  const [processingConnect, setProcessingConnect] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const isOwnProfile = !userId || userId === user?.id;
+  // Lógica: Se userId na URL existir e for diferente do meu ID -> É Perfil de Outro
+  const isOwnProfile = !userId || (user && userId === user.id);
 
-  // 1. Determina qual perfil exibir (Meu ou de Outro)
+  // 1. CARREGAR DADOS DO PERFIL
   useEffect(() => {
-    const fetchProfileData = async () => {
-      setLoading(true);
-      if (isOwnProfile) {
-        setDisplayProfile(myProfile);
-      } else {
-        const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-        setDisplayProfile(data);
-        
-        // Se for outro usuário, verifica conexão
-        if (user && userId) {
-            const { data: conn } = await supabase
-                .from('connections')
-                .select('*')
-                .or(`and(requester_id.eq.${user.id},receiver_id.eq.${userId}),and(requester_id.eq.${userId},receiver_id.eq.${user.id})`)
-                .single();
-            
-            if (conn) setConnectionStatus(conn.status);
-            else setConnectionStatus('none');
+    const loadProfileData = async () => {
+      setLoadingProfile(true);
+      
+      try {
+        if (isOwnProfile) {
+          // MEU PERFIL
+          if (myProfile) {
+            setDisplayProfile(myProfile);
+            await loadStats(myProfile.id);
+            await loadPosts(myProfile.id);
+          }
+        } else {
+          // PERFIL DE OUTRO
+          if (!userId) return;
+
+          const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+          if (error || !data) {
+             alert("Usuário não encontrado.");
+             navigate('/feed');
+             return;
+          }
+          setDisplayProfile(data);
+          await loadStats(userId);
+          await loadPosts(userId);
+
+          // Checar Conexão
+          if (user) {
+             const { data: conn } = await supabase
+              .from('connections')
+              .select('*')
+              .or(`and(requester_id.eq.${user.id},receiver_id.eq.${userId}),and(requester_id.eq.${userId},receiver_id.eq.${user.id})`)
+              .maybeSingle();
+
+             if (conn) {
+               setConnectionStatus(conn.status);
+               setIsMyRequest(conn.requester_id === user.id);
+             } else {
+               setConnectionStatus('none');
+             }
+          }
         }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingProfile(false);
       }
-      setLoading(false);
     };
 
-    fetchProfileData();
-  }, [userId, myProfile, user, isOwnProfile]);
+    loadProfileData();
+  }, [userId, isOwnProfile, myProfile, user]); // Recarrega se a URL ou usuário mudar
 
-  // 2. Carrega Posts e Stats quando temos o displayProfile
-  useEffect(() => {
-    if (displayProfile?.id) {
-      loadStats(displayProfile.id);
-      if (activeTab === 'posts') {
-        loadPosts(displayProfile.id);
-      }
-    }
-  }, [displayProfile, activeTab]);
-
-  const loadStats = async (id: string) => {
-    const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', id);
-    const connectionsReq = await supabase
+  const loadStats = async (targetId: string) => {
+    const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', targetId);
+    const connReq = await supabase
       .from('connections')
       .select('id', { count: 'exact' })
-      .or(`requester_id.eq.${id},receiver_id.eq.${id}`)
+      .or(`requester_id.eq.${targetId},receiver_id.eq.${targetId}`)
       .eq('status', 'accepted');
 
     setStats({
       posts: postsReq.count || 0,
-      connections: connectionsReq.count || 0
+      connections: connReq.count || 0
     });
   };
 
-  const loadPosts = async (id: string) => {
+  const loadPosts = async (targetId: string) => {
     setLoadingPosts(true);
     const { data } = await supabase
       .from('posts')
@@ -91,7 +110,7 @@ export const ProfilePage = () => {
         likes(user_id),
         comments(count)
       `)
-      .eq('user_id', id)
+      .eq('user_id', targetId)
       .order('created_at', { ascending: false });
 
     if (data) {
@@ -106,17 +125,82 @@ export const ProfilePage = () => {
     setLoadingPosts(false);
   };
 
+  // 2. AÇÕES DE CONEXÃO (ROBUSTAS)
+  const handleConnect = async () => {
+    if (!user || !displayProfile || processingConnect) return;
+    setProcessingConnect(true);
+
+    try {
+      // Verifica conexão existente
+      const { data: existingConn } = await supabase
+        .from('connections')
+        .select('*')
+        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${displayProfile.id}),and(requester_id.eq.${displayProfile.id},receiver_id.eq.${user.id})`)
+        .maybeSingle();
+
+      if (existingConn) {
+         // Se já for amigo ou bloqueado, para.
+         if (existingConn.status === 'accepted') return;
+         if (existingConn.status === 'blocked') { alert('Não permitido'); return; }
+         
+         // Se pendente:
+         if (existingConn.status === 'pending') {
+             // Se fui eu que pedi, não faço nada (já está enviado)
+             if (existingConn.requester_id === user.id) return;
+             // Se foi ele que pediu, deveria aceitar (mas este botão é de "Conectar", então tratamos como "Aceitar" ou deixamos ir para notificações?)
+             // Para simplificar, vamos deletar e criar novo pedido (Hard Reset) ou aceitar.
+             // Vamos deletar para garantir consistência do botão "Conectar".
+         }
+
+         // HARD DELETE para limpar qualquer estado 'declined' ou confuso
+         await supabase.from('connections').delete().eq('id', existingConn.id);
+      }
+
+      // INSERT FRESH
+      const { data: newConn, error: insertError } = await supabase
+        .from('connections')
+        .insert({
+           requester_id: user.id,
+           receiver_id: displayProfile.id,
+           status: 'pending'
+        })
+        .select()
+        .single();
+      
+      if (insertError) throw insertError;
+
+      if (newConn) {
+          await supabase.from('notifications').insert({
+            user_id: displayProfile.id,
+            actor_id: user.id,
+            type: 'request_received',
+            reference_id: newConn.id
+          });
+          
+          setConnectionStatus('pending');
+          setIsMyRequest(true);
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      alert("Erro ao conectar. Tente novamente.");
+    } finally {
+      setProcessingConnect(false);
+    }
+  };
+
+  // 3. UPLOAD DE FOTO
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0 || !user) return;
     
     setUploadingAvatar(true);
     const file = event.target.files[0];
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     try {
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
@@ -124,59 +208,14 @@ export const ProfilePage = () => {
       const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
       if (updateError) throw updateError;
 
-      await refreshProfile();
+      await refreshProfile(); // Atualiza contexto
+      setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl })); // Atualiza local
+      
     } catch (error: any) {
-      alert('Erro ao atualizar foto.');
+      console.error(error);
+      alert('Erro no upload. Tente uma imagem menor.');
     } finally {
       setUploadingAvatar(false);
-    }
-  };
-
-  const handleConnect = async () => {
-    if (!user || !displayProfile || processingConnect) return;
-    setProcessingConnect(true);
-
-    try {
-      // Mesma lógica robusta do Discover (Upsert)
-      const { data: existingConn } = await supabase
-        .from('connections')
-        .select('id, status')
-        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${displayProfile.id}),and(requester_id.eq.${displayProfile.id},receiver_id.eq.${user.id})`)
-        .single();
-
-      let connectionId = existingConn?.id;
-
-      if (existingConn) {
-         if (existingConn.status === 'blocked') {
-            alert('Ação não permitida.');
-            return;
-         }
-         await supabase
-            .from('connections')
-            .update({ status: 'pending', requester_id: user.id, receiver_id: displayProfile.id, updated_at: new Date().toISOString() })
-            .eq('id', existingConn.id);
-      } else {
-         const { data: newConn } = await supabase
-            .from('connections')
-            .insert({ requester_id: user.id, receiver_id: displayProfile.id, status: 'pending' })
-            .select()
-            .single();
-         connectionId = newConn?.id;
-      }
-
-      if (connectionId) {
-          await supabase.from('notifications').insert({
-            user_id: displayProfile.id,
-            actor_id: user.id,
-            type: 'request_received',
-            reference_id: connectionId
-          });
-          setConnectionStatus('pending');
-      }
-    } catch (err) {
-       console.error(err);
-    } finally {
-        setProcessingConnect(false);
     }
   };
 
@@ -186,8 +225,7 @@ export const ProfilePage = () => {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm("ATENÇÃO: Isso excluirá PERMANENTEMENTE sua conta.");
-    if (confirmed) {
+    if (window.confirm("Isso apagará sua conta e dados para sempre. Continuar?")) {
       setIsDeleting(true);
       try {
         await supabase.from('profiles').delete().eq('id', user?.id);
@@ -198,16 +236,20 @@ export const ProfilePage = () => {
     }
   };
 
-  if (loading || !displayProfile) {
-    return <div className="min-h-full flex items-center justify-center bg-midnight-950"><Loader2 className="animate-spin text-ocean" /></div>;
+  if (loadingProfile || !displayProfile) {
+    return <div className="h-screen w-full flex items-center justify-center bg-midnight-950"><Loader2 className="animate-spin text-ocean" size={32} /></div>;
   }
 
   return (
-    <div className="min-h-full pb-24 bg-midnight-950">
+    <div className="min-h-full pb-24 bg-midnight-950 animate-fade-in">
+      {/* Header Visual */}
       <div className="h-40 bg-gradient-to-b from-ocean-900 to-midnight-950 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
         {!isOwnProfile && (
-            <button onClick={() => navigate(-1)} className="absolute top-4 left-4 p-2 bg-black/20 rounded-full text-white backdrop-blur">
+            <button 
+              onClick={() => navigate(-1)} 
+              className="absolute top-safe left-4 mt-4 p-2.5 bg-black/20 rounded-full text-white backdrop-blur border border-white/5 active:scale-95 transition-transform"
+            >
                 <ArrowLeft size={20} />
             </button>
         )}
@@ -215,7 +257,7 @@ export const ProfilePage = () => {
 
       <div className="px-5 -mt-16 relative z-10">
         <div className="flex justify-between items-end mb-4">
-           {/* Avatar */}
+           {/* Avatar Area */}
            <div className="relative group">
              <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
                 <Avatar url={displayProfile.avatar_url} alt={displayProfile.username} size="xl" />
@@ -226,7 +268,7 @@ export const ProfilePage = () => {
                  <button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingAvatar}
-                    className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95"
+                    className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95 disabled:opacity-50"
                  >
                     {uploadingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                  </button>
@@ -235,51 +277,65 @@ export const ProfilePage = () => {
              )}
            </div>
 
-           {/* Ações (Botão Connect ou Logout) */}
-           {isOwnProfile ? (
-             <button onClick={() => signOut()} className="mb-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors">
-                Sair
-             </button>
-           ) : (
-             <div className="mb-2">
-                {connectionStatus === 'accepted' ? (
-                   <button onClick={() => navigate(`/chat/${displayProfile.id}`)} className="bg-white/10 text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
-                       <MessageCircle size={16} /> Mensagem
-                   </button>
-                ) : connectionStatus === 'pending' ? (
-                   <button className="bg-white/5 text-slate-400 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 cursor-default border border-white/5">
-                       <Clock size={16} /> Pendente
-                   </button>
-                ) : (
-                   <button 
-                     onClick={handleConnect}
-                     disabled={processingConnect}
-                     className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-ocean/20 transition-all active:scale-95 flex items-center gap-2"
-                   >
-                       {processingConnect ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
-                       Conectar
-                   </button>
-                )}
-             </div>
-           )}
+           {/* Action Buttons */}
+           <div className="mb-2">
+             {isOwnProfile ? (
+               <button 
+                 onClick={() => signOut()} 
+                 className="bg-white/5 hover:bg-white/10 text-white px-5 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors"
+               >
+                  Sair
+               </button>
+             ) : (
+                <>
+                  {connectionStatus === 'accepted' ? (
+                     <button 
+                        onClick={() => navigate(`/chat/${displayProfile.id}`)} 
+                        className="bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 border border-white/10 transition-colors"
+                     >
+                         <MessageCircle size={18} /> Mensagem
+                     </button>
+                  ) : connectionStatus === 'pending' ? (
+                     <button className="bg-white/5 text-slate-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-default border border-white/5">
+                         <Clock size={18} /> {isMyRequest ? 'Enviado' : 'Pendente'}
+                     </button>
+                  ) : connectionStatus === 'blocked' ? (
+                     <button className="bg-red-500/10 text-red-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-not-allowed border border-red-500/20">
+                         <Ban size={18} /> Bloqueado
+                     </button>
+                  ) : (
+                     <button 
+                       onClick={handleConnect}
+                       disabled={processingConnect}
+                       className="bg-ocean hover:bg-ocean-600 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(14,165,233,0.3)] transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                     >
+                         {processingConnect ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
+                         Conectar
+                     </button>
+                  )}
+                </>
+             )}
+           </div>
         </div>
         
+        {/* Info */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white tracking-tight">{displayProfile.full_name}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{displayProfile.full_name || displayProfile.username}</h1>
           <p className="text-slate-500 font-medium text-sm">@{displayProfile.username}</p>
           <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-sm">
-            {displayProfile.bio || (isOwnProfile ? "Edite seu perfil para adicionar uma bio." : "Membro do ELO.")}
+            {displayProfile.bio || (isOwnProfile ? "Toque em Editar para adicionar uma bio." : "Membro do ELO.")}
           </p>
         </div>
 
-        <div className="flex gap-6 mb-8 border-t border-white/5 pt-4">
-          <div className="flex gap-2 items-baseline">
-             <span className="text-lg font-bold text-white">{stats.posts}</span>
-             <span className="text-xs text-slate-500 font-medium">Posts</span>
+        {/* Stats */}
+        <div className="flex gap-8 mb-8 border-t border-white/5 pt-4">
+          <div className="flex flex-col">
+             <span className="text-lg font-bold text-white leading-none">{stats.posts}</span>
+             <span className="text-xs text-slate-500 font-medium mt-1">Publicações</span>
           </div>
-          <div className="flex gap-2 items-baseline">
-             <span className="text-lg font-bold text-white">{stats.connections}</span>
-             <span className="text-xs text-slate-500 font-medium">Conexões</span>
+          <div className="flex flex-col">
+             <span className="text-lg font-bold text-white leading-none">{stats.connections}</span>
+             <span className="text-xs text-slate-500 font-medium mt-1">Conexões</span>
           </div>
         </div>
 
@@ -287,30 +343,36 @@ export const ProfilePage = () => {
         <div className="flex items-center border-b border-white/5 mb-2 sticky top-14 bg-midnight-950 z-20">
           <button 
             onClick={() => setActiveTab('posts')}
-            className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'posts' ? 'text-white border-b-2 border-ocean' : 'text-slate-500'}`}
+            className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors relative ${activeTab === 'posts' ? 'text-white' : 'text-slate-500'}`}
           >
             <Grid size={16} />
             Publicações
+            {activeTab === 'posts' && <div className="absolute bottom-0 w-full h-0.5 bg-ocean rounded-t-full"></div>}
           </button>
+          
           {isOwnProfile && (
              <button 
                 onClick={() => setActiveTab('info')}
-                className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'info' ? 'text-white border-b-2 border-ocean' : 'text-slate-500'}`}
+                className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors relative ${activeTab === 'info' ? 'text-white' : 'text-slate-500'}`}
              >
                <Activity size={16} />
                Conta
+               {activeTab === 'info' && <div className="absolute bottom-0 w-full h-0.5 bg-ocean rounded-t-full"></div>}
              </button>
           )}
         </div>
 
-        {/* Conteúdo */}
+        {/* Content Area */}
         <div className="min-h-[300px]">
           {activeTab === 'posts' ? (
              loadingPosts ? (
-               <div className="p-10 text-center text-slate-500"><Loader2 className="animate-spin mx-auto" /></div>
+               <div className="py-20 text-center text-slate-500"><Loader2 className="animate-spin mx-auto mb-2" />Carregando posts...</div>
              ) : posts.length === 0 ? (
-               <div className="p-10 text-center text-slate-500 border border-dashed border-white/10 rounded-xl mt-4">
-                 Nenhuma publicação.
+               <div className="py-20 text-center">
+                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-600">
+                    <Grid size={24} />
+                 </div>
+                 <p className="text-slate-500 text-sm">Nenhuma publicação ainda.</p>
                </div>
              ) : (
                <div className="divide-y divide-white/5 border-t border-white/5">
@@ -320,15 +382,18 @@ export const ProfilePage = () => {
                </div>
              )
           ) : (
-             <div className="mt-8 space-y-4 px-2">
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                   <h3 className="text-white font-bold mb-2 text-sm">Zona de Perigo</h3>
+             <div className="mt-8 space-y-4 px-1">
+                <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
+                   <h3 className="text-white font-bold mb-1 text-sm">Zona de Perigo</h3>
+                   <p className="text-xs text-slate-400 mb-4">Ações irreversíveis.</p>
+                   
                    <button 
                     onClick={handleDeleteAccount}
                     disabled={isDeleting}
                     className="w-full text-red-400 hover:text-red-300 text-sm font-bold py-3 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
                   >
-                    {isDeleting ? '...' : <><Trash2 size={16} /> Excluir conta</>}
+                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                    Excluir conta permanentemente
                   </button>
                 </div>
              </div>
