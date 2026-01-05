@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from '../components/ui/Avatar';
-import { Heart, MessageCircle, UserPlus, Check, Bell, Loader2, X } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Check, Bell, Loader2, X, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PullToRefresh } from '../components/ui/PullToRefresh';
@@ -12,18 +12,21 @@ export const NotificationsPage = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Busca inicial
   const fetchNotifications = async () => {
     if (!user) return;
+    setError(null);
     
     try {
-      const { data, error } = await supabase
+      // IMPORTANTE: A query usa !notifications_actor_id_fkey para garantir que o Supabase entenda a relação
+      const { data, error: fetchError } = await supabase
         .from('notifications')
         .select(`
           *,
-          actor:profiles!actor_id (
+          actor:profiles!notifications_actor_id_fkey (
             username,
             avatar_url,
             full_name
@@ -33,18 +36,25 @@ export const NotificationsPage = () => {
         .order('created_at', { ascending: false })
         .limit(50);
       
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
       if (data) {
         setNotifications(data);
         
+        // Marca como lidas silenciosamente
         const unreadIds = data.filter((n: any) => !n.is_read).map((n: any) => n.id);
         if (unreadIds.length > 0) {
           await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao buscar notificações:", err);
+      // Se for erro de relação, avisa o dev/usuário
+      if (err.message?.includes("relationship")) {
+        setError("Erro de estrutura: Rode o SQL de correção no Supabase.");
+      } else {
+        setError("Não foi possível carregar as notificações.");
+      }
     } finally {
       setLoading(false);
     }
@@ -56,7 +66,7 @@ export const NotificationsPage = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('realtime_notifications')
+      .channel('realtime_notifications_page')
       .on(
         'postgres_changes',
         {
@@ -66,6 +76,7 @@ export const NotificationsPage = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
+          // Busca os dados do ator para montar o card completo
           const { data: actorData } = await supabase
             .from('profiles')
             .select('username, avatar_url, full_name')
@@ -79,6 +90,7 @@ export const NotificationsPage = () => {
             };
             
             setNotifications((prev) => [newNotification, ...prev]);
+            // Marca como lida na hora
             supabase.from('notifications').update({ is_read: true }).eq('id', payload.new.id);
           }
         }
@@ -97,10 +109,8 @@ export const NotificationsPage = () => {
     try {
       let connectionId = notification.reference_id;
 
-      // --- LÓGICA DE SELF-HEALING (CORREÇÃO DE BUGS ANTIGOS) ---
-      // Se a notificação não tiver ID (bug anterior), tentamos achar a conexão manualmente
+      // Self-Healing: Tenta achar conexão se o ID estiver faltando
       if (!connectionId) {
-        console.warn("Reference ID faltando. Tentando recuperar conexão pendente...");
         const { data: fallbackConnection } = await supabase
           .from('connections')
           .select('id')
@@ -112,15 +122,12 @@ export const NotificationsPage = () => {
         if (fallbackConnection) {
           connectionId = fallbackConnection.id;
         } else {
-          // Se não achar mesmo assim, removemos a notificação pois é inválida
-          await supabase.from('notifications').delete().eq('id', notification.id);
           setNotifications(prev => prev.filter(n => n.id !== notification.id));
-          throw new Error("Este pedido não existe mais ou foi cancelado.");
+          await supabase.from('notifications').delete().eq('id', notification.id);
+          return; 
         }
       }
-      // -----------------------------------------------------------
 
-      // 2. Tenta atualizar o status
       const { error: updateError } = await supabase
         .from('connections')
         .update({ 
@@ -129,22 +136,17 @@ export const NotificationsPage = () => {
         })
         .eq('id', connectionId);
 
-      if (updateError) {
-         console.error("Erro Supabase:", updateError);
-         throw new Error("Falha ao atualizar conexão. Tente recarregar.");
-      }
+      if (updateError) throw updateError;
 
-      // 3. Se aceitou, notifica o remetente original
       if (action === 'accepted') {
         await supabase.from('notifications').insert({
-          user_id: notification.actor_id, // Quem pediu
-          actor_id: user?.id,             // Eu (que aceitei)
+          user_id: notification.actor_id,
+          actor_id: user?.id,
           type: 'request_accepted',
           reference_id: connectionId
         });
       }
 
-      // 4. Atualiza UI localmente
       setNotifications(prev => prev.map(n => {
          if (n.id === notification.id) {
              return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };
@@ -153,8 +155,8 @@ export const NotificationsPage = () => {
       }));
 
     } catch (error: any) {
-      console.error("Falha ao processar pedido:", error);
-      alert(error.message || "Erro ao processar. Tente novamente.");
+      console.error("Falha:", error);
+      alert("Erro ao processar: " + (error.message || "Tente novamente."));
     } finally {
       setProcessingId(null);
     }
@@ -198,6 +200,13 @@ export const NotificationsPage = () => {
           {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
         </div>
 
+        {error && (
+          <div className="m-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+             <AlertCircle className="text-red-400" size={20} />
+             <p className="text-sm text-red-200 font-medium">{error}</p>
+          </div>
+        )}
+
         <div className="divide-y divide-white/5">
           {loading && notifications.length === 0 ? (
              [1,2,3].map(i => (
@@ -209,7 +218,7 @@ export const NotificationsPage = () => {
                  </div>
                </div>
              ))
-          ) : notifications.length === 0 ? (
+          ) : notifications.length === 0 && !error ? (
             <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
                  <Bell size={24} />
