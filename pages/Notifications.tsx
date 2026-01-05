@@ -95,8 +95,30 @@ export const NotificationsPage = () => {
     setProcessingId(notification.id);
 
     try {
-      // 1. O reference_id na notificação deve ser o ID da linha em 'connections'
-      if (!notification.reference_id) throw new Error("ID de referência inválido");
+      let connectionId = notification.reference_id;
+
+      // --- LÓGICA DE SELF-HEALING (CORREÇÃO DE BUGS ANTIGOS) ---
+      // Se a notificação não tiver ID (bug anterior), tentamos achar a conexão manualmente
+      if (!connectionId) {
+        console.warn("Reference ID faltando. Tentando recuperar conexão pendente...");
+        const { data: fallbackConnection } = await supabase
+          .from('connections')
+          .select('id')
+          .eq('requester_id', notification.actor_id)
+          .eq('receiver_id', user?.id)
+          .eq('status', 'pending')
+          .single();
+
+        if (fallbackConnection) {
+          connectionId = fallbackConnection.id;
+        } else {
+          // Se não achar mesmo assim, removemos a notificação pois é inválida
+          await supabase.from('notifications').delete().eq('id', notification.id);
+          setNotifications(prev => prev.filter(n => n.id !== notification.id));
+          throw new Error("Este pedido não existe mais ou foi cancelado.");
+        }
+      }
+      // -----------------------------------------------------------
 
       // 2. Tenta atualizar o status
       const { error: updateError } = await supabase
@@ -105,11 +127,11 @@ export const NotificationsPage = () => {
           status: action,
           updated_at: new Date().toISOString()
         })
-        .eq('id', notification.reference_id);
+        .eq('id', connectionId);
 
       if (updateError) {
          console.error("Erro Supabase:", updateError);
-         throw new Error("Falha ao atualizar conexão. Verifique permissões.");
+         throw new Error("Falha ao atualizar conexão. Tente recarregar.");
       }
 
       // 3. Se aceitou, notifica o remetente original
@@ -118,12 +140,11 @@ export const NotificationsPage = () => {
           user_id: notification.actor_id, // Quem pediu
           actor_id: user?.id,             // Eu (que aceitei)
           type: 'request_accepted',
-          reference_id: notification.reference_id
+          reference_id: connectionId
         });
       }
 
-      // 4. Atualiza UI localmente: Remove a notificação de "pedido recebido"
-      // ou altera seu estado para feedback visual
+      // 4. Atualiza UI localmente
       setNotifications(prev => prev.map(n => {
          if (n.id === notification.id) {
              return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };

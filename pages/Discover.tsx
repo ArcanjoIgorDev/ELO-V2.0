@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 import { Avatar } from '../components/ui/Avatar';
-import { Search as SearchIcon, UserPlus, Check, Clock, Ban } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Check, Clock, Ban, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,6 +13,7 @@ export const Discover = () => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,23 +46,37 @@ export const Discover = () => {
   };
 
   const sendRequest = async (receiverId: string) => {
-    if (!user) return;
+    if (!user || processingId) return;
+    setProcessingId(receiverId);
     
-    // Insere notificação
-    const { error } = await supabase.from('connections').insert({
-      requester_id: user.id,
-      receiver_id: receiverId,
-      status: 'pending'
-    });
+    try {
+      // 1. Cria a conexão e RETORNA O DADO (Importante: .select().single())
+      const { data: connectionData, error } = await supabase.from('connections').insert({
+        requester_id: user.id,
+        receiver_id: receiverId,
+        status: 'pending'
+      })
+      .select()
+      .single();
 
-    if (!error) {
-       await supabase.from('notifications').insert({
-         user_id: receiverId,
-         actor_id: user.id,
-         type: 'request_received'
-       });
-       // Atualiza UI localmente
-       setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id } } : r));
+      if (error) throw error;
+
+      if (connectionData) {
+         // 2. Cria a notificação COM O REFERENCE_ID CORRETO
+         await supabase.from('notifications').insert({
+           user_id: receiverId,
+           actor_id: user.id,
+           type: 'request_received',
+           reference_id: connectionData.id // Correção do Bug
+         });
+         
+         // Atualiza UI localmente
+         setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id } } : r));
+      }
+    } catch (err) {
+      console.error("Erro ao enviar pedido:", err);
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -88,7 +103,10 @@ export const Discover = () => {
 
       <div className="px-5 space-y-4 mt-2">
         {searching ? (
-          <div className="text-slate-500 text-center py-4">Procurando nas profundezas...</div>
+          <div className="text-slate-500 text-center py-4 flex items-center justify-center gap-2">
+             <Loader2 className="animate-spin" size={18} />
+             Procurando nas profundezas...
+          </div>
         ) : results.length > 0 ? (
           results.map(profile => {
             const status = profile.connection?.status;
@@ -118,9 +136,10 @@ export const Discover = () => {
                 ) : (
                   <button 
                     onClick={() => sendRequest(profile.id)}
-                    className="p-3 bg-ocean text-white rounded-2xl hover:bg-ocean-600 shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all active:scale-90"
+                    disabled={!!processingId}
+                    className="p-3 bg-ocean text-white rounded-2xl hover:bg-ocean-600 shadow-[0_0_15px_rgba(14,165,233,0.3)] transition-all active:scale-90 disabled:opacity-50"
                   >
-                    <UserPlus size={18} strokeWidth={2.5} />
+                    {processingId === profile.id ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} strokeWidth={2.5} />}
                   </button>
                 )}
               </div>
