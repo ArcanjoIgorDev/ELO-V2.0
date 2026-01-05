@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -12,9 +13,10 @@ import { NotificationsPage } from './pages/Notifications';
 import { ChatList } from './pages/ChatList';
 import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
+import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { Loader2 } from 'lucide-react';
 
-// Componente Layout que gerencia animações
+// Componente Layout que gerencia animações e estrutura protegida
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -34,7 +36,8 @@ const ProtectedLayout = () => {
   return (
     <div className="fixed inset-0 flex flex-col w-full bg-midnight-950 overflow-hidden">
       <Header />
-      {/* Wrapper de Animação - Chave única baseada no pathname força o React a recriar e re-animar */}
+      
+      {/* Wrapper de Animação */}
       <main className="flex-1 w-full max-w-lg mx-auto bg-midnight-950 relative overflow-hidden">
         <div 
           key={location.pathname} 
@@ -43,7 +46,11 @@ const ProtectedLayout = () => {
            <Outlet />
         </div>
       </main>
+      
       <BottomNav />
+      
+      {/* Tutorial Overlay - Só aparece se necessário */}
+      <OnboardingTutorial />
     </div>
   );
 };

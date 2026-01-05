@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -36,7 +37,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!error && data) {
         setProfile(data);
       } else {
-        // Se der erro, não crasha o app, apenas loga e segue
         console.warn('Profile fetch warning:', error?.message);
       }
     } catch (err) {
@@ -57,8 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (initialSession?.user) {
           setSession(initialSession);
           setUser(initialSession.user);
-          // Busca o perfil, mas não bloqueia o estado 'auth' crítico se não for estritamente necessário
-          // Aqui optamos por esperar para evitar "glitch" visual de avatar vazio
+          // Busca o perfil inicial
           await fetchProfile(initialSession.user.id);
         }
       } catch (error) {
@@ -70,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initializeAuth();
 
-    // 2. Listener de Mudanças (Login/Logout em outras abas ou pós-ação)
+    // 2. Listener de Mudanças
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
@@ -83,7 +82,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfile(null);
       }
       
-      // Garante que o loading saia da frente
       setLoading(false);
     });
 
@@ -99,7 +97,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfile(null);
       setUser(null);
       setSession(null);
-      // Força limpeza de dados locais se necessário
       localStorage.clear(); 
     } catch (error) {
       console.error("Error signing out:", error);
