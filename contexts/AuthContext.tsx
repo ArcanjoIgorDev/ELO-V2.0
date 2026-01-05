@@ -45,6 +45,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Timeout de segurança: se o Supabase não responder em 5s, libera o app
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth initialization timed out. Forcing app load.");
+        setLoading(false);
+      }
+    }, 5000);
+
     const initAuth = async () => {
       try {
         // 1. Verifica sessão atual
@@ -63,7 +71,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error("Auth initialization error:", e);
       } finally {
         // CRÍTICO: Sempre remover loading, independente de sucesso ou erro
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(safetyTimeout);
+        }
       }
     };
 
@@ -88,6 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
