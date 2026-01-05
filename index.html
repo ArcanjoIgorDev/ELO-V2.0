@@ -1,25 +1,29 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=ELO" />
+    
+    <!-- Favicon Profissional (SVG Base64) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect width='100' height='100' rx='24' fill='%230ea5e9'/%3E%3Cpath d='M30 50C30 38.9543 38.9543 30 50 30C61.0457 30 70 38.9543 70 50' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M70 50C70 61.0457 61.0457 70 50 70C38.9543 70 30 61.0457 30 50' stroke='white' stroke-width='8' stroke-linecap='round' stroke-opacity='0.4'/%3E%3Ccircle cx='50' cy='50' r='12' fill='white'/%3E%3C/svg%3E" />
+    
     <link rel="manifest" href="/manifest.json" />
     
-    <!-- Meta tags para comportamento App-Like -->
+    <!-- Meta tags -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#020617" />
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Rede social, não mídia social. Conexões reais em ordem cronológica.">
     
-    <title>ELO</title>
+    <title>ELO | Rede Social</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
-              // Nova Paleta Deep Ocean
               midnight: {
                 50: '#f0f9ff',
                 100: '#e0f2fe',
@@ -30,93 +34,105 @@
                 600: '#0284c7',
                 700: '#0369a1',
                 800: '#075985',
-                900: '#0f172a', // Base Dark
-                950: '#020617', // Deepest Dark
+                900: '#0f172a', 
+                950: '#020617', // Deepest Ocean
               },
               ocean: {
-                DEFAULT: '#0ea5e9', // Primary Brand Color
-                light: '#38bdf8',
-                dark: '#0369a1',
+                DEFAULT: '#0ea5e9', 
+                hover: '#0284c7',
+                surface: '#1e293b',
               }
             },
             fontFamily: {
               sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-              'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-              'pulse-subtle': 'pulseSubtle 4s infinite',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              slideUp: {
-                '0%': { transform: 'translateY(20px)', opacity: '0' },
-                '100%': { transform: 'translateY(0)', opacity: '1' },
-              },
-              pulseSubtle: {
-                '0%, 100%': { opacity: '1' },
-                '50%': { opacity: '0.6' },
-              }
             }
           }
         }
       }
     </script>
     <style>
-      /* Reset Global */
+      /* Reset Crítico */
+      :root {
+        color-scheme: dark;
+      }
       * {
         -webkit-tap-highlight-color: transparent;
         box-sizing: border-box;
       }
 
       html, body {
-        background-color: #020617; /* midnight-950 */
-        color: #e2e8f0; /* slate-200 equivalent */
+        background-color: #020617;
+        color: #e2e8f0;
         width: 100%;
         min-height: 100%;
+        overscroll-behavior-y: none;
       }
 
-      /* 
-         NOTA: Removemos 'overflow: hidden' e 'position: fixed' do body 
-         para permitir rolagem na Landing Page. 
-         O 'App Mode' será controlado no App.tsx via classes CSS.
-      */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* Vidro Profissional */
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
+      .pt-safe { padding-top: env(safe-area-inset-top, 24px); }
+
+      /* --- ANIMAÇÕES CSS PURAS (Robustez) --- */
       
-      /* Scrollbar Customizada (Dark) */
-      ::-webkit-scrollbar {
-        width: 6px;
-        background: #020617;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #1e293b;
-        border-radius: 3px;
+      /* Estado inicial: invisível */
+      .animate-enter {
+        opacity: 0;
+        animation: enter-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
-      /* Vidro Escuro (Dark Glass) */
-      .glass {
-        background: rgba(15, 23, 42, 0.7); /* midnight-900 com transparência */
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      .animate-fade {
+        opacity: 0;
+        animation: fade-in 0.8s ease-out forwards;
       }
 
-      .glass-card {
-        background: rgba(30, 41, 59, 0.4); /* midnight-800 com transparência */
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+      @keyframes enter-up {
+        0% {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      /* SafeArea utilities */
-      .pb-safe {
-        padding-bottom: env(safe-area-inset-bottom, 20px);
+      @keyframes fade-in {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
       }
-      .pt-safe {
-        padding-top: env(safe-area-inset-top, 20px);
+
+      /* Animações Contínuas */
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+      
+      .animate-pulse-slow {
+        animation: pulse-slow 4s ease-in-out infinite;
+      }
+
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+
+      @keyframes pulse-slow {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
       }
     </style>
   <script type="importmap">

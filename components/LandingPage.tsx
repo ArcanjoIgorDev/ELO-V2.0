@@ -1,168 +1,159 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Waves, Shield, Zap, Layout, Users, ArrowRight, Lock } from 'lucide-react';
+import { Waves, ArrowRight, ShieldCheck, Clock, Zap, Globe, Smartphone } from 'lucide-react';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-midnight-950 text-slate-200 font-sans selection:bg-ocean selection:text-white pb-20">
+    <div className="min-h-screen bg-midnight-950 text-slate-200 font-sans selection:bg-ocean selection:text-white overflow-hidden relative">
       
-      {/* Navbar Fixa */}
-      <nav className="fixed top-0 w-full z-50 glass bg-midnight-950/80 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-ocean text-white p-1.5 rounded-lg shadow-lg shadow-ocean/20">
-              <Waves size={20} strokeWidth={2.5} />
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-0 w-full h-[800px] bg-gradient-to-b from-midnight-900 to-midnight-950 -z-10" />
+      <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-ocean-600/10 rounded-full blur-[120px] pointer-events-none animate-pulse-slow" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Navbar */}
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-midnight-950/80 backdrop-blur-xl transition-all duration-300 animate-fade">
+        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3 select-none">
+            <div className="w-8 h-8 bg-ocean text-white rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.3)]">
+              <Waves size={18} strokeWidth={3} />
             </div>
             <span className="text-xl font-bold tracking-tight text-white">ELO</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <button 
               onClick={() => navigate('/auth')}
-              className="text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+              className="text-sm font-medium text-slate-400 hover:text-white transition-colors hidden sm:block"
             >
               Entrar
             </button>
             <button 
               onClick={() => navigate('/auth')}
-              className="bg-white text-midnight-950 px-4 py-2 rounded-full text-sm font-bold hover:bg-slate-200 transition-colors hidden sm:block"
+              className="bg-white text-midnight-950 px-5 py-2.5 rounded-full text-sm font-bold hover:bg-slate-200 transition-all active:scale-95 shadow-lg shadow-white/5"
             >
-              Cadastrar
+              Começar
             </button>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 relative overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[600px] bg-ocean-600/10 blur-[120px] rounded-full pointer-events-none z-0" />
-        
-        <div className="max-w-3xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-ocean-300 mb-6 animate-fade-in">
-            <span className="w-1.5 h-1.5 rounded-full bg-ocean animate-pulse"></span>
-            Versão 1.0 disponível
+      <main className="pt-32 pb-20 px-6 max-w-6xl mx-auto relative z-10">
+        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-20">
+          
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-ocean-300 mb-8 hover:bg-white/10 transition-colors cursor-default animate-enter">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ocean-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-ocean-500"></span>
+            </span>
+            Disponível para todos
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-6 leading-[1.1] animate-slide-up">
-            Conexões reais. <br/>
-            <span className="text-ocean-400">Sem ruído.</span>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6 leading-[1.1] animate-enter" style={{ animationDelay: '100ms' }}>
+            Rede social, <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-ocean-300 to-ocean-500">não mídia social.</span>
           </h1>
           
-          <p className="text-lg text-slate-400 mb-8 max-w-xl mx-auto leading-relaxed animate-slide-up [animation-delay:100ms] opacity-0 [animation-fill-mode:forwards]">
-            Uma rede social desenhada para respeitar o seu tempo e privacidade. Sem algoritmos viciantes, apenas você e suas interações.
+          <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed animate-enter" style={{ animationDelay: '200ms' }}>
+            Recupere sua autonomia digital. Um feed puramente cronológico, sem algoritmos de retenção, sem anúncios invasivos. Apenas as conexões que você escolheu.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-up [animation-delay:200ms] opacity-0 [animation-fill-mode:forwards]">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto animate-enter" style={{ animationDelay: '300ms' }}>
             <button 
               onClick={() => navigate('/auth')}
-              className="w-full sm:w-auto px-8 py-4 bg-ocean hover:bg-ocean-600 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)] active:scale-95 flex items-center justify-center gap-2 group"
+              className="w-full sm:w-auto px-8 py-4 bg-ocean hover:bg-ocean-600 text-white font-bold rounded-2xl transition-all shadow-[0_0_25px_rgba(14,165,233,0.3)] hover:shadow-[0_0_35px_rgba(14,165,233,0.4)] active:scale-95 flex items-center justify-center gap-3 group"
             >
-              Começar Agora
+              Criar conta gratuita
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button 
               onClick={() => navigate('/auth')}
-              className="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-bold rounded-2xl transition-all border border-white/5 flex items-center justify-center"
+              className="w-full sm:w-auto px-8 py-4 bg-midnight-800/50 hover:bg-midnight-800 text-slate-200 font-semibold rounded-2xl transition-all border border-white/5 hover:border-white/10 flex items-center justify-center backdrop-blur-sm"
             >
-              Fazer Login
+              Acessar existente
             </button>
           </div>
         </div>
-      </section>
 
-      {/* Value Proposition */}
-      <section className="px-6 py-12 max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-3 gap-6">
-          <FeatureCard 
-            icon={Layout}
-            title="Feed Cronológico"
-            desc="Veja as postagens na ordem em que aconteceram. Você controla o que vê, não um algoritmo."
-          />
-          <FeatureCard 
-            icon={Lock}
-            title="Privacidade Primeiro"
-            desc="Seus dados não são o produto. Navegue com a segurança de uma plataforma transparente."
-          />
-          <FeatureCard 
-            icon={Zap}
-            title="Design Focado"
-            desc="Interface limpa e livre de distrações, pensada para destacar o conteúdo e as conversas."
-          />
-        </div>
-      </section>
-
-      {/* App Showcase / Detailed Features */}
-      <section className="px-6 py-20 max-w-5xl mx-auto border-t border-white/5 mt-10">
-        <div className="flex flex-col md:flex-row items-center gap-12">
-          <div className="flex-1 space-y-6">
-            <h2 className="text-3xl font-bold text-white">Simplicidade é a maior sofisticação.</h2>
-            <p className="text-slate-400 leading-relaxed">
-              Removemos contadores de visualizações, métricas de vaidade excessivas e notificações invasivas. 
-              O ELO foi construído para devolver a autonomia da sua experiência digital.
-            </p>
-            
-            <ul className="space-y-4 mt-6">
-              <li className="flex items-center gap-3 text-slate-300">
-                <div className="bg-ocean/20 p-1.5 rounded-full text-ocean"><Users size={16} /></div>
-                <span>Comunidades orgânicas</span>
-              </li>
-              <li className="flex items-center gap-3 text-slate-300">
-                <div className="bg-ocean/20 p-1.5 rounded-full text-ocean"><Shield size={16} /></div>
-                <span>Moderação ativa</span>
-              </li>
-            </ul>
+        {/* Bento Grid Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-enter" style={{ animationDelay: '400ms' }}>
+          {/* Card 1 */}
+          <div className="col-span-1 md:col-span-2 p-8 rounded-3xl bg-midnight-900/40 border border-white/5 backdrop-blur-sm hover:border-ocean/20 transition-colors group relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Globe size={120} strokeWidth={1} />
+             </div>
+             <div className="relative z-10">
+               <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-400 mb-6">
+                 <Clock size={24} />
+               </div>
+               <h3 className="text-2xl font-bold text-white mb-3">Tempo Real Cronológico</h3>
+               <p className="text-slate-400 leading-relaxed max-w-md">
+                 Você vê o que acontece agora. Não o que um algoritmo acha que vai te viciar. O controle do seu feed volta para as suas mãos.
+               </p>
+             </div>
           </div>
-          
-          {/* Abstract UI Representation */}
-          <div className="flex-1 w-full max-w-sm mx-auto">
-            <div className="aspect-[9/16] bg-midnight-900 rounded-[2.5rem] border-4 border-midnight-800 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="h-full w-full bg-gradient-to-b from-midnight-900 to-midnight-950 p-6 flex flex-col gap-4 opacity-80">
-                {/* Fake UI Elements */}
-                <div className="h-8 w-8 bg-white/10 rounded-full mb-4"></div>
-                <div className="h-4 w-3/4 bg-white/10 rounded mb-2"></div>
-                <div className="h-4 w-1/2 bg-white/10 rounded mb-8"></div>
-                
-                <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 p-4 space-y-3">
-                  <div className="flex gap-3">
-                    <div className="h-10 w-10 bg-ocean/20 rounded-full"></div>
-                    <div className="flex-1 space-y-2 py-1">
-                      <div className="h-3 w-1/3 bg-white/10 rounded"></div>
-                      <div className="h-3 w-full bg-white/10 rounded"></div>
-                    </div>
-                  </div>
+
+          {/* Card 2 */}
+          <div className="p-8 rounded-3xl bg-midnight-900/40 border border-white/5 backdrop-blur-sm hover:border-ocean/20 transition-colors relative overflow-hidden group">
+             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-colors"></div>
+             <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-400 mb-6">
+                <ShieldCheck size={24} />
+             </div>
+             <h3 className="text-xl font-bold text-white mb-2">Privacidade Real</h3>
+             <p className="text-slate-400 text-sm leading-relaxed">
+               Sem rastreadores de terceiros. Seus dados não são nosso produto.
+             </p>
+          </div>
+
+          {/* Card 3 */}
+          <div className="p-8 rounded-3xl bg-midnight-900/40 border border-white/5 backdrop-blur-sm hover:border-ocean/20 transition-colors relative overflow-hidden group">
+             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-colors"></div>
+             <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center text-amber-400 mb-6">
+                <Zap size={24} />
+             </div>
+             <h3 className="text-xl font-bold text-white mb-2">Instantâneo</h3>
+             <p className="text-slate-400 text-sm leading-relaxed">
+               Interações via WebSockets. Chats e notificações voam, sem refresh.
+             </p>
+          </div>
+
+          {/* Card 4 */}
+          <div className="col-span-1 md:col-span-2 p-8 rounded-3xl bg-midnight-900/40 border border-white/5 backdrop-blur-sm hover:border-ocean/20 transition-colors group relative overflow-hidden flex items-center">
+             <div className="flex-1 relative z-10">
+               <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-purple-400 mb-6">
+                 <Smartphone size={24} />
+               </div>
+               <h3 className="text-2xl font-bold text-white mb-3">App-Like Experience</h3>
+               <p className="text-slate-400 leading-relaxed max-w-sm">
+                 Instalável como aplicativo nativo (PWA). Fluido, responsivo e desenhado para o toque. Funciona em iOS e Android.
+               </p>
+             </div>
+             <div className="hidden md:block w-48 h-full bg-midnight-950/50 rounded-2xl border border-white/5 relative translate-x-12 translate-y-8 rotate-[-6deg] shadow-2xl">
+                {/* Abstract Phone UI */}
+                <div className="p-4 space-y-3 opacity-50">
+                  <div className="w-full h-32 bg-white/10 rounded-xl"></div>
+                  <div className="w-3/4 h-4 bg-white/10 rounded-full"></div>
+                  <div className="w-1/2 h-4 bg-white/10 rounded-full"></div>
                 </div>
-                <div className="h-20 bg-white/5 rounded-2xl border border-white/5"></div>
-              </div>
-              
-              {/* Overlay Glass */}
-              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-midnight-950 to-transparent"></div>
-            </div>
+             </div>
           </div>
         </div>
-      </section>
+      </main>
 
-      {/* Footer */}
-      <footer className="mt-20 border-t border-white/5 pt-12 pb-8 px-6 text-center">
-        <div className="flex items-center justify-center gap-2 mb-6 opacity-50">
-          <Waves size={24} />
-          <span className="font-bold text-lg">ELO</span>
+      {/* Footer Minimalista */}
+      <footer className="border-t border-white/5 py-12 px-6 mt-12 bg-midnight-950">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 opacity-60 hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2">
+            <Waves size={16} />
+            <span className="font-bold text-sm tracking-wide">ELO NETWORK</span>
+          </div>
+          <p className="text-xs text-slate-500">
+            © {new Date().getFullYear()} Elo. Construído para humanos, não usuários.
+          </p>
         </div>
-        <p className="text-slate-600 text-sm">
-          &copy; {new Date().getFullYear()} ELO Network. Feito com cuidado para humanos.
-        </p>
       </footer>
     </div>
   );
 };
-
-const FeatureCard = ({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) => (
-  <div className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors group">
-    <div className="w-12 h-12 rounded-2xl bg-midnight-950 border border-white/10 flex items-center justify-center mb-4 text-ocean group-hover:scale-110 transition-transform">
-      <Icon size={24} strokeWidth={2} />
-    </div>
-    <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-    <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
-  </div>
-);

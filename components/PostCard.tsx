@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PostWithAuthor, CommentWithAuthor } from '../types';
 import { Avatar } from './ui/Avatar';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +15,11 @@ interface PostCardProps {
 export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const { user } = useAuth();
   
+  // Safety check: Se o post ou autor vierem quebrados do backend
+  if (!post || !post.author) {
+    return null; // Ou um placeholder, mas melhor esconder dados corrompidos
+  }
+
   // Estados de Likes
   const [hasLiked, setHasLiked] = useState(post.user_has_liked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
@@ -145,24 +150,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
   // --- AÇÕES DO POST ---
   const handleDeletePost = async () => {
-    // 1. Confirmação
-    if (!window.confirm('Tem certeza que deseja excluir esta publicação? Esta ação é irreversível.')) return;
+    if (!window.confirm('Excluir esta publicação permanentemente?')) return;
     
     setIsDeleting(true);
     try {
-      // 2. Execução no Backend
       const { error } = await supabase.from('posts').delete().eq('id', post.id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      // 3. Atualização da UI Pai (Feed)
-      if (onDelete) {
-        onDelete(post.id);
-      }
+      if (error) throw error;
+      if (onDelete) onDelete(post.id);
     } catch (err: any) {
-      console.error("Erro ao deletar:", err);
       alert('Erro ao excluir: ' + (err.message || 'Tente novamente.'));
       setIsDeleting(false);
     }
@@ -170,49 +165,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
   const handleShare = async () => {
     setIsSharing(true);
-    
-    // Tratamento de URL robusto
-    let shareUrl = window.location.href;
-    try {
-      // Se estivermos em um ambiente local ou iframe sem URL válida, usamos a home
-      const urlObj = new URL(shareUrl);
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
-        shareUrl = 'https://elo.network';
-      }
-    } catch (e) {
-      shareUrl = 'https://elo.network';
-    }
-
+    const shareUrl = window.location.href; // Idealmente seria /post/:id
     const shareData = {
       title: 'ELO',
-      text: `Confira este post de @${post.author.username} no ELO`,
+      text: `Post de @${post.author.username} no ELO`,
       url: shareUrl
     };
 
     try {
-      // Tenta API nativa, mas força erro se não suportada para cair no catch
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
       } else {
-        throw new Error('Web Share API unavailable');
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        alert('Link copiado!');
       }
     } catch (err) {
-      console.log('Share API failed or not supported, falling back to clipboard.', err);
-      // Fallback universal para clipboard
-      try {
-        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-        alert('Link copiado para a área de transferência!');
-      } catch (clipErr) {
-        console.error('Clipboard failed', clipErr);
-        alert('Não foi possível compartilhar este post.');
-      }
+      console.log('Share falhou:', err);
     } finally {
       setIsSharing(false);
     }
   };
 
   return (
-    <article className="bg-midnight-900/50 backdrop-blur-sm border border-white/5 mb-4 rounded-3xl p-5 transition-all duration-300 hover:border-white/10 relative group">
+    <article className="bg-midnight-900/40 backdrop-blur-md border border-white/5 mb-4 rounded-3xl p-5 transition-colors duration-300 hover:bg-midnight-900/60 hover:border-white/10 relative group">
       <div className="flex space-x-3.5">
         <div className="flex-shrink-0 pt-1">
           <Avatar url={post.author.avatar_url} alt={post.author.username} size="md" />
@@ -222,13 +197,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex flex-col leading-tight">
-              <span className="font-bold text-slate-100 text-[15px] truncate">
+              <span className="font-bold text-slate-100 text-[15px] truncate cursor-pointer hover:underline decoration-white/30">
                 {post.author.full_name || post.author.username}
               </span>
-              <div className="flex items-center text-slate-400 text-xs mt-0.5 gap-1 font-medium">
+              <div className="flex items-center text-slate-500 text-xs mt-0.5 gap-1 font-medium">
                 <span>@{post.author.username}</span>
-                <span className="text-slate-600">•</span>
-                <time dateTime={post.created_at}>
+                <span className="text-slate-700">•</span>
+                <time dateTime={post.created_at} className="hover:text-slate-400">
                   {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
                 </time>
               </div>
@@ -245,7 +220,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
-                  <div className="absolute right-0 mt-2 w-48 bg-midnight-900 border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden py-1 animate-fade-in">
+                  <div className="absolute right-0 mt-2 w-48 bg-midnight-950 border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden py-1 animate-fade-in ring-1 ring-white/5">
                     {isAuthor && (
                       <button 
                         onClick={handleDeletePost}
@@ -253,17 +228,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                         className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                       >
                         {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                        Excluir publicação
+                        Excluir
                       </button>
                     )}
                     <button className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5">
                       Copiar link
                     </button>
-                    {!isAuthor && (
-                      <button className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5">
-                        Reportar
-                      </button>
-                    )}
                   </div>
                 </>
               )}
@@ -279,11 +249,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
           <div className="mt-4 flex items-center justify-between max-w-[280px]">
             <button 
               onClick={handleLike}
-              className={`group flex items-center gap-2 p-2 -ml-2 rounded-full transition-all duration-200 ${hasLiked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500 hover:bg-rose-500/10'}`}
+              className={`group flex items-center gap-2 p-2 -ml-2 rounded-full transition-all duration-200 ${hasLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500 hover:bg-rose-500/10'}`}
             >
               <Heart 
                 size={20} 
-                className={`transition-transform duration-300 ${hasLiked ? 'fill-current scale-110' : 'group-active:scale-75'}`} 
+                className={`transition-transform duration-300 ${hasLiked ? 'fill-current scale-110' : 'group-active:scale-90'}`} 
               />
               <span className="text-sm font-medium tabular-nums min-w-[1ch]">
                 {likesCount > 0 ? likesCount : ''}
@@ -292,9 +262,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
             <button 
               onClick={toggleComments}
-              className={`group flex items-center gap-2 p-2 rounded-full transition-all duration-200 ${showComments ? 'text-ocean' : 'text-slate-400 hover:text-ocean hover:bg-ocean/10'}`}
+              className={`group flex items-center gap-2 p-2 rounded-full transition-all duration-200 ${showComments ? 'text-ocean' : 'text-slate-500 hover:text-ocean hover:bg-ocean/10'}`}
             >
-              <MessageCircle size={20} className="transition-transform group-active:scale-75" />
+              <MessageCircle size={20} className="transition-transform group-active:scale-90" />
               <span className="text-sm font-medium tabular-nums min-w-[1ch]">
                 {commentsCount > 0 ? commentsCount : ''}
               </span>
@@ -303,9 +273,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
             <button 
               onClick={handleShare}
               disabled={isSharing}
-              className="group flex items-center gap-2 p-2 rounded-full text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all duration-200 disabled:opacity-50"
+              className="group flex items-center gap-2 p-2 rounded-full text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all duration-200 disabled:opacity-50"
             >
-              <Share2 size={20} className={`transition-transform group-active:scale-75 ${isSharing ? 'animate-pulse' : ''}`} />
+              <Share2 size={20} className={`transition-transform group-active:scale-90 ${isSharing ? 'animate-pulse' : ''}`} />
             </button>
           </div>
 
@@ -314,13 +284,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
             <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
               <div className="space-y-4 mb-4 max-h-80 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
                 {comments.length === 0 && commentsLoaded ? (
-                  <p className="text-xs text-slate-500 text-center py-4">Nenhum comentário.</p>
+                  <p className="text-xs text-slate-600 text-center py-4">Seja o primeiro a comentar.</p>
                 ) : (
                   comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-2 group/comment">
+                    <div key={comment.id} className="flex gap-3 group/comment">
                        <Avatar url={comment.author?.avatar_url} alt={comment.author?.username || '?'} size="sm" />
                        <div className="flex-1">
-                         <div className="bg-white/5 rounded-2xl rounded-tl-none p-3 relative">
+                         <div className="bg-white/5 rounded-2xl rounded-tl-none p-3">
                             <span className="text-xs font-bold text-slate-300 mb-0.5 block">{comment.author?.username}</span>
                             <p className="text-sm text-slate-200 leading-snug">{comment.content}</p>
                          </div>
@@ -338,7 +308,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
               <form onSubmit={handleSendComment} className="flex items-center gap-2 relative">
                 <input
                   type="text"
-                  placeholder="Comente algo..."
+                  placeholder="Escreva sua resposta..."
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   className="flex-1 bg-midnight-950 border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-ocean/50 transition-colors placeholder:text-slate-600"

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -25,7 +24,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Busca perfil de forma independente, sem bloquear a UI principal
+  // Função isolada para buscar perfil
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -36,54 +35,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (!error && data) {
         setProfile(data);
+      } else {
+        // Se der erro, não crasha o app, apenas loga e segue
+        console.warn('Profile fetch warning:', error?.message);
       }
     } catch (err) {
-      console.error('Non-critical error fetching profile:', err);
+      console.error('Critical profile fetch error:', err);
     }
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // Timeout de segurança: se o Supabase não responder em 5s, libera o app
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("Auth initialization timed out. Forcing app load.");
-        setLoading(false);
-      }
-    }, 5000);
-
-    const initAuth = async () => {
+    // 1. Inicialização Atômica
+    const initializeAuth = async () => {
       try {
-        // 1. Verifica sessão atual
         const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (mounted) {
+        if (!mounted) return;
+
+        if (initialSession?.user) {
           setSession(initialSession);
-          setUser(initialSession?.user ?? null);
-          
-          if (initialSession?.user) {
-            // Inicia busca do perfil em background
-            fetchProfile(initialSession.user.id);
-          }
+          setUser(initialSession.user);
+          // Busca o perfil, mas não bloqueia o estado 'auth' crítico se não for estritamente necessário
+          // Aqui optamos por esperar para evitar "glitch" visual de avatar vazio
+          await fetchProfile(initialSession.user.id);
         }
-      } catch (e) {
-        console.error("Auth initialization error:", e);
+      } catch (error) {
+        console.error("Auth init failed:", error);
       } finally {
-        // CRÍTICO: Sempre remover loading, independente de sucesso ou erro
-        if (mounted) {
-          setLoading(false);
-          clearTimeout(safetyTimeout);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
-    initAuth();
+    initializeAuth();
 
-    // 2. Escuta mudanças de auth em tempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    // 2. Listener de Mudanças (Login/Logout em outras abas ou pós-ação)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
-      
+
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
@@ -93,13 +83,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setProfile(null);
       }
       
-      // Garante que loading seja falso após qualquer mudança de estado
+      // Garante que o loading saia da frente
       setLoading(false);
     });
 
     return () => {
       mounted = false;
-      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -110,15 +99,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfile(null);
       setUser(null);
       setSession(null);
+      // Força limpeza de dados locais se necessário
+      localStorage.clear(); 
     } catch (error) {
       console.error("Error signing out:", error);
     }
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
+    if (user) await fetchProfile(user.id);
   };
 
   return (
