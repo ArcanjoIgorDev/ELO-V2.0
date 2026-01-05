@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,13 +11,13 @@ export const NotificationsPage = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Busca inicial
   const fetchNotifications = async () => {
     if (!user) return;
     
     try {
-      // Importante: actor:profiles!actor_id garante que o Supabase entenda qual FK usar
       const { data, error } = await supabase
         .from('notifications')
         .select(`
@@ -36,7 +37,6 @@ export const NotificationsPage = () => {
       if (data) {
         setNotifications(data);
         
-        // Marca como lidas silenciosamente após carregar
         const unreadIds = data.filter((n: any) => !n.is_read).map((n: any) => n.id);
         if (unreadIds.length > 0) {
           await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
@@ -54,7 +54,6 @@ export const NotificationsPage = () => {
 
     fetchNotifications();
 
-    // ⚡ REALTIME SUBSCRIPTION
     const channel = supabase
       .channel('realtime_notifications')
       .on(
@@ -66,8 +65,6 @@ export const NotificationsPage = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          // Quando chega uma nova notificação, precisamos buscar os dados do perfil (actor)
-          // pois o payload do realtime só traz os IDs, não o join.
           const { data: actorData } = await supabase
             .from('profiles')
             .select('username, avatar_url, full_name')
@@ -81,8 +78,6 @@ export const NotificationsPage = () => {
             };
             
             setNotifications((prev) => [newNotification, ...prev]);
-            
-            // Marca como lida imediatamente já que o usuário está vendo a tela
             supabase.from('notifications').update({ is_read: true }).eq('id', payload.new.id);
           }
         }
@@ -95,24 +90,23 @@ export const NotificationsPage = () => {
   }, [user]);
 
   const handleConnection = async (notification: any, action: 'accepted' | 'declined') => {
-    // 1. Atualizar conexão
-    const { error } = await supabase
-      .from('connections')
-      .update({ 
-        status: action,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', notification.reference_id);
+    if (processingId) return;
+    setProcessingId(notification.id);
 
-    if (!error) {
-      // 2. Atualizar UI da notificação localmente para remover os botões
-      setNotifications(prev => prev.map(n => 
-        n.id === notification.id 
-          ? { ...n, type: action === 'accepted' ? 'request_accepted' : 'request_declined' } 
-          : n
-      ));
-      
-      // 3. Se aceitou, cria notificação para a outra pessoa
+    try {
+      // 1. Validação Backend: Atualizar a tabela connections
+      // O RLS deve permitir update se o user for receiver_id
+      const { error: updateError } = await supabase
+        .from('connections')
+        .update({ 
+          status: action,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', notification.reference_id); // reference_id DEVE ser o ID da connection
+
+      if (updateError) throw updateError;
+
+      // 2. Se aceitou, cria notificação recíproca
       if (action === 'accepted') {
         await supabase.from('notifications').insert({
           user_id: notification.actor_id,
@@ -121,6 +115,16 @@ export const NotificationsPage = () => {
           reference_id: notification.reference_id
         });
       }
+
+      // 3. Atualizar UI: Remove a notificação da lista ou altera visualmente
+      // Para UX mais limpa, removemos o pedido da lista de notificações ativas
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+
+    } catch (error) {
+      console.error("Falha ao processar pedido:", error);
+      alert("Não foi possível processar o pedido. Tente novamente.");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -129,7 +133,7 @@ export const NotificationsPage = () => {
       case 'like_post': return <Heart className="text-rose-500 fill-rose-500" size={14} />;
       case 'like_comment': return <Heart className="text-rose-500" size={14} />;
       case 'comment': return <MessageCircle className="text-ocean fill-ocean" size={14} />;
-      case 'request_received': return <UserPlus className="text-emerald-500" size={14} />;
+      case 'request_received': return <UserPlus className="text-ocean" size={14} />;
       case 'request_accepted': return <Check className="text-emerald-500" size={14} />;
       case 'request_declined': return <X className="text-red-500" size={14} />;
       default: return <div className="w-2 h-2 bg-ocean rounded-full" />;
@@ -137,69 +141,75 @@ export const NotificationsPage = () => {
   };
 
   const NotificationContent = ({ n }: { n: any }) => {
-    const name = n.actor?.username || 'Usuário desconhecido';
-    const boldName = <span className="font-bold text-slate-200 hover:underline cursor-pointer">{name}</span>;
+    const name = n.actor?.username || 'Usuário';
+    const boldName = <span className="font-bold text-slate-100">{name}</span>;
     
     switch (n.type) {
-      case 'like_post': return <p className="text-sm text-slate-400 leading-snug">{boldName} curtiu sua publicação.</p>;
-      case 'like_comment': return <p className="text-sm text-slate-400 leading-snug">{boldName} curtiu seu comentário.</p>;
-      case 'comment': return <p className="text-sm text-slate-400 leading-snug">{boldName} comentou em sua publicação.</p>;
-      case 'request_received': return <p className="text-sm text-slate-400 leading-snug">{boldName} deseja conectar-se com você.</p>;
-      case 'request_accepted': return <p className="text-sm text-slate-400 leading-snug">{boldName} agora é sua conexão.</p>;
-      case 'request_declined': return <p className="text-sm text-slate-400 leading-snug">Você recusou o pedido de {boldName}.</p>;
-      default: return <p className="text-sm text-slate-400 leading-snug">Nova interação de {boldName}.</p>;
+      case 'like_post': return <p className="text-[15px] text-slate-400">{boldName} curtiu seu post.</p>;
+      case 'like_comment': return <p className="text-[15px] text-slate-400">{boldName} curtiu seu comentário.</p>;
+      case 'comment': return <p className="text-[15px] text-slate-400">{boldName} comentou: "..."</p>;
+      case 'request_received': return <p className="text-[15px] text-slate-400">{boldName} enviou um pedido de amizade.</p>;
+      case 'request_accepted': return <p className="text-[15px] text-slate-400">{boldName} aceitou seu pedido.</p>;
+      default: return <p className="text-[15px] text-slate-400">Nova interação de {boldName}.</p>;
     }
   };
 
   return (
     <div className="min-h-full pb-20 bg-midnight-950">
-      <div className="px-5 py-4 sticky top-0 bg-midnight-950/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center gap-3">
-        <Bell size={20} className="text-white" />
-        <h1 className="text-lg font-bold text-white tracking-tight">Atividade</h1>
+      <div className="px-5 py-4 sticky top-0 bg-midnight-950/95 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-white tracking-tight">Atividade</h1>
+        {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
       </div>
 
       <div className="divide-y divide-white/5">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
-             <Loader2 className="animate-spin text-ocean" size={32} />
-             <p className="text-xs text-slate-500 font-medium">Sincronizando...</p>
-          </div>
+        {loading && notifications.length === 0 ? (
+           // Skeleton
+           [1,2,3].map(i => (
+             <div key={i} className="p-4 flex gap-4 animate-pulse">
+               <div className="w-10 h-10 rounded-full bg-white/5" />
+               <div className="flex-1 space-y-2">
+                 <div className="w-1/2 h-3 bg-white/5 rounded" />
+                 <div className="w-1/3 h-2 bg-white/5 rounded" />
+               </div>
+             </div>
+           ))
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-8 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-               <Bell size={24} className="text-slate-600" />
+          <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
+            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
+               <Bell size={24} />
             </div>
-            <p className="text-slate-400 font-medium">Tudo tranquilo por aqui.</p>
-            <p className="text-slate-600 text-xs mt-2 max-w-[200px]">Interaja com a comunidade para receber notificações.</p>
+            <p className="text-slate-400 font-medium">Nenhuma notificação recente.</p>
           </div>
         ) : (
           notifications.map(n => (
-            <div key={n.id} className={`p-4 flex gap-4 transition-colors ${!n.is_read ? 'bg-ocean-900/10' : 'hover:bg-white/[0.02]'}`}>
-              <div className="relative shrink-0">
+            <div key={n.id} className={`p-4 flex gap-4 transition-colors ${!n.is_read ? 'bg-ocean-950/20' : ''}`}>
+              <div className="relative shrink-0 pt-1">
                 <Avatar url={n.actor?.avatar_url} alt={n.actor?.username || '?'} size="md" />
-                <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-1 border border-white/10 shadow-sm">
+                <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-1 border border-white/10 ring-2 ring-midnight-950">
                    <NotificationIcon type={n.type} />
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 <NotificationContent n={n} />
-                <span className="text-[11px] text-slate-600 mt-1 block font-medium">
+                <span className="text-xs text-slate-500 mt-1 block">
                   {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                 </span>
                 
                 {n.type === 'request_received' && (
-                  <div className="flex gap-3 mt-3 animate-fade-in">
+                  <div className="flex gap-3 mt-3">
                     <button 
                       onClick={() => handleConnection(n, 'accepted')}
-                      className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-xs font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-ocean/20"
+                      disabled={processingId === n.id}
+                      className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50"
                     >
-                      Aceitar
+                      {processingId === n.id ? 'Aceitando...' : 'Confirmar'}
                     </button>
                     <button 
                       onClick={() => handleConnection(n, 'declined')}
-                      className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold py-2 px-4 rounded-lg transition-colors border border-white/5"
+                      disabled={processingId === n.id}
+                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50"
                     >
-                      Recusar
+                      Excluir
                     </button>
                   </div>
                 )}

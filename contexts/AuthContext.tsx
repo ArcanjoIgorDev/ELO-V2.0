@@ -25,7 +25,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função isolada para buscar perfil
+  // Função segura para limpar tudo
+  const clearAuthState = () => {
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    localStorage.removeItem('sb-cyxsdewmlqeypdmfdiho-auth-token'); // Limpa token específico do Supabase se existir
+    localStorage.clear(); // Limpa estado residual
+  };
+
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -34,34 +42,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .eq('id', userId)
         .single();
       
-      if (!error && data) {
-        setProfile(data);
-      } else {
-        console.warn('Profile fetch warning:', error?.message);
+      if (error) {
+        console.warn('Profile fetch warning:', error.message);
+        return null;
       }
+      return data;
     } catch (err) {
       console.error('Critical profile fetch error:', err);
+      return null;
     }
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // 1. Inicialização Atômica
     const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // 1. Tenta recuperar sessão
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (sessionError) throw sessionError;
 
         if (initialSession?.user) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          // Busca o perfil inicial
-          await fetchProfile(initialSession.user.id);
+          // 2. Validação: Se temos sessão, PRECISAMOS do perfil.
+          const userProfile = await fetchProfile(initialSession.user.id);
+          
+          if (!userProfile) {
+            // Se falhar em pegar o perfil, o estado do usuário é inválido. Logout forçado.
+            throw new Error("Sessão válida mas perfil não encontrado.");
+          }
+
+          if (mounted) {
+            setSession(initialSession);
+            setUser(initialSession.user);
+            setProfile(userProfile);
+          }
+        } else {
+          // Sem sessão, garante limpeza
+          if (mounted) clearAuthState();
         }
       } catch (error) {
-        console.error("Auth init failed:", error);
+        console.error("Auth initialization failed - Auto-recovering:", error);
+        // RECUPERAÇÃO AUTOMÁTICA DE FALHA:
+        await supabase.auth.signOut();
+        if (mounted) clearAuthState();
       } finally {
         if (mounted) setLoading(false);
       }
@@ -69,20 +93,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     initializeAuth();
 
-    // 2. Listener de Mudanças
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      
-      if (newSession?.user) {
-        await fetchProfile(newSession.user.id);
-      } else {
-        setProfile(null);
+      if (event === 'SIGNED_OUT' || !newSession) {
+        clearAuthState();
+        setLoading(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+        setUser(newSession.user);
+        
+        // Busca perfil novamente para garantir dados frescos
+        const userProfile = await fetchProfile(newSession.user.id);
+        setProfile(userProfile);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => {
@@ -94,17 +119,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      setProfile(null);
-      setUser(null);
-      setSession(null);
-      localStorage.clear(); 
     } catch (error) {
       console.error("Error signing out:", error);
+    } finally {
+      clearAuthState();
     }
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) {
+      const data = await fetchProfile(user.id);
+      if (data) setProfile(data);
+    }
   };
 
   return (

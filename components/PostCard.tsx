@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { PostWithAuthor, CommentWithAuthor } from '../types';
 import { Avatar } from './ui/Avatar';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, Repeat2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,19 +14,14 @@ interface PostCardProps {
 }
 
 export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
-  // Safety check: Se o post ou autor vierem quebrados do backend
-  if (!post || !post.author) {
-    return null; // Ou um placeholder, mas melhor esconder dados corrompidos
-  }
+  if (!post || !post.author) return null;
 
-  // Estados de Likes
   const [hasLiked, setHasLiked] = useState(post.user_has_liked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [isLiking, setIsLiking] = useState(false);
-
-  // Estados de Comentários
+  
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentWithAuthor[]>([]);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
@@ -33,14 +29,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
 
-  // Estados de Menu e Ações
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
 
   const isAuthor = user?.id === post.user_id;
 
-  // --- LÓGICA DE LIKE ---
   const handleLike = async () => {
     if (!user || isLiking) return;
     setIsLiking(true);
@@ -73,7 +66,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     }
   };
 
-  // --- LÓGICA DE COMENTÁRIOS ---
   const fetchComments = async () => {
     if (!user) return;
     const { data } = await supabase
@@ -148,10 +140,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     }
   };
 
-  // --- AÇÕES DO POST ---
   const handleDeletePost = async () => {
     if (!window.confirm('Excluir esta publicação permanentemente?')) return;
-    
     setIsDeleting(true);
     try {
       const { error } = await supabase.from('posts').delete().eq('id', post.id);
@@ -163,56 +153,32 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     }
   };
 
-  const handleShare = async () => {
-    setIsSharing(true);
-    const shareUrl = window.location.href; // Idealmente seria /post/:id
-    const shareData = {
-      title: 'ELO',
-      text: `Post de @${post.author.username} no ELO`,
-      url: shareUrl
-    };
-
-    try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-        alert('Link copiado!');
-      }
-    } catch (err) {
-      console.log('Share falhou:', err);
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
   return (
-    <article className="bg-midnight-900/40 backdrop-blur-md border border-white/5 mb-4 rounded-3xl p-5 transition-colors duration-300 hover:bg-midnight-900/60 hover:border-white/10 relative group">
-      <div className="flex space-x-3.5">
-        <div className="flex-shrink-0 pt-1">
+    <article className="border-b border-white/5 bg-midnight-950 py-4 px-4 hover:bg-white/[0.01] transition-colors">
+      <div className="flex space-x-3">
+        {/* Avatar Col */}
+        <div className="flex-shrink-0">
           <Avatar url={post.author.avatar_url} alt={post.author.username} size="md" />
         </div>
         
+        {/* Content Col */}
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-slate-100 text-[15px] truncate cursor-pointer hover:underline decoration-white/30">
-                {post.author.full_name || post.author.username}
+            <div className="flex items-center gap-1.5 overflow-hidden">
+              <span className="font-bold text-slate-100 text-[15px] truncate hover:underline cursor-pointer">
+                {post.author.username}
               </span>
-              <div className="flex items-center text-slate-500 text-xs mt-0.5 gap-1 font-medium">
-                <span>@{post.author.username}</span>
-                <span className="text-slate-700">•</span>
-                <time dateTime={post.created_at} className="hover:text-slate-400">
-                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
-                </time>
-              </div>
+              <span className="text-slate-500 text-sm">·</span>
+              <time className="text-slate-500 text-sm hover:text-slate-400 whitespace-nowrap">
+                {formatDistanceToNow(new Date(post.created_at), { addSuffix: false, locale: ptBR }).replace('aproximadamente ', '').replace(' horas', 'h').replace(' minutos', 'm')}
+              </time>
             </div>
             
             <div className="relative">
               <button 
                 onClick={() => setShowMenu(!showMenu)}
-                className="text-slate-500 hover:text-white transition-colors p-2 -mr-2 rounded-full hover:bg-white/5 active:bg-white/10"
+                className="text-slate-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
               >
                 <MoreHorizontal size={18} />
               </button>
@@ -220,18 +186,17 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
               {showMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
-                  <div className="absolute right-0 mt-2 w-48 bg-midnight-950 border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden py-1 animate-fade-in ring-1 ring-white/5">
+                  <div className="absolute right-0 mt-1 w-40 bg-midnight-900 border border-white/10 rounded-lg shadow-xl z-20 py-1">
                     {isAuthor && (
                       <button 
                         onClick={handleDeletePost}
-                        disabled={isDeleting}
-                        className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 flex items-center gap-2"
                       >
-                        {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                        {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                         Excluir
                       </button>
                     )}
-                    <button className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-white/5">
+                    <button className="w-full text-left px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5">
                       Copiar link
                     </button>
                   </div>
@@ -240,85 +205,83 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
             </div>
           </div>
 
-          {/* Conteúdo */}
-          <div className="mt-3 text-[15px] leading-relaxed text-slate-200 break-words whitespace-pre-wrap font-normal">
+          {/* Body */}
+          <div className="mt-1 text-[15px] text-slate-200 leading-normal whitespace-pre-wrap font-normal break-words">
             {post.content}
           </div>
 
-          {/* Ações */}
-          <div className="mt-4 flex items-center justify-between max-w-[280px]">
+          {/* Action Bar - Clean & Spaced */}
+          <div className="mt-3 flex items-center justify-between max-w-[320px] text-slate-500">
             <button 
               onClick={handleLike}
-              className={`group flex items-center gap-2 p-2 -ml-2 rounded-full transition-all duration-200 ${hasLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-500 hover:bg-rose-500/10'}`}
+              className={`group flex items-center gap-1.5 transition-colors ${hasLiked ? 'text-rose-500' : 'hover:text-rose-500'}`}
             >
-              <Heart 
-                size={20} 
-                className={`transition-transform duration-300 ${hasLiked ? 'fill-current scale-110' : 'group-active:scale-90'}`} 
-              />
-              <span className="text-sm font-medium tabular-nums min-w-[1ch]">
-                {likesCount > 0 ? likesCount : ''}
-              </span>
+              <div className={`p-2 rounded-full transition-colors ${hasLiked ? '' : 'group-hover:bg-rose-500/10'}`}>
+                <Heart size={18} className={hasLiked ? 'fill-current' : ''} />
+              </div>
+              <span className="text-xs font-medium tabular-nums">{likesCount || ''}</span>
             </button>
 
             <button 
               onClick={toggleComments}
-              className={`group flex items-center gap-2 p-2 rounded-full transition-all duration-200 ${showComments ? 'text-ocean' : 'text-slate-500 hover:text-ocean hover:bg-ocean/10'}`}
+              className={`group flex items-center gap-1.5 transition-colors ${showComments ? 'text-ocean' : 'hover:text-ocean'}`}
             >
-              <MessageCircle size={20} className="transition-transform group-active:scale-90" />
-              <span className="text-sm font-medium tabular-nums min-w-[1ch]">
-                {commentsCount > 0 ? commentsCount : ''}
-              </span>
+               <div className={`p-2 rounded-full transition-colors ${showComments ? '' : 'group-hover:bg-ocean/10'}`}>
+                <MessageCircle size={18} />
+              </div>
+              <span className="text-xs font-medium tabular-nums">{commentsCount || ''}</span>
             </button>
 
-            <button 
-              onClick={handleShare}
-              disabled={isSharing}
-              className="group flex items-center gap-2 p-2 rounded-full text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all duration-200 disabled:opacity-50"
-            >
-              <Share2 size={20} className={`transition-transform group-active:scale-90 ${isSharing ? 'animate-pulse' : ''}`} />
+            <button className="group flex items-center gap-1.5 hover:text-emerald-500 transition-colors">
+               <div className="p-2 rounded-full group-hover:bg-emerald-500/10 transition-colors">
+                <Repeat2 size={18} />
+               </div>
+            </button>
+
+            <button className="group flex items-center gap-1.5 hover:text-sky-400 transition-colors">
+               <div className="p-2 rounded-full group-hover:bg-sky-400/10 transition-colors">
+                <Share2 size={18} />
+               </div>
             </button>
           </div>
 
-          {/* Comentários */}
+          {/* Comments Section */}
           {showComments && (
-            <div className="mt-4 pt-4 border-t border-white/5 animate-fade-in">
-              <div className="space-y-4 mb-4 max-h-80 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10">
-                {comments.length === 0 && commentsLoaded ? (
-                  <p className="text-xs text-slate-600 text-center py-4">Seja o primeiro a comentar.</p>
-                ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 group/comment">
+            <div className="mt-3 pt-3 border-t border-white/5 animate-fade-in">
+              <div className="space-y-4 mb-4">
+                {comments.map((comment) => (
+                    <div key={comment.id} className="flex gap-3">
                        <Avatar url={comment.author?.avatar_url} alt={comment.author?.username || '?'} size="sm" />
                        <div className="flex-1">
-                         <div className="bg-white/5 rounded-2xl rounded-tl-none p-3">
-                            <span className="text-xs font-bold text-slate-300 mb-0.5 block">{comment.author?.username}</span>
-                            <p className="text-sm text-slate-200 leading-snug">{comment.content}</p>
-                         </div>
-                         <div className="flex items-center gap-4 mt-1 ml-2">
-                           <span className="text-[10px] text-slate-600">
-                             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: ptBR })}
-                           </span>
-                         </div>
+                          <div className="flex items-baseline gap-2">
+                             <span className="text-xs font-bold text-slate-100">{comment.author?.username}</span>
+                             <span className="text-[10px] text-slate-500">
+                               {formatDistanceToNow(new Date(comment.created_at), { locale: ptBR })}
+                             </span>
+                          </div>
+                          <p className="text-sm text-slate-300 mt-0.5">{comment.content}</p>
                        </div>
                     </div>
-                  ))
-                )}
+                ))}
               </div>
 
-              <form onSubmit={handleSendComment} className="flex items-center gap-2 relative">
-                <input
-                  type="text"
-                  placeholder="Escreva sua resposta..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  className="flex-1 bg-midnight-950 border border-white/10 rounded-full py-3 pl-4 pr-12 text-sm text-white focus:outline-none focus:border-ocean/50 transition-colors placeholder:text-slate-600"
-                />
+              <form onSubmit={handleSendComment} className="flex gap-2">
+                <Avatar url={user?.user_metadata?.avatar_url || profile?.avatar_url} alt="Eu" size="sm" />
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    placeholder="Publique sua resposta"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="w-full bg-transparent border-none focus:ring-0 text-white placeholder:text-slate-600 p-0 py-1 text-sm h-full"
+                  />
+                </div>
                 <button 
                   type="submit" 
                   disabled={!newComment.trim() || isCommenting}
-                  className="absolute right-1.5 p-2 bg-ocean text-white rounded-full disabled:opacity-50 disabled:bg-slate-700 transition-all hover:bg-ocean-600 active:scale-90"
+                  className="text-ocean disabled:opacity-50 font-bold text-sm"
                 >
-                  {isCommenting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  Responder
                 </button>
               </form>
             </div>
