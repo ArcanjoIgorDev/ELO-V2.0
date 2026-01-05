@@ -24,7 +24,7 @@ export const ProfilePage = () => {
   
   // Estados de Ação
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'declined' | 'blocked'>('none');
-  const [isMyRequest, setIsMyRequest] = useState(false); // Para saber se FUI EU que enviei o pendente
+  const [isMyRequest, setIsMyRequest] = useState(false);
   const [processingConnect, setProcessingConnect] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +52,7 @@ export const ProfilePage = () => {
 
           const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
           if (error || !data) {
+             console.error(error);
              alert("Usuário não encontrado.");
              navigate('/feed');
              return;
@@ -77,14 +78,14 @@ export const ProfilePage = () => {
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Erro carregando perfil:", err);
       } finally {
         setLoadingProfile(false);
       }
     };
 
     loadProfileData();
-  }, [userId, isOwnProfile, myProfile, user]); // Recarrega se a URL ou usuário mudar
+  }, [userId, isOwnProfile, myProfile, user]); 
 
   const loadStats = async (targetId: string) => {
     const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', targetId);
@@ -142,15 +143,7 @@ export const ProfilePage = () => {
          // Se já for amigo ou bloqueado, para.
          if (existingConn.status === 'accepted') return;
          if (existingConn.status === 'blocked') { alert('Não permitido'); return; }
-         
-         // Se pendente:
-         if (existingConn.status === 'pending') {
-             // Se fui eu que pedi, não faço nada (já está enviado)
-             if (existingConn.requester_id === user.id) return;
-             // Se foi ele que pediu, deveria aceitar (mas este botão é de "Conectar", então tratamos como "Aceitar" ou deixamos ir para notificações?)
-             // Para simplificar, vamos deletar e criar novo pedido (Hard Reset) ou aceitar.
-             // Vamos deletar para garantir consistência do botão "Conectar".
-         }
+         if (existingConn.status === 'pending' && existingConn.requester_id === user.id) return;
 
          // HARD DELETE para limpar qualquer estado 'declined' ou confuso
          await supabase.from('connections').delete().eq('id', existingConn.id);
@@ -170,6 +163,7 @@ export const ProfilePage = () => {
       if (insertError) throw insertError;
 
       if (newConn) {
+          // Tenta criar notificação, ignora erro se RLS bloquear
           await supabase.from('notifications').insert({
             user_id: displayProfile.id,
             actor_id: user.id,
@@ -183,7 +177,7 @@ export const ProfilePage = () => {
 
     } catch (err: any) {
       console.error(err);
-      alert("Erro ao conectar. Tente novamente.");
+      alert("Erro ao conectar: " + err.message);
     } finally {
       setProcessingConnect(false);
     }

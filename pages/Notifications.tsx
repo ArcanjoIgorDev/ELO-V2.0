@@ -15,14 +15,14 @@ export const NotificationsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Busca inicial
-  const fetchNotifications = async () => {
+  // Busca Híbrida Blindada
+  const fetchData = async () => {
     if (!user) return;
     setError(null);
     
     try {
-      // IMPORTANTE: Esta query depende do SQL de correção ter sido rodado.
-      const { data, error: fetchError } = await supabase
+      // 1. Busca Notificações Normais
+      const { data: notifsData, error: notifsError } = await supabase
         .from('notifications')
         .select(`
           *,
@@ -34,78 +34,86 @@ export const NotificationsPage = () => {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(30);
       
-      if (fetchError) throw fetchError;
+      if (notifsError) throw notifsError;
 
-      if (data) {
-        // FILTRO DE SEGURANÇA: Remove notificações onde 'actor' é null (usuário deletado)
-        const validNotifications = data.filter((n: any) => !!n.actor);
-        setNotifications(validNotifications);
-        
-        // Limpa notificações fantasmas do banco silenciosamente
-        const ghostIds = data.filter((n: any) => !n.actor).map((n: any) => n.id);
-        if (ghostIds.length > 0) {
-           await supabase.from('notifications').delete().in('id', ghostIds);
+      // 2. Busca Solicitações de Amizade Pendentes (Direto da fonte)
+      // Isso resolve o problema de "não chegou notificação"
+      const { data: pendingRequests, error: pendingError } = await supabase
+        .from('connections')
+        .select(`
+          id,
+          created_at,
+          requester:profiles!requester_id (
+             id, username, avatar_url, full_name
+          )
+        `)
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending');
+
+      if (pendingError) throw pendingError;
+
+      // 3. Mesclagem Inteligente (Merge & Dedupe)
+      let combined = [...(notifsData || [])];
+      
+      // Para cada pedido pendente, verifica se JÁ EXISTE uma notificação visual para ele
+      pendingRequests?.forEach((req: any) => {
+        const alreadyHasNotification = combined.some(
+          n => n.type === 'request_received' && n.reference_id === req.id
+        );
+
+        if (!alreadyHasNotification) {
+          // Cria uma "Notificação Sintética" localmente
+          combined.unshift({
+            id: `synth-${req.id}`, // ID temporário
+            type: 'request_received',
+            user_id: user.id,
+            actor_id: req.requester.id,
+            actor: req.requester,
+            reference_id: req.id,
+            is_read: false,
+            created_at: req.created_at
+          });
         }
-        
-        // Marca como lidas
-        const unreadIds = validNotifications.filter((n: any) => !n.is_read).map((n: any) => n.id);
-        if (unreadIds.length > 0) {
-          await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
-        }
+      });
+
+      // Ordena tudo por data
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Filtra notificações quebradas (sem ator)
+      const cleanList = combined.filter(n => !!n.actor);
+      
+      setNotifications(cleanList);
+
+      // Marca notificações reais como lidas (silenciosamente)
+      const realUnreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
+      if (realUnreadIds.length > 0) {
+        supabase.from('notifications').update({ is_read: true }).in('id', realUnreadIds).then(() => {});
       }
+
     } catch (err: any) {
-      console.error("Erro ao buscar notificações:", err);
-      if (err.message?.includes("relationship") || err.message?.includes("fkey")) {
-        setError("Erro crítico: Banco de dados desatualizado. Rode o SQL de correção.");
-      } else {
-        setError("Não foi possível carregar as notificações.");
-      }
+      console.error("Erro ao carregar atividades:", err);
+      setError("Não foi possível atualizar algumas atividades.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchNotifications();
+    fetchData();
     
     if (!user) return;
 
+    // Realtime para notificações novas
     const channel = supabase
-      .channel('realtime_notifications_page')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          // Busca os dados do ator
-          const { data: actorData } = await supabase
-            .from('profiles')
-            .select('username, avatar_url, full_name')
-            .eq('id', payload.new.actor_id)
-            .single();
-
-          if (actorData) {
-            const newNotification = {
-              ...payload.new,
-              actor: actorData
-            };
-            
-            setNotifications((prev) => [newNotification, ...prev]);
-            supabase.from('notifications').update({ is_read: true }).eq('id', payload.new.id);
-          }
-        }
+      .channel('realtime_notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
+        () => fetchData() // Recarrega tudo para garantir consistência
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const handleConnection = async (notification: any, action: 'accepted' | 'declined') => {
@@ -113,27 +121,9 @@ export const NotificationsPage = () => {
     setProcessingId(notification.id);
 
     try {
-      let connectionId = notification.reference_id;
+      const connectionId = notification.reference_id;
 
-      // Self-Healing: Tenta achar conexão se o ID estiver faltando
-      if (!connectionId) {
-        const { data: fallbackConnection } = await supabase
-          .from('connections')
-          .select('id')
-          .eq('requester_id', notification.actor_id)
-          .eq('receiver_id', user?.id)
-          .eq('status', 'pending')
-          .single();
-
-        if (fallbackConnection) {
-          connectionId = fallbackConnection.id;
-        } else {
-          setNotifications(prev => prev.filter(n => n.id !== notification.id));
-          await supabase.from('notifications').delete().eq('id', notification.id);
-          return; 
-        }
-      }
-
+      // Atualiza o status da conexão
       const { error: updateError } = await supabase
         .from('connections')
         .update({ 
@@ -144,25 +134,29 @@ export const NotificationsPage = () => {
 
       if (updateError) throw updateError;
 
+      // Se aceitou, cria notificação para o outro usuário
       if (action === 'accepted') {
         await supabase.from('notifications').insert({
-          user_id: notification.actor_id,
+          user_id: notification.actor_id, // Manda para quem pediu
           actor_id: user?.id,
           type: 'request_accepted',
           reference_id: connectionId
         });
       }
 
+      // Atualiza UI Localmente
       setNotifications(prev => prev.map(n => {
-         if (n.id === notification.id) {
-             return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };
+         if (n.reference_id === connectionId && n.type === 'request_received') {
+             return { 
+               ...n, 
+               type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' 
+             };
          }
          return n;
       }));
 
     } catch (error: any) {
-      console.error("Falha:", error);
-      alert("Erro ao processar: " + (error.message || "Tente novamente."));
+      alert("Erro ao processar solicitação. Tente novamente.");
     } finally {
       setProcessingId(null);
     }
@@ -193,13 +187,13 @@ export const NotificationsPage = () => {
       case 'request_received': return <p className="text-[15px] text-slate-200 font-medium">{boldName} quer conectar com você.</p>;
       case 'request_accepted': return <p className="text-[15px] text-emerald-400">{boldName} aceitou seu pedido!</p>;
       case 'request_accepted_by_me': return <p className="text-[15px] text-slate-500">Você aceitou {boldName}.</p>;
-      case 'request_declined_by_me': return <p className="text-[15px] text-slate-500">Você recusou {boldName}.</p>;
+      case 'request_declined_by_me': return <p className="text-[15px] text-slate-500">Solicitação recusada.</p>;
       default: return <p className="text-[15px] text-slate-400">Nova interação de {boldName}.</p>;
     }
   };
 
   return (
-    <PullToRefresh onRefresh={fetchNotifications}>
+    <PullToRefresh onRefresh={fetchData}>
       <div className="min-h-full pb-20 bg-midnight-950">
         <div className="px-5 py-4 sticky top-0 bg-midnight-950/95 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-between">
           <h1 className="text-xl font-bold text-white tracking-tight">Atividade</h1>
@@ -229,7 +223,7 @@ export const NotificationsPage = () => {
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
                  <Bell size={24} />
               </div>
-              <p className="text-slate-400 font-medium">Você está em dia.</p>
+              <p className="text-slate-400 font-medium">Tudo tranquilo por aqui.</p>
             </div>
           ) : (
             notifications.map(n => (

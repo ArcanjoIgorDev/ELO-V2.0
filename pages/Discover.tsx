@@ -40,7 +40,7 @@ export const Discover = () => {
             .from('connections')
             .select('*')
             .or(`and(requester_id.eq.${user.id},receiver_id.eq.${p.id}),and(requester_id.eq.${p.id},receiver_id.eq.${user.id})`)
-            .maybeSingle(); // Usa maybeSingle para não estourar erro se não existir
+            .maybeSingle(); 
           
           return { ...p, connection: conn };
         }));
@@ -68,18 +68,19 @@ export const Discover = () => {
       if (existingConn) {
         if (existingConn.status === 'blocked') {
           alert('Não é possível conectar com este usuário.');
-          setProcessingId(null);
           return;
         }
-        if (existingConn.status === 'accepted' || existingConn.status === 'pending') {
-          // Já existe, apenas atualiza a UI
+        if (existingConn.status === 'accepted') {
           updateLocalResult(receiverId, existingConn);
-          setProcessingId(null);
+          return;
+        }
+        if (existingConn.status === 'pending') {
+          // Se já está pendente, apenas atualiza UI
+          updateLocalResult(receiverId, existingConn);
           return;
         }
         
-        // Se for 'declined', fazemos um HARD DELETE para limpar o estado
-        // Isso evita erros de permissão ao tentar inverter requester/receiver
+        // Se for 'declined' ou estado inválido, limpa tudo para recomeçar do zero
         await supabase.from('connections').delete().eq('id', existingConn.id);
       }
 
@@ -94,26 +95,27 @@ export const Discover = () => {
         .select()
         .single();
       
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Erro insert conexão:", insertError);
+        throw new Error("Não foi possível enviar o pedido.");
+      }
 
-      // 3. Notificação (Crucial)
+      // 3. Notificação (Crucial) - Tenta enviar, mas não falha se der erro de RLS
       if (newConn) {
-         const { error: notifError } = await supabase.from('notifications').insert({
+         await supabase.from('notifications').insert({
            user_id: receiverId,
            actor_id: user.id,
            type: 'request_received',
            reference_id: newConn.id
          });
-
-         // Se falhar a notificação, não quebra o fluxo, mas loga
-         if (notifError) console.error("Erro ao notificar:", notifError);
-
+         
+         // Atualiza UI com sucesso imediato
          updateLocalResult(receiverId, newConn);
       }
 
     } catch (err: any) {
       console.error("Erro ao enviar pedido:", err);
-      alert("Falha ao conectar. Tente novamente.");
+      alert("Falha ao conectar: " + (err.message || "Erro desconhecido"));
     } finally {
       setProcessingId(null);
     }
@@ -154,8 +156,6 @@ export const Discover = () => {
         ) : results.length > 0 ? (
           results.map(profile => {
             const status = profile.connection?.status;
-            // Se está pendente e EU sou o requester -> Aguardando
-            // Se está pendente e O OUTRO é o requester -> Responder (Mas aqui mostramos pendente por simplicidade)
             const isMyRequest = profile.connection?.requester_id === user?.id;
             const isCooldown = status === 'declined' && checkCooldown(profile.connection.updated_at);
 
