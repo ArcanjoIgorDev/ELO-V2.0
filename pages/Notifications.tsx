@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from '../components/ui/Avatar';
-import { Heart, MessageCircle, UserPlus, Check, X, Bell } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Check, Bell, Loader2, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -13,31 +12,45 @@ export const NotificationsPage = () => {
   const [loading, setLoading] = useState(true);
 
   // Busca inicial
-  useEffect(() => {
+  const fetchNotifications = async () => {
     if (!user) return;
-
-    const fetchNotifications = async () => {
-      const { data } = await supabase
+    
+    try {
+      // Importante: actor:profiles!actor_id garante que o Supabase entenda qual FK usar
+      const { data, error } = await supabase
         .from('notifications')
         .select(`
           *,
-          actor:profiles(*)
+          actor:profiles!actor_id (
+            username,
+            avatar_url,
+            full_name
+          )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
       
+      if (error) throw error;
+
       if (data) {
         setNotifications(data);
         
-        // Marca como lidas silenciosamente
+        // Marca como lidas silenciosamente após carregar
         const unreadIds = data.filter((n: any) => !n.is_read).map((n: any) => n.id);
         if (unreadIds.length > 0) {
           await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
         }
       }
+    } catch (err) {
+      console.error("Erro ao buscar notificações:", err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
 
     fetchNotifications();
 
@@ -53,10 +66,11 @@ export const NotificationsPage = () => {
           filter: `user_id=eq.${user.id}`,
         },
         async (payload) => {
-          // Busca os dados do ator (quem gerou a notificação) para exibir Avatar e Nome
+          // Quando chega uma nova notificação, precisamos buscar os dados do perfil (actor)
+          // pois o payload do realtime só traz os IDs, não o join.
           const { data: actorData } = await supabase
             .from('profiles')
-            .select('*')
+            .select('username, avatar_url, full_name')
             .eq('id', payload.new.actor_id)
             .single();
 
@@ -68,7 +82,7 @@ export const NotificationsPage = () => {
             
             setNotifications((prev) => [newNotification, ...prev]);
             
-            // Marca como lida imediatamente se o usuário já estiver nesta tela
+            // Marca como lida imediatamente já que o usuário está vendo a tela
             supabase.from('notifications').update({ is_read: true }).eq('id', payload.new.id);
           }
         }
@@ -80,7 +94,7 @@ export const NotificationsPage = () => {
     };
   }, [user]);
 
-  const handleConnection = async (notification: any, action: 'accepted' | 'declined' | 'blocked') => {
+  const handleConnection = async (notification: any, action: 'accepted' | 'declined') => {
     // 1. Atualizar conexão
     const { error } = await supabase
       .from('connections')
@@ -91,10 +105,14 @@ export const NotificationsPage = () => {
       .eq('id', notification.reference_id);
 
     if (!error) {
-      // 2. Atualizar UI da notificação localmente
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      // 2. Atualizar UI da notificação localmente para remover os botões
+      setNotifications(prev => prev.map(n => 
+        n.id === notification.id 
+          ? { ...n, type: action === 'accepted' ? 'request_accepted' : 'request_declined' } 
+          : n
+      ));
       
-      // 3. Gerar notificação reversa se aceito
+      // 3. Se aceitou, cria notificação para a outra pessoa
       if (action === 'accepted') {
         await supabase.from('notifications').insert({
           user_id: notification.actor_id,
@@ -113,19 +131,22 @@ export const NotificationsPage = () => {
       case 'comment': return <MessageCircle className="text-ocean fill-ocean" size={14} />;
       case 'request_received': return <UserPlus className="text-emerald-500" size={14} />;
       case 'request_accepted': return <Check className="text-emerald-500" size={14} />;
+      case 'request_declined': return <X className="text-red-500" size={14} />;
       default: return <div className="w-2 h-2 bg-ocean rounded-full" />;
     }
   };
 
   const NotificationContent = ({ n }: { n: any }) => {
-    const boldName = <span className="font-bold text-slate-200 hover:underline cursor-pointer">{n.actor?.username || 'Alguém'}</span>;
+    const name = n.actor?.username || 'Usuário desconhecido';
+    const boldName = <span className="font-bold text-slate-200 hover:underline cursor-pointer">{name}</span>;
+    
     switch (n.type) {
       case 'like_post': return <p className="text-sm text-slate-400 leading-snug">{boldName} curtiu sua publicação.</p>;
       case 'like_comment': return <p className="text-sm text-slate-400 leading-snug">{boldName} curtiu seu comentário.</p>;
       case 'comment': return <p className="text-sm text-slate-400 leading-snug">{boldName} comentou em sua publicação.</p>;
       case 'request_received': return <p className="text-sm text-slate-400 leading-snug">{boldName} deseja conectar-se com você.</p>;
       case 'request_accepted': return <p className="text-sm text-slate-400 leading-snug">{boldName} agora é sua conexão.</p>;
-      case 'request_declined': return <p className="text-sm text-slate-400 leading-snug">{boldName} recusou o pedido.</p>;
+      case 'request_declined': return <p className="text-sm text-slate-400 leading-snug">Você recusou o pedido de {boldName}.</p>;
       default: return <p className="text-sm text-slate-400 leading-snug">Nova interação de {boldName}.</p>;
     }
   };
@@ -140,7 +161,7 @@ export const NotificationsPage = () => {
       <div className="divide-y divide-white/5">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-4">
-             <div className="w-8 h-8 border-2 border-ocean border-t-transparent rounded-full animate-spin"></div>
+             <Loader2 className="animate-spin text-ocean" size={32} />
              <p className="text-xs text-slate-500 font-medium">Sincronizando...</p>
           </div>
         ) : notifications.length === 0 ? (
@@ -167,7 +188,7 @@ export const NotificationsPage = () => {
                 </span>
                 
                 {n.type === 'request_received' && (
-                  <div className="flex gap-3 mt-3">
+                  <div className="flex gap-3 mt-3 animate-fade-in">
                     <button 
                       onClick={() => handleConnection(n, 'accepted')}
                       className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-xs font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-ocean/20"
