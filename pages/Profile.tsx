@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban } from 'lucide-react';
+import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban, X } from 'lucide-react';
 import { PostCard } from '../components/PostCard';
 import { PostWithAuthor } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ export const ProfilePage = () => {
   
   // Estados de Ação
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'declined' | 'blocked'>('none');
+  const [connectionId, setConnectionId] = useState<string | null>(null);
   const [isMyRequest, setIsMyRequest] = useState(false);
   const [processingConnect, setProcessingConnect] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -72,6 +73,7 @@ export const ProfilePage = () => {
              if (conn) {
                setConnectionStatus(conn.status);
                setIsMyRequest(conn.requester_id === user.id);
+               setConnectionId(conn.id);
              } else {
                setConnectionStatus('none');
              }
@@ -164,20 +166,52 @@ export const ProfilePage = () => {
 
       if (newConn) {
           // Tenta criar notificação, ignora erro se RLS bloquear
-          await supabase.from('notifications').insert({
-            user_id: displayProfile.id,
-            actor_id: user.id,
-            type: 'request_received',
-            reference_id: newConn.id
-          });
+          try {
+            await supabase.from('notifications').insert({
+              user_id: displayProfile.id,
+              actor_id: user.id,
+              type: 'request_received',
+              reference_id: newConn.id
+            });
+          } catch (e) { console.warn("Notificação falhou, mas pedido enviado."); }
           
           setConnectionStatus('pending');
           setIsMyRequest(true);
+          setConnectionId(newConn.id);
       }
 
     } catch (err: any) {
       console.error(err);
       alert("Erro ao conectar: " + err.message);
+    } finally {
+      setProcessingConnect(false);
+    }
+  };
+
+  const handleResponse = async (action: 'accepted' | 'declined') => {
+    if (!connectionId || processingConnect) return;
+    setProcessingConnect(true);
+    
+    try {
+      await supabase
+        .from('connections')
+        .update({ status: action, updated_at: new Date().toISOString() })
+        .eq('id', connectionId);
+      
+      setConnectionStatus(action);
+      
+      if (action === 'accepted') {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: displayProfile.id,
+            actor_id: user?.id,
+            type: 'request_accepted',
+            reference_id: connectionId
+          });
+        } catch (e) {}
+      }
+    } catch (err) {
+      alert("Erro ao responder.");
     } finally {
       setProcessingConnect(false);
     }
@@ -290,9 +324,28 @@ export const ProfilePage = () => {
                          <MessageCircle size={18} /> Mensagem
                      </button>
                   ) : connectionStatus === 'pending' ? (
-                     <button className="bg-white/5 text-slate-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-default border border-white/5">
-                         <Clock size={18} /> {isMyRequest ? 'Enviado' : 'Pendente'}
-                     </button>
+                     isMyRequest ? (
+                       <button className="bg-white/5 text-slate-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-default border border-white/5">
+                           <Clock size={18} /> Enviado
+                       </button>
+                     ) : (
+                       <div className="flex gap-2">
+                         <button 
+                           onClick={() => handleResponse('accepted')}
+                           disabled={processingConnect}
+                           className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2"
+                         >
+                            {processingConnect ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />} Aceitar
+                         </button>
+                         <button 
+                           onClick={() => handleResponse('declined')}
+                           disabled={processingConnect}
+                           className="bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-full"
+                         >
+                            <X size={18} />
+                         </button>
+                       </div>
+                     )
                   ) : connectionStatus === 'blocked' ? (
                      <button className="bg-red-500/10 text-red-400 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 cursor-not-allowed border border-red-500/20">
                          <Ban size={18} /> Bloqueado
