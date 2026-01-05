@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BottomNav } from './components/layout/BottomNav';
@@ -15,17 +15,41 @@ import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 // Componente Layout que gerencia animações e estrutura protegida
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
+  const [showRescue, setShowRescue] = useState(false);
+
+  // Timer para mostrar botão de resgate se o loading demorar muito
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (loading) {
+      timer = setTimeout(() => setShowRescue(true), 4000); // 4 segundos
+    } else {
+      setShowRescue(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   if (loading) {
     return (
-      <div className="h-[100dvh] w-screen flex items-center justify-center bg-midnight-950">
+      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950 gap-4">
         <Loader2 className="animate-spin text-ocean" size={40} />
+        
+        {showRescue && (
+          <div className="animate-fade-in flex flex-col items-center gap-2 mt-4">
+            <p className="text-slate-500 text-sm">A conexão está lenta...</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full text-white text-sm font-bold hover:bg-white/20 transition-colors"
+            >
+              <RefreshCw size={14} /> Recarregar App
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -58,7 +82,7 @@ const ProtectedLayout = () => {
 
 const RootRoute = () => {
   const { session, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return null; // Deixa o ProtectedLayout lidar com o loading UI global se necessário, ou retorna null rápido
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
 };

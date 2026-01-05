@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
@@ -16,22 +16,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Ref para evitar atualizações em componentes desmontados
+  const mounted = useRef(true);
 
-  // Limpeza segura (mantém preferências locais importantes, limpa auth)
+  // Limpeza de Estado e LocalStorage (Cookies)
   const clearAuthState = () => {
+    if (!mounted.current) return;
     setSession(null);
     setUser(null);
     setProfile(null);
-    // Remove apenas chaves de auth do Supabase, mantém 'has_seen_tutorial' etc se estiver no local
+    
+    // Limpa chaves específicas do Supabase para evitar loops de token inválido
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('sb-') || key === 'supabase.auth.token') {
         localStorage.removeItem(key);
@@ -41,113 +42,117 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
       return data;
-    } catch (err) {
-      return null;
-    }
+    } catch { return null; }
   };
 
   useEffect(() => {
-    let mounted = true;
+    mounted.current = true;
 
-    // Timeout de Segurança: Se o Supabase demorar muito (ex: rede lenta ao voltar), libera o app
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("Auth timeout reached. Forcing loading false.");
+    // Timeout de Segurança Supremo: Garante que o loading saia em 3s no máximo
+    const safetyTimer = setTimeout(() => {
+      if (mounted.current && loading) {
+        console.warn("Auth timeout forced unlock.");
         setLoading(false);
       }
-    }, 4000);
+    }, 3000);
 
     const initializeAuth = async () => {
-      // Verifica versão para reset global se necessário
+      // 1. Version Check
       const storedVersion = localStorage.getItem('elo_app_version');
       if (storedVersion !== APP_VERSION) {
-        console.log(`Atualizando versão para ${APP_VERSION}`);
         await supabase.auth.signOut();
         localStorage.clear();
         localStorage.setItem('elo_app_version', APP_VERSION);
       }
 
       try {
-        // Tenta recuperar sessão
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        // 2. Busca sessão inicial
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
-        if (sessionError) throw sessionError;
+        if (error) throw error;
 
-        if (initialSession?.user) {
-          const userProfile = await fetchProfile(initialSession.user.id);
-          
-          if (mounted) {
-            setSession(initialSession);
-            setUser(initialSession.user);
-            // Se não tiver perfil (bug raro), o app vai lidar na UI ou criar depois
-            if (userProfile) setProfile(userProfile);
-          }
+        if (initialSession?.user && mounted.current) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          // Busca perfil em paralelo para não travar tanto
+          fetchProfile(initialSession.user.id).then(p => {
+             if(mounted.current && p) setProfile(p);
+          });
         }
       } catch (error) {
-        console.error("Auth init error:", error);
-        // Em caso de erro grave, limpa para forçar login limpo
-        if (mounted) clearAuthState();
+        console.error("Auth init failed, clearing storage:", error);
+        clearAuthState();
       } finally {
-        if (mounted) setLoading(false);
-        clearTimeout(safetyTimeout);
+        if (mounted.current) setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // Listener de mudanças de Auth
+    // 3. Listener de Eventos (BLINDADO: Nunca seta loading=true aqui)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) return;
+      if (!mounted.current) return;
       
       console.log(`Auth event: ${event}`);
 
       if (event === 'SIGNED_OUT' || !newSession) {
         clearAuthState();
-        setLoading(false);
+        setLoading(false); // Garante que destrave
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession.user);
         
-        // Só busca perfil se não tiver ou se mudou o usuário
+        // Atualiza perfil se necessário
         if (!profile || profile.id !== newSession.user.id) {
-            const userProfile = await fetchProfile(newSession.user.id);
-            setProfile(userProfile);
+           const p = await fetchProfile(newSession.user.id);
+           if(mounted.current) setProfile(p);
         }
-        setLoading(false);
+        // NÃO setamos loading=true aqui para não piscar a tela
       }
     });
 
+    // 4. Visibility Listener (Silent Refresh)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && mounted.current) {
+        // Apenas verifica se a sessão ainda é válida em background
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          // Se o token expirou enquanto estava minimizado, o onAuthStateChange cuidará disso via event SIGNED_OUT
+          // Não fazemos nada aqui para não conflitar
+        } else if (data.session.user.id !== user?.id) {
+           setSession(data.session);
+           setUser(data.session.user);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
-      mounted = false;
-      clearTimeout(safetyTimeout);
+      mounted.current = false;
+      clearTimeout(safetyTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
     try {
-      setLoading(true);
+      setLoading(true); // Aqui pode ter loading pois é ação do usuário
       await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Error signing out:", error);
+    } catch (e) {
+      console.error(e);
     } finally {
       clearAuthState();
-      setLoading(false);
+      if(mounted.current) setLoading(false);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
       const data = await fetchProfile(user.id);
-      if (data) setProfile(data);
+      if (data && mounted.current) setProfile(data);
     }
   };
 
@@ -160,8 +165,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth error');
   return context;
 };
