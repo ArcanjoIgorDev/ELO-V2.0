@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
+import { APP_VERSION } from '../lib/constants';
 
 interface AuthContextType {
   session: Session | null;
@@ -30,8 +31,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setSession(null);
     setUser(null);
     setProfile(null);
-    localStorage.removeItem('sb-cyxsdewmlqeypdmfdiho-auth-token'); // Limpa token específico do Supabase se existir
-    localStorage.clear(); // Limpa estado residual
+    localStorage.clear(); 
+  };
+
+  // VERIFICAÇÃO DE VERSÃO (RESET GLOBAL)
+  const checkAppVersion = async () => {
+    const storedVersion = localStorage.getItem('elo_app_version');
+    
+    if (storedVersion !== APP_VERSION) {
+      console.warn(`Nova versão detectada (${APP_VERSION}). Executando limpeza global.`);
+      await supabase.auth.signOut();
+      localStorage.clear();
+      localStorage.setItem('elo_app_version', APP_VERSION);
+      return false; // Indica que houve reset
+    }
+    return true;
   };
 
   const fetchProfile = async (userId: string) => {
@@ -42,13 +56,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .eq('id', userId)
         .single();
       
-      if (error) {
-        console.warn('Profile fetch warning:', error.message);
-        return null;
-      }
+      if (error) return null;
       return data;
     } catch (err) {
-      console.error('Critical profile fetch error:', err);
       return null;
     }
   };
@@ -57,19 +67,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     let mounted = true;
 
     const initializeAuth = async () => {
+      // 1. Verifica versão antes de tudo
+      const versionValid = await checkAppVersion();
+      if (!versionValid) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
       try {
-        // 1. Tenta recuperar sessão
         const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) throw sessionError;
 
         if (initialSession?.user) {
-          // 2. Validação: Se temos sessão, PRECISAMOS do perfil.
           const userProfile = await fetchProfile(initialSession.user.id);
           
           if (!userProfile) {
-            // Se falhar em pegar o perfil, o estado do usuário é inválido. Logout forçado.
-            throw new Error("Sessão válida mas perfil não encontrado.");
+            // Perfil não encontrado (possível inconsistência), logout forçado
+            await supabase.auth.signOut();
+            throw new Error("Sessão sem perfil correspondente.");
           }
 
           if (mounted) {
@@ -78,12 +94,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setProfile(userProfile);
           }
         } else {
-          // Sem sessão, garante limpeza
           if (mounted) clearAuthState();
         }
       } catch (error) {
-        console.error("Auth initialization failed - Auto-recovering:", error);
-        // RECUPERAÇÃO AUTOMÁTICA DE FALHA:
+        console.error("Auth recovery:", error);
         await supabase.auth.signOut();
         if (mounted) clearAuthState();
       } finally {
@@ -102,8 +116,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setSession(newSession);
         setUser(newSession.user);
-        
-        // Busca perfil novamente para garantir dados frescos
         const userProfile = await fetchProfile(newSession.user.id);
         setProfile(userProfile);
         setLoading(false);

@@ -1,64 +1,89 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { LogOut, Grid, Users, Trash2, AlertTriangle } from 'lucide-react';
+import { LogOut, Grid, Users, Trash2, AlertTriangle, Activity } from 'lucide-react';
+import { PostCard } from '../components/PostCard';
+import { PostWithAuthor } from '../types';
 
 export const ProfilePage = () => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, user } = useAuth();
   const [stats, setStats] = useState({ posts: 0, connections: 0 });
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'posts' | 'info'>('posts');
+  const [myPosts, setMyPosts] = useState<PostWithAuthor[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
-      const loadStats = async () => {
-        setLoading(true);
-        const postsReq = await supabase
-          .from('posts')
-          .select('id', { count: 'exact' })
-          .eq('user_id', profile.id);
-        
-        const connectionsReq = await supabase
-          .from('connections')
-          .select('id', { count: 'exact' })
-          .or(`requester_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
-          .eq('status', 'accepted');
-
-        setStats({
-          posts: postsReq.count || 0,
-          connections: connectionsReq.count || 0
-        });
-        setLoading(false);
-      };
       loadStats();
+      if (activeTab === 'posts') {
+        loadMyPosts();
+      }
     }
-  }, [profile]);
+  }, [profile, activeTab]);
+
+  const loadStats = async () => {
+    if (!profile) return;
+    setLoading(true);
+    const postsReq = await supabase.from('posts').select('id', { count: 'exact' }).eq('user_id', profile.id);
+    const connectionsReq = await supabase
+      .from('connections')
+      .select('id', { count: 'exact' })
+      .or(`requester_id.eq.${profile.id},receiver_id.eq.${profile.id}`)
+      .eq('status', 'accepted');
+
+    setStats({
+      posts: postsReq.count || 0,
+      connections: connectionsReq.count || 0
+    });
+    setLoading(false);
+  };
+
+  const loadMyPosts = async () => {
+    if (!profile) return;
+    setLoadingPosts(true);
+    const { data } = await supabase
+      .from('posts')
+      .select(`
+        *,
+        author:profiles(*),
+        likes(user_id),
+        comments(count)
+      `)
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false });
+
+    if (data) {
+      const formatted: PostWithAuthor[] = data.map((post: any) => ({
+        ...post,
+        likes_count: post.likes ? post.likes.length : 0,
+        comments_count: post.comments ? post.comments[0].count : 0,
+        user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
+      }));
+      setMyPosts(formatted);
+    }
+    setLoadingPosts(false);
+  };
+
+  const handlePostDeleted = (postId: string) => {
+    setMyPosts(prev => prev.filter(p => p.id !== postId));
+    setStats(prev => ({ ...prev, posts: prev.posts - 1 }));
+  };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm("ATENÇÃO: Isso excluirá PERMANENTEMENTE sua conta, posts, conexões e mensagens.\n\nEsta ação é irreversível. Deseja continuar?");
-    
+    const confirmed = window.confirm("ATENÇÃO: Isso excluirá PERMANENTEMENTE sua conta.\n\nDeseja continuar?");
     if (confirmed) {
       setIsDeleting(true);
       try {
-        // Tenta chamar a função segura do banco
-        const { error } = await supabase.rpc('delete_own_profile');
-        
+        const { error } = await supabase.from('profiles').delete().eq('id', profile?.id);
         if (error) throw error;
-        
-        // Se sucesso, desloga
         await signOut();
-      } catch (err: any) {
-        console.error("Delete Error:", err);
-        // Fallback: se RPC falhar, tentar deletar diretamente a tabela profiles (se RLS permitir)
-        const { error: deleteError } = await supabase.from('profiles').delete().eq('id', profile?.id);
-        
-        if (deleteError) {
-           alert("Erro ao excluir conta. Contate o suporte ou tente novamente mais tarde.");
-           setIsDeleting(false);
-        } else {
-           await signOut();
-        }
+      } catch (err) {
+        alert("Erro ao excluir. Tente novamente.");
+        setIsDeleting(false);
       }
     }
   };
@@ -66,89 +91,96 @@ export const ProfilePage = () => {
   if (!profile) return null;
 
   return (
-    <div className="min-h-full pb-24">
+    <div className="min-h-full pb-24 bg-midnight-950">
       {/* Header Abstrato */}
-      <div className="h-48 bg-gradient-to-b from-ocean-dark to-midnight-950 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-           <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-             <path d="M0 80 C 30 50 70 50 100 80 L 100 100 L 0 100 Z" fill="white" />
-             <circle cx="20" cy="20" r="30" fill="white" fillOpacity="0.1" />
-           </svg>
-        </div>
+      <div className="h-40 bg-gradient-to-b from-ocean-900 to-midnight-950 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
       </div>
 
-      <div className="px-5 -mt-20 relative z-10">
-        <div className="glass-card rounded-[2rem] p-6 flex flex-col items-center animate-slide-up bg-midnight-900/80">
-          <div className="relative -mt-16 mb-4">
-            <div className="p-1.5 bg-midnight-950 rounded-full shadow-lg border border-white/10">
+      <div className="px-5 -mt-16 relative z-10">
+        <div className="flex justify-between items-end mb-4">
+           <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
               <Avatar url={profile.avatar_url} alt={profile.username} size="xl" />
-            </div>
-          </div>
-          
-          <h1 className="text-2xl font-bold text-white">{profile.full_name}</h1>
-          <p className="text-ocean font-medium text-sm mb-4">@{profile.username}</p>
-          
-          <p className="text-center text-slate-400 text-sm leading-relaxed max-w-xs mb-6 font-medium">
-            {profile.bio || "Explorando as profundezas do ELO. 🌊"}
+           </div>
+           <button onClick={() => signOut()} className="mb-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors">
+              Sair
+           </button>
+        </div>
+        
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-white tracking-tight">{profile.full_name}</h1>
+          <p className="text-slate-500 font-medium text-sm">@{profile.username}</p>
+          <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-sm">
+            {profile.bio || "Membro do ELO."}
           </p>
+        </div>
 
-          <div className="flex w-full border-t border-white/5 pt-6">
-            <div className="flex-1 flex flex-col items-center border-r border-white/5">
-              <span className="text-xl font-bold text-white">{loading ? '-' : stats.posts}</span>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Posts</span>
-            </div>
-            <div className="flex-1 flex flex-col items-center">
-              <span className="text-xl font-bold text-white">{loading ? '-' : stats.connections}</span>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Conexões</span>
-            </div>
+        <div className="flex gap-6 mb-8 border-t border-white/5 pt-4">
+          <div className="flex gap-2 items-baseline">
+             <span className="text-lg font-bold text-white">{stats.posts}</span>
+             <span className="text-xs text-slate-500 font-medium">Posts</span>
+          </div>
+          <div className="flex gap-2 items-baseline">
+             <span className="text-lg font-bold text-white">{stats.connections}</span>
+             <span className="text-xs text-slate-500 font-medium">Conexões</span>
           </div>
         </div>
 
-        <div className="mt-8">
-          <div className="flex items-center space-x-6 px-4 mb-4 border-b border-white/5">
-            <button className="pb-3 border-b-2 border-ocean text-ocean font-bold text-sm flex items-center gap-2">
-              <Grid size={18} />
-              Posts
-            </button>
-            <button className="pb-3 border-b-2 border-transparent text-slate-500 font-bold text-sm flex items-center gap-2 hover:text-slate-300 transition-colors">
-              <Users size={18} />
-              Conexões
-            </button>
-          </div>
+        {/* Tabs */}
+        <div className="flex items-center border-b border-white/5 mb-2 sticky top-14 bg-midnight-950 z-20">
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'posts' ? 'text-white border-b-2 border-ocean' : 'text-slate-500'}`}
+          >
+            <Grid size={16} />
+            Publicações
+          </button>
+          <button 
+             onClick={() => setActiveTab('info')}
+             className={`flex-1 pb-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${activeTab === 'info' ? 'text-white border-b-2 border-ocean' : 'text-slate-500'}`}
+          >
+            <Activity size={16} />
+            Conta
+          </button>
+        </div>
 
-          <div className="rounded-3xl border border-white/5 p-10 text-center bg-midnight-900/30">
-            <p className="text-slate-500 font-medium text-sm">O histórico está submerso...</p>
-          </div>
-          
-          <div className="mt-8 mb-8 space-y-4">
-             <button 
-              onClick={() => signOut()}
-              className="w-full text-slate-300 hover:text-white text-sm font-bold py-4 px-6 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-            >
-              <LogOut size={18} />
-              Desconectar
-            </button>
-
-            <button 
-              onClick={handleDeleteAccount}
-              disabled={isDeleting}
-              className="w-full text-red-400 hover:text-red-300 text-sm font-bold py-4 px-6 rounded-2xl border border-red-500/20 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
-            >
-              {isDeleting ? (
-                <span className="animate-pulse">Excluindo...</span>
-              ) : (
-                <>
-                  <Trash2 size={18} />
-                  Excluir minha conta
-                </>
-              )}
-            </button>
-            
-            <p className="text-center text-[10px] text-slate-600 px-4">
-              <AlertTriangle size={10} className="inline mr-1" />
-              Ao excluir sua conta, todos os seus dados serão removidos permanentemente e seu nome de usuário ficará disponível para outros.
-            </p>
-          </div>
+        {/* Conteúdo das Abas */}
+        <div className="min-h-[300px]">
+          {activeTab === 'posts' ? (
+             loadingPosts ? (
+               <div className="p-10 text-center text-slate-500">Carregando...</div>
+             ) : myPosts.length === 0 ? (
+               <div className="p-10 text-center text-slate-500 border border-dashed border-white/10 rounded-xl mt-4">
+                 Nenhuma publicação ainda.
+               </div>
+             ) : (
+               <div className="divide-y divide-white/5 border-t border-white/5">
+                 {myPosts.map(post => (
+                    <PostCard key={post.id} post={post} onDelete={handlePostDeleted} />
+                 ))}
+               </div>
+             )
+          ) : (
+             <div className="mt-8 space-y-4 px-2">
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                   <h3 className="text-white font-bold mb-2 text-sm">Zona de Perigo</h3>
+                   <p className="text-xs text-slate-400 mb-4">Ações aqui não podem ser desfeitas.</p>
+                   
+                   <button 
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="w-full text-red-400 hover:text-red-300 text-sm font-bold py-3 px-4 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {isDeleting ? 'Excluindo...' : (
+                      <>
+                        <Trash2 size={16} />
+                        Excluir conta permanentemente
+                      </>
+                    )}
+                  </button>
+                </div>
+             </div>
+          )}
         </div>
       </div>
     </div>

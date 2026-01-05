@@ -6,6 +6,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Heart, MessageCircle, UserPlus, Check, Bell, Loader2, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PullToRefresh } from '../components/ui/PullToRefresh';
 
 export const NotificationsPage = () => {
   const { user } = useAuth();
@@ -50,9 +51,9 @@ export const NotificationsPage = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
-
     fetchNotifications();
+    
+    if (!user) return;
 
     const channel = supabase
       .channel('realtime_notifications')
@@ -94,35 +95,45 @@ export const NotificationsPage = () => {
     setProcessingId(notification.id);
 
     try {
-      // 1. Validação Backend: Atualizar a tabela connections
-      // O RLS deve permitir update se o user for receiver_id
+      // 1. O reference_id na notificação deve ser o ID da linha em 'connections'
+      if (!notification.reference_id) throw new Error("ID de referência inválido");
+
+      // 2. Tenta atualizar o status
       const { error: updateError } = await supabase
         .from('connections')
         .update({ 
           status: action,
           updated_at: new Date().toISOString()
         })
-        .eq('id', notification.reference_id); // reference_id DEVE ser o ID da connection
+        .eq('id', notification.reference_id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+         console.error("Erro Supabase:", updateError);
+         throw new Error("Falha ao atualizar conexão. Verifique permissões.");
+      }
 
-      // 2. Se aceitou, cria notificação recíproca
+      // 3. Se aceitou, notifica o remetente original
       if (action === 'accepted') {
         await supabase.from('notifications').insert({
-          user_id: notification.actor_id,
-          actor_id: user?.id,
+          user_id: notification.actor_id, // Quem pediu
+          actor_id: user?.id,             // Eu (que aceitei)
           type: 'request_accepted',
           reference_id: notification.reference_id
         });
       }
 
-      // 3. Atualizar UI: Remove a notificação da lista ou altera visualmente
-      // Para UX mais limpa, removemos o pedido da lista de notificações ativas
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      // 4. Atualiza UI localmente: Remove a notificação de "pedido recebido"
+      // ou altera seu estado para feedback visual
+      setNotifications(prev => prev.map(n => {
+         if (n.id === notification.id) {
+             return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };
+         }
+         return n;
+      }));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Falha ao processar pedido:", error);
-      alert("Não foi possível processar o pedido. Tente novamente.");
+      alert(error.message || "Erro ao processar. Tente novamente.");
     } finally {
       setProcessingId(null);
     }
@@ -135,7 +146,9 @@ export const NotificationsPage = () => {
       case 'comment': return <MessageCircle className="text-ocean fill-ocean" size={14} />;
       case 'request_received': return <UserPlus className="text-ocean" size={14} />;
       case 'request_accepted': return <Check className="text-emerald-500" size={14} />;
+      case 'request_accepted_by_me': return <Check className="text-emerald-500" size={14} />;
       case 'request_declined': return <X className="text-red-500" size={14} />;
+      case 'request_declined_by_me': return <X className="text-slate-500" size={14} />;
       default: return <div className="w-2 h-2 bg-ocean rounded-full" />;
     }
   };
@@ -147,77 +160,80 @@ export const NotificationsPage = () => {
     switch (n.type) {
       case 'like_post': return <p className="text-[15px] text-slate-400">{boldName} curtiu seu post.</p>;
       case 'like_comment': return <p className="text-[15px] text-slate-400">{boldName} curtiu seu comentário.</p>;
-      case 'comment': return <p className="text-[15px] text-slate-400">{boldName} comentou: "..."</p>;
-      case 'request_received': return <p className="text-[15px] text-slate-400">{boldName} enviou um pedido de amizade.</p>;
-      case 'request_accepted': return <p className="text-[15px] text-slate-400">{boldName} aceitou seu pedido.</p>;
+      case 'comment': return <p className="text-[15px] text-slate-400">{boldName} comentou em sua publicação.</p>;
+      case 'request_received': return <p className="text-[15px] text-slate-200 font-medium">{boldName} quer conectar com você.</p>;
+      case 'request_accepted': return <p className="text-[15px] text-emerald-400">{boldName} aceitou seu pedido!</p>;
+      case 'request_accepted_by_me': return <p className="text-[15px] text-slate-500">Você aceitou {boldName}.</p>;
+      case 'request_declined_by_me': return <p className="text-[15px] text-slate-500">Você recusou {boldName}.</p>;
       default: return <p className="text-[15px] text-slate-400">Nova interação de {boldName}.</p>;
     }
   };
 
   return (
-    <div className="min-h-full pb-20 bg-midnight-950">
-      <div className="px-5 py-4 sticky top-0 bg-midnight-950/95 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white tracking-tight">Atividade</h1>
-        {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
-      </div>
+    <PullToRefresh onRefresh={fetchNotifications}>
+      <div className="min-h-full pb-20 bg-midnight-950">
+        <div className="px-5 py-4 sticky top-0 bg-midnight-950/95 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-white tracking-tight">Atividade</h1>
+          {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
+        </div>
 
-      <div className="divide-y divide-white/5">
-        {loading && notifications.length === 0 ? (
-           // Skeleton
-           [1,2,3].map(i => (
-             <div key={i} className="p-4 flex gap-4 animate-pulse">
-               <div className="w-10 h-10 rounded-full bg-white/5" />
-               <div className="flex-1 space-y-2">
-                 <div className="w-1/2 h-3 bg-white/5 rounded" />
-                 <div className="w-1/3 h-2 bg-white/5 rounded" />
+        <div className="divide-y divide-white/5">
+          {loading && notifications.length === 0 ? (
+             [1,2,3].map(i => (
+               <div key={i} className="p-4 flex gap-4 animate-pulse">
+                 <div className="w-10 h-10 rounded-full bg-white/5" />
+                 <div className="flex-1 space-y-2">
+                   <div className="w-1/2 h-3 bg-white/5 rounded" />
+                   <div className="w-1/3 h-2 bg-white/5 rounded" />
+                 </div>
                </div>
-             </div>
-           ))
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
-            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
-               <Bell size={24} />
+             ))
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600">
+                 <Bell size={24} />
+              </div>
+              <p className="text-slate-400 font-medium">Você está em dia.</p>
             </div>
-            <p className="text-slate-400 font-medium">Nenhuma notificação recente.</p>
-          </div>
-        ) : (
-          notifications.map(n => (
-            <div key={n.id} className={`p-4 flex gap-4 transition-colors ${!n.is_read ? 'bg-ocean-950/20' : ''}`}>
-              <div className="relative shrink-0 pt-1">
-                <Avatar url={n.actor?.avatar_url} alt={n.actor?.username || '?'} size="md" />
-                <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-1 border border-white/10 ring-2 ring-midnight-950">
-                   <NotificationIcon type={n.type} />
+          ) : (
+            notifications.map(n => (
+              <div key={n.id} className={`p-4 flex gap-4 transition-colors ${!n.is_read ? 'bg-ocean-950/10' : ''}`}>
+                <div className="relative shrink-0 pt-1">
+                  <Avatar url={n.actor?.avatar_url} alt={n.actor?.username || '?'} size="md" />
+                  <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-1 border border-white/10 ring-2 ring-midnight-950">
+                     <NotificationIcon type={n.type} />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <NotificationContent n={n} />
+                  <span className="text-xs text-slate-500 mt-1 block">
+                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
+                  </span>
+                  
+                  {n.type === 'request_received' && (
+                    <div className="flex gap-3 mt-3 animate-fade-in">
+                      <button 
+                        onClick={() => handleConnection(n, 'accepted')}
+                        disabled={!!processingId}
+                        className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-ocean/20"
+                      >
+                        {processingId === n.id ? '...' : 'Aceitar'}
+                      </button>
+                      <button 
+                        onClick={() => handleConnection(n, 'declined')}
+                        disabled={!!processingId}
+                        className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50 border border-white/5"
+                      >
+                        Recusar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <NotificationContent n={n} />
-                <span className="text-xs text-slate-500 mt-1 block">
-                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
-                </span>
-                
-                {n.type === 'request_received' && (
-                  <div className="flex gap-3 mt-3">
-                    <button 
-                      onClick={() => handleConnection(n, 'accepted')}
-                      disabled={processingId === n.id}
-                      className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {processingId === n.id ? 'Aceitando...' : 'Confirmar'}
-                    </button>
-                    <button 
-                      onClick={() => handleConnection(n, 'declined')}
-                      disabled={processingId === n.id}
-                      className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold py-2 px-4 rounded-lg transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
