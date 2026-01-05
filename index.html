@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="https://api.dicebear.com/7.x/identicon/svg?seed=ELO" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Meta tags para comportamento App-Like -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#020617" />
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>ELO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              // Nova Paleta Deep Ocean
+              midnight: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0f172a', // Base Dark
+                950: '#020617', // Deepest Dark
+              },
+              ocean: {
+                DEFAULT: '#0ea5e9', // Primary Brand Color
+                light: '#38bdf8',
+                dark: '#0369a1',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out',
+              'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+              'pulse-subtle': 'pulseSubtle 4s infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(20px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+              pulseSubtle: {
+                '0%, 100%': { opacity: '1' },
+                '50%': { opacity: '0.6' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Reset Global */
+      * {
+        -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        background-color: #020617; /* midnight-950 */
+        color: #e2e8f0; /* slate-200 equivalent */
+        width: 100%;
+        min-height: 100%;
+      }
+
+      /* 
+         NOTA: Removemos 'overflow: hidden' e 'position: fixed' do body 
+         para permitir rolagem na Landing Page. 
+         O 'App Mode' será controlado no App.tsx via classes CSS.
+      */
+      
+      /* Scrollbar Customizada (Dark) */
+      ::-webkit-scrollbar {
+        width: 6px;
+        background: #020617;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 3px;
+      }
+
+      /* Vidro Escuro (Dark Glass) */
+      .glass {
+        background: rgba(15, 23, 42, 0.7); /* midnight-900 com transparência */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .glass-card {
+        background: rgba(30, 41, 59, 0.4); /* midnight-800 com transparência */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      /* SafeArea utilities */
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 20px);
+      }
+      .pt-safe {
+        padding-top: env(safe-area-inset-top, 20px);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "date-fns/locale": "https://esm.sh/date-fns@^4.1.0/locale",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "date-fns/": "https://esm.sh/date-fns@^4.1.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-midnight-950 text-slate-200 antialiased selection:bg-ocean selection:text-white">
+    <div id="root" class="min-h-full w-full"></div>
+  </body>
+</html>

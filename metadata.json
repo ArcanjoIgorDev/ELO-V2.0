@@ -1,0 +1,5 @@
+{
+  "name": "ELO",
+  "description": "Uma rede social mobile-first inspirada no oceano, focada em conexões profundas e interações fluidas. Construída com React, TypeScript e Supabase.",
+  "requestFramePermissions": []
+}
