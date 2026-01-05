@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { PostWithAuthor } from '../types';
 import { PostCard } from '../components/PostCard';
@@ -28,12 +28,22 @@ export const Feed = () => {
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  
+  // Ref para rastrear se o componente está montado
+  const isMounted = useRef(true);
 
-  const fetchPosts = useCallback(async () => {
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  const fetchPosts = useCallback(async (isRefresh = false) => {
+    if (!user) return;
+    
     try {
-      // setLoading(true) APENAS na primeira carga para não piscar no refresh
-      if (posts.length === 0) setLoading(true);
-      setError(false);
+      // Só mostra loading na tela inteira se não for um refresh e não tiver posts
+      if (!isRefresh && posts.length === 0 && isMounted.current) setLoading(true);
+      if (isMounted.current) setError(false);
       
       const { data, error } = await supabase
         .from('posts')
@@ -47,7 +57,7 @@ export const Feed = () => {
 
       if (error) throw error;
 
-      if (data) {
+      if (data && isMounted.current) {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
           ...post,
           likes_count: post.likes ? post.likes.length : 0,
@@ -58,18 +68,18 @@ export const Feed = () => {
       }
     } catch (error) {
       console.error('Erro ao buscar posts:', error);
-      setError(true);
+      if (isMounted.current) setError(true);
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
-  }, [user]); // Removido posts.length das dependências para evitar loops
+  }, [user]); // 'posts.length' removido para evitar loops e stale closures
 
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
 
   const handleRefresh = async () => {
-    await fetchPosts();
+    await fetchPosts(true);
   };
 
   const handlePostDeleted = (postId: string) => {
@@ -79,7 +89,7 @@ export const Feed = () => {
   if (loading && posts.length === 0) {
     return (
       <div className="min-h-full pt-safe">
-         <div className="h-32 bg-white/5 animate-pulse mb-6" /> {/* Ecos Skeleton */}
+         <div className="h-32 bg-white/5 animate-pulse mb-6" /> 
          {[1, 2, 3, 4].map((i) => <FeedSkeleton key={i} />)}
       </div>
     );
@@ -93,7 +103,7 @@ export const Feed = () => {
            </div>
            <h3 className="text-xl font-bold text-slate-200 mb-2">Erro de conexão</h3>
            <p className="text-slate-500 mb-6">Não foi possível carregar o feed.</p>
-           <button onClick={handleRefresh} className="px-6 py-2 bg-slate-800 text-white rounded-full font-bold">Tentar novamente</button>
+           <button onClick={() => fetchPosts()} className="px-6 py-2 bg-slate-800 text-white rounded-full font-bold">Tentar novamente</button>
         </div>
      )
   }

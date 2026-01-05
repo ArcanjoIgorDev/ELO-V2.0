@@ -1,20 +1,24 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { LogOut, Grid, Users, Trash2, AlertTriangle, Activity } from 'lucide-react';
+import { LogOut, Grid, Trash2, Activity, Camera, Loader2 } from 'lucide-react';
 import { PostCard } from '../components/PostCard';
 import { PostWithAuthor } from '../types';
 
 export const ProfilePage = () => {
-  const { profile, signOut, user } = useAuth();
+  const { profile, signOut, user, refreshProfile } = useAuth();
   const [stats, setStats] = useState({ posts: 0, connections: 0 });
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'info'>('posts');
   const [myPosts, setMyPosts] = useState<PostWithAuthor[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  
+  // Upload States
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (profile?.id) {
@@ -68,6 +72,48 @@ export const ProfilePage = () => {
     setLoadingPosts(false);
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !user) return;
+    
+    setUploadingAvatar(true);
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    try {
+      // 1. Upload para o bucket 'avatars'
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Pegar URL Pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // 3. Atualizar Perfil
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // 4. Atualizar Contexto Local
+      await refreshProfile();
+      alert("Foto atualizada com sucesso!");
+
+    } catch (error: any) {
+      console.error('Erro upload:', error);
+      alert('Erro ao atualizar foto. Tente novamente.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const handlePostDeleted = (postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
     setStats(prev => ({ ...prev, posts: prev.posts - 1 }));
@@ -99,9 +145,29 @@ export const ProfilePage = () => {
 
       <div className="px-5 -mt-16 relative z-10">
         <div className="flex justify-between items-end mb-4">
-           <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
-              <Avatar url={profile.avatar_url} alt={profile.username} size="xl" />
+           {/* Avatar com Upload */}
+           <div className="relative group">
+             <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
+                <Avatar url={profile.avatar_url} alt={profile.username} size="xl" />
+             </div>
+             
+             {/* Botão de Câmera Overlay */}
+             <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95"
+             >
+                {uploadingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+             </button>
+             <input 
+               type="file" 
+               ref={fileInputRef}
+               className="hidden"
+               accept="image/*"
+               onChange={handleAvatarUpload}
+             />
            </div>
+
            <button onClick={() => signOut()} className="mb-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors">
               Sair
            </button>

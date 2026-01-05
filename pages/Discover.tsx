@@ -50,8 +50,8 @@ export const Discover = () => {
     setProcessingId(receiverId);
     
     try {
-      // 1. Cria a conexão e RETORNA O DADO (Importante: .select().single())
-      const { data: connectionData, error } = await supabase.from('connections').insert({
+      // 1. Cria a conexão
+      const { data: connectionData, error: connError } = await supabase.from('connections').insert({
         requester_id: user.id,
         receiver_id: receiverId,
         status: 'pending'
@@ -59,22 +59,30 @@ export const Discover = () => {
       .select()
       .single();
 
-      if (error) throw error;
+      if (connError) throw connError;
 
       if (connectionData) {
-         // 2. Cria a notificação COM O REFERENCE_ID CORRETO
-         await supabase.from('notifications').insert({
+         // 2. Tenta criar a notificação
+         const { error: notifError } = await supabase.from('notifications').insert({
            user_id: receiverId,
            actor_id: user.id,
            type: 'request_received',
-           reference_id: connectionData.id // Correção do Bug
+           reference_id: connectionData.id
          });
-         
-         // Atualiza UI localmente
-         setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id } } : r));
+
+         if (notifError) {
+             console.error("Erro ao criar notificação. Fazendo rollback...", notifError);
+             // ROLLBACK: Se a notificação falhar, apagamos o pedido para o usuário poder tentar de novo
+             await supabase.from('connections').delete().eq('id', connectionData.id);
+             alert("Erro de conexão. Tente enviar o pedido novamente.");
+         } else {
+             // SUCESSO COMPLETO
+             setResults(results.map(r => r.id === receiverId ? { ...r, connection: { status: 'pending', requester_id: user.id } } : r));
+         }
       }
-    } catch (err) {
-      console.error("Erro ao enviar pedido:", err);
+    } catch (err: any) {
+      console.error("Erro fatal ao enviar pedido:", err);
+      alert("Falha ao enviar pedido: " + err.message);
     } finally {
       setProcessingId(null);
     }
