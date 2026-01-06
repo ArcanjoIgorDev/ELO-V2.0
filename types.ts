@@ -202,6 +202,32 @@ export interface Database {
           expires_at?: string
         }
       }
+      echo_likes: {
+        Row: {
+          id: string
+          user_id: string
+          echo_id: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          echo_id: string
+        }
+      }
+      echo_comments: {
+        Row: {
+          id: string
+          user_id: string
+          echo_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          user_id: string
+          echo_id: string
+          content: string
+        }
+      }
     }
   }
 }
@@ -215,6 +241,8 @@ export type Connection = Database['public']['Tables']['connections']['Row'];
 export type Message = Database['public']['Tables']['messages']['Row'];
 export type Notification = Database['public']['Tables']['notifications']['Row'];
 export type Echo = Database['public']['Tables']['echos']['Row'];
+export type EchoLike = Database['public']['Tables']['echo_likes']['Row'];
+export type EchoComment = Database['public']['Tables']['echo_comments']['Row'];
 
 export interface PostWithAuthor extends Post {
   author: Profile;
@@ -228,4 +256,12 @@ export interface CommentWithAuthor extends Comment {
   author: Profile;
   likes_count: number;
   user_has_liked: boolean;
+}
+
+export interface EchoWithAuthor extends Echo {
+    author_avatar?: string;
+    author_username?: string;
+    likes_count: number;
+    comments_count: number;
+    user_has_liked: boolean;
 }

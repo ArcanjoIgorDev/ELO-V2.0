@@ -2,54 +2,75 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus, X, Trash2, Zap } from 'lucide-react';
+import { Plus, X, Trash2, Zap, Heart, MessageCircle, Send } from 'lucide-react';
 import { Avatar } from './ui/Avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface Echo {
-  id: string;
-  content: string;
-  created_at: string;
-  user_id: string;
-  author_avatar?: string;
-  author_username?: string;
-}
+import { EchoWithAuthor } from '../types';
 
 export const EcosBar = () => {
   const { user } = useAuth();
-  const [echos, setEchos] = useState<Echo[]>([]);
-  const [viewingEcho, setViewingEcho] = useState<Echo | null>(null);
+  const [echos, setEchos] = useState<EchoWithAuthor[]>([]);
+  const [viewingEcho, setViewingEcho] = useState<EchoWithAuthor | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newEchoContent, setNewEchoContent] = useState('');
-  const [loading, setLoading] = useState(true);
+  
+  // Interaction States inside viewing
+  const [vibeLikes, setVibeLikes] = useState(0);
+  const [hasLikedVibe, setHasLikedVibe] = useState(false);
+  const [vibeComments, setVibeComments] = useState<any[]>([]);
+  const [newVibeComment, setNewVibeComment] = useState('');
 
   const fetchEchos = async () => {
     if (!user) return;
     
-    // Busca Vibes válidas
     const { data } = await supabase
       .from('echos')
-      .select(`id, content, created_at, user_id, author:profiles!echos_user_id_fkey(username, avatar_url)`)
+      .select(`
+        *,
+        author:profiles!echos_user_id_fkey(username, avatar_url),
+        likes:echo_likes(user_id),
+        comments:echo_comments(id)
+      `)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
     if (data) {
-      const formatted = data.map((e: any) => ({
+      const formatted: EchoWithAuthor[] = data.map((e: any) => ({
         ...e,
         author_avatar: e.author?.avatar_url,
-        author_username: e.author?.username
+        author_username: e.author?.username,
+        likes_count: e.likes ? e.likes.length : 0,
+        comments_count: e.comments ? e.comments.length : 0,
+        user_has_liked: e.likes ? e.likes.some((l: any) => l.user_id === user.id) : false
       }));
       setEchos(formatted);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetchEchos();
-    const channel = supabase.channel('echos_pub').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'echos' }, fetchEchos).subscribe();
+    const channel = supabase.channel('echos_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'echos' }, fetchEchos).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  // Load interactions when viewing
+  useEffect(() => {
+    if (viewingEcho) {
+      setVibeLikes(viewingEcho.likes_count);
+      setHasLikedVibe(viewingEcho.user_has_liked);
+      
+      const loadComments = async () => {
+        const { data } = await supabase
+          .from('echo_comments')
+          .select('*, author:profiles(username, avatar_url)')
+          .eq('echo_id', viewingEcho.id)
+          .order('created_at', { ascending: true });
+        if (data) setVibeComments(data);
+      };
+      loadComments();
+    }
+  }, [viewingEcho]);
 
   const handleCreateEcho = async () => {
     if (!newEchoContent.trim() || !user) return;
@@ -67,10 +88,43 @@ export const EcosBar = () => {
   };
 
   const handleDeleteEcho = async (echoId: string) => {
-    if (!window.confirm("Apagar?")) return;
+    if (!window.confirm("Apagar vibe?")) return;
     await supabase.from('echos').delete().eq('id', echoId);
     setViewingEcho(null);
     setEchos(prev => prev.filter(e => e.id !== echoId));
+  };
+
+  const handleLikeVibe = async () => {
+    if (!user || !viewingEcho) return;
+    const originalState = hasLikedVibe;
+    setHasLikedVibe(!hasLikedVibe);
+    setVibeLikes(prev => hasLikedVibe ? prev - 1 : prev + 1);
+
+    try {
+      if (originalState) {
+        await supabase.from('echo_likes').delete().match({ user_id: user.id, echo_id: viewingEcho.id });
+      } else {
+        await supabase.from('echo_likes').insert({ user_id: user.id, echo_id: viewingEcho.id });
+      }
+    } catch (e) {
+      setHasLikedVibe(originalState); // Revert
+    }
+  };
+
+  const handleCommentVibe = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!user || !viewingEcho || !newVibeComment.trim()) return;
+     
+     const { data, error } = await supabase
+       .from('echo_comments')
+       .insert({ user_id: user.id, echo_id: viewingEcho.id, content: newVibeComment.trim() })
+       .select('*, author:profiles(username, avatar_url)')
+       .single();
+     
+     if (!error && data) {
+       setVibeComments([...vibeComments, data]);
+       setNewVibeComment('');
+     }
   };
 
   const myEchos = echos.filter(e => e.user_id === user?.id);
@@ -78,131 +132,116 @@ export const EcosBar = () => {
   const hasMyVibe = myEchos.length > 0;
 
   return (
-    <div className="pt-5 pb-4 bg-midnight-950">
-      <div className="flex gap-4 overflow-x-auto px-5 no-scrollbar snap-x items-start">
+    <div className="pt-4 pb-2 bg-midnight-950">
+      <div className="flex gap-4 overflow-x-auto px-4 no-scrollbar items-center">
         
-        {/* Minha Vibe */}
-        <div className="flex flex-col items-center gap-2 shrink-0 snap-start cursor-pointer group">
-          <button 
-            onClick={() => hasMyVibe ? setViewingEcho(myEchos[0]) : setIsCreating(true)}
-            className="relative w-[74px] h-[74px] flex items-center justify-center transition-transform active:scale-95"
-          >
-            {/* Ring */}
-            <div className={`absolute inset-0 rounded-full p-[2px] ${hasMyVibe ? 'bg-gradient-to-tr from-ocean via-cyan-400 to-emerald-400 animate-spin-slow' : 'border-2 border-dashed border-white/20'}`}></div>
-            <div className={`absolute inset-[3px] rounded-full bg-midnight-950 z-0`}></div>
-            
-            {/* Image */}
-            <div className="w-[66px] h-[66px] rounded-full overflow-hidden relative z-10 bg-midnight-900">
-               {hasMyVibe ? (
-                 <img src={myEchos[0].author_avatar} className="w-full h-full object-cover" alt="Eu" />
-               ) : (
-                 <div className="w-full h-full flex items-center justify-center bg-white/5">
-                   <Plus className="text-ocean" size={24} />
-                 </div>
-               )}
-            </div>
-            {!hasMyVibe && (
-               <div className="absolute bottom-0 right-0 bg-ocean text-white rounded-full p-1 border-2 border-midnight-950 z-20 shadow-lg">
-                  <Plus size={12} />
-               </div>
-            )}
-          </button>
-          <span className="text-[11px] font-semibold text-slate-300 truncate max-w-[74px] tracking-wide">
-            {hasMyVibe ? 'Sua Vibe' : 'Criar Vibe'}
-          </span>
+        {/* Create / My Vibe */}
+        <div className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group" onClick={() => hasMyVibe ? setViewingEcho(myEchos[0]) : setIsCreating(true)}>
+           <div className={`w-16 h-16 rounded-[2rem] flex items-center justify-center relative transition-all duration-300 ${hasMyVibe ? 'bg-gradient-to-br from-ocean to-emerald-400 p-[2px]' : 'bg-white/5 border border-white/10'}`}>
+              <div className="w-full h-full rounded-[1.9rem] bg-midnight-950 overflow-hidden relative">
+                 {hasMyVibe ? (
+                   <img src={myEchos[0].author_avatar} className="w-full h-full object-cover opacity-80" alt="" />
+                 ) : (
+                   <div className="w-full h-full flex items-center justify-center">
+                     <Plus className="text-ocean" />
+                   </div>
+                 )}
+              </div>
+              {!hasMyVibe && <div className="absolute -bottom-1 -right-1 bg-ocean rounded-full p-1 border-2 border-midnight-950"><Plus size={10} className="text-white"/></div>}
+           </div>
+           <span className="text-[10px] font-bold text-slate-400">Eu</span>
         </div>
 
-        {/* Vibes Amigos */}
-        {otherEchos.map((echo) => (
-          <div key={echo.id} className="flex flex-col items-center gap-2 shrink-0 snap-start cursor-pointer group">
-            <button 
-              onClick={() => setViewingEcho(echo)}
-              className="w-[74px] h-[74px] relative flex items-center justify-center transition-transform active:scale-95"
-            >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 p-[2px]"></div>
-              <div className="absolute inset-[3px] rounded-full bg-midnight-950"></div>
-              <div className="w-[66px] h-[66px] rounded-full overflow-hidden relative z-10 border-2 border-midnight-950">
-                <img src={echo.author_avatar} alt={echo.author_username} className="w-full h-full object-cover" />
+        {/* Others */}
+        {otherEchos.map(echo => (
+           <div key={echo.id} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onClick={() => setViewingEcho(echo)}>
+              <div className="w-16 h-16 rounded-[2rem] p-[2px] bg-gradient-to-br from-indigo-500 to-purple-500">
+                 <div className="w-full h-full rounded-[1.9rem] bg-midnight-950 overflow-hidden">
+                    <img src={echo.author_avatar} className="w-full h-full object-cover" alt="" />
+                 </div>
               </div>
-            </button>
-            <span className="text-[11px] font-medium text-slate-400 truncate max-w-[74px] group-hover:text-white transition-colors">
-              {echo.author_username}
-            </span>
-          </div>
-        ))}
-
-        {echos.length === 0 && !loading && (
-           <div className="h-[74px] flex items-center px-4">
-              <span className="text-xs text-slate-600 font-medium italic">Seus amigos aparecerão aqui</span>
+              <span className="text-[10px] font-medium text-slate-400 truncate max-w-[64px]">{echo.author_username}</span>
            </div>
-        )}
+        ))}
       </div>
 
-      {/* Modal Criar */}
+      {/* CREATE MODAL */}
       {isCreating && (
         <div className="fixed inset-0 z-[60] bg-midnight-950/95 backdrop-blur-xl flex flex-col p-6 animate-fade-in">
-          <div className="flex justify-between items-center mb-10">
-            <button onClick={() => setIsCreating(false)} className="text-white p-2 bg-white/10 rounded-full"><X size={20}/></button>
-            <span className="font-bold text-white tracking-widest text-sm">NOVA VIBE</span>
-            <div className="w-10"></div>
+          <button onClick={() => setIsCreating(false)} className="self-end p-2 bg-white/10 rounded-full text-white mb-10"><X /></button>
+          <div className="flex-1 flex flex-col items-center justify-center">
+             <div className="w-20 h-20 bg-ocean/20 rounded-full flex items-center justify-center mb-6 text-ocean animate-pulse"><Zap size={40}/></div>
+             <textarea 
+               autoFocus maxLength={60} value={newEchoContent} onChange={e => setNewEchoContent(e.target.value)}
+               placeholder="Mande sua vibe..."
+               className="w-full bg-transparent text-center text-3xl font-bold text-white placeholder:text-white/20 focus:outline-none resize-none mb-4"
+             />
+             <div className="text-sm text-slate-500 font-medium">{newEchoContent.length}/60</div>
           </div>
-          <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full pb-20">
-            <div className="w-24 h-24 bg-gradient-to-tr from-ocean-900 to-midnight-900 rounded-full flex items-center justify-center mb-8 border border-ocean/30 shadow-[0_0_50px_rgba(14,165,233,0.15)]">
-               <Zap size={40} className="text-ocean" />
-            </div>
-            <textarea 
-              autoFocus
-              maxLength={60}
-              placeholder="O que está rolando?"
-              value={newEchoContent}
-              onChange={e => setNewEchoContent(e.target.value)}
-              className="w-full bg-transparent text-center text-4xl font-bold text-white placeholder:text-white/20 focus:outline-none resize-none leading-tight mb-4"
-              rows={3}
-            />
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-500 mb-8">
-               <span className={newEchoContent.length > 50 ? 'text-rose-400' : ''}>{newEchoContent.length}/60</span>
-               <span>•</span>
-               <span>Visível por 24h</span>
-            </div>
-            <button 
-              onClick={handleCreateEcho}
-              disabled={!newEchoContent.trim()}
-              className="w-full bg-white text-black py-4 rounded-2xl font-black text-lg shadow-xl hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50"
-            >
-              COMPARTILHAR
-            </button>
-          </div>
+          <button onClick={handleCreateEcho} disabled={!newEchoContent.trim()} className="w-full bg-ocean text-white font-bold py-4 rounded-2xl mb-8 disabled:opacity-50">COMPARTILHAR VIBE</button>
         </div>
       )}
 
-      {/* Visualizador */}
+      {/* VIEW MODAL (IMMERSIVE) */}
       {viewingEcho && (
-        <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl flex flex-col animate-fade-in">
-          <div className="h-1 bg-white/20 w-full mt-safe px-2 pt-2">
-            <div className="h-full rounded-full overflow-hidden bg-white/20">
-               <div className="h-full bg-white animate-[width_5s_linear] w-full origin-left" onAnimationEnd={() => setViewingEcho(null)}></div>
-            </div>
-          </div>
-          <div className="p-4 flex items-center justify-between mt-4">
+        <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-2xl flex flex-col animate-fade-in">
+          {/* Progress */}
+          <div className="pt-2 px-2"><div className="h-1 bg-white/20 rounded-full overflow-hidden"><div className="h-full bg-white w-full animate-[width_10s_linear] origin-left" onAnimationEnd={() => setViewingEcho(null)}></div></div></div>
+          
+          {/* Header */}
+          <div className="p-4 flex items-center justify-between">
              <div className="flex items-center gap-3">
                <Avatar url={viewingEcho.author_avatar} alt="" size="sm" />
-               <div className="flex flex-col">
-                 <span className="text-white font-bold text-sm">{viewingEcho.author_username}</span>
-                 <span className="text-slate-400 text-xs">{formatDistanceToNow(new Date(viewingEcho.created_at), { locale: ptBR })}</span>
+               <div className="leading-tight">
+                 <div className="font-bold text-white">{viewingEcho.author_username}</div>
+                 <div className="text-xs text-slate-400">{formatDistanceToNow(new Date(viewingEcho.created_at), { locale: ptBR })}</div>
                </div>
              </div>
-             <button onClick={() => setViewingEcho(null)} className="text-white p-2 hover:bg-white/10 rounded-full"><X size={24}/></button>
+             <button onClick={() => setViewingEcho(null)}><X className="text-white" /></button>
           </div>
+
+          {/* Content */}
           <div className="flex-1 flex items-center justify-center p-8 text-center">
-             <p className="text-4xl text-white font-bold leading-snug drop-shadow-2xl">{viewingEcho.content}</p>
+             <p className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 drop-shadow-lg">{viewingEcho.content}</p>
           </div>
-          {viewingEcho.user_id === user?.id && (
-            <div className="p-safe mb-8 flex justify-center pb-10">
-              <button onClick={() => handleDeleteEcho(viewingEcho.id)} className="flex items-center gap-2 text-white bg-white/10 hover:bg-red-500/20 px-6 py-3 rounded-full text-sm font-bold transition-colors">
-                <Trash2 size={18} /> Apagar
-              </button>
-            </div>
-          )}
+
+          {/* Interactions Overlay */}
+          <div className="p-4 pb-safe bg-gradient-to-t from-black via-black/80 to-transparent">
+             
+             {/* Comments List Preview (Last 2) */}
+             <div className="space-y-2 mb-4 max-h-32 overflow-y-auto mask-image-b">
+                {vibeComments.map(c => (
+                   <div key={c.id} className="flex gap-2 text-sm text-white/90 animate-slide-up">
+                      <span className="font-bold text-white">{c.author.username}:</span>
+                      <span>{c.content}</span>
+                   </div>
+                ))}
+             </div>
+
+             <div className="flex items-center gap-3">
+                <form onSubmit={handleCommentVibe} className="flex-1 relative">
+                  <input 
+                    value={newVibeComment} onChange={e => setNewVibeComment(e.target.value)}
+                    placeholder="Responda essa vibe..."
+                    className="w-full bg-white/10 border border-white/10 rounded-full pl-4 pr-10 py-3 text-white placeholder:text-white/40 focus:outline-none focus:border-white/30 backdrop-blur-md"
+                  />
+                  <button type="submit" disabled={!newVibeComment.trim()} className="absolute right-1 top-1 p-2 bg-white/20 rounded-full text-white disabled:opacity-0"><Send size={16}/></button>
+                </form>
+                
+                <button onClick={handleLikeVibe} className="flex flex-col items-center gap-1 group">
+                   <div className={`p-3 rounded-full ${hasLikedVibe ? 'bg-rose-500/20 text-rose-500' : 'bg-white/10 text-white'} transition-colors`}>
+                      <Heart size={24} className={hasLikedVibe ? 'fill-current' : ''} />
+                   </div>
+                   <span className="text-xs font-bold text-white">{vibeLikes}</span>
+                </button>
+             </div>
+
+             {viewingEcho.user_id === user?.id && (
+                <button onClick={() => handleDeleteEcho(viewingEcho.id)} className="w-full mt-4 py-3 text-red-400 text-sm font-bold bg-white/5 rounded-xl flex items-center justify-center gap-2">
+                   <Trash2 size={16} /> Apagar Vibe
+                </button>
+             )}
+          </div>
         </div>
       )}
     </div>

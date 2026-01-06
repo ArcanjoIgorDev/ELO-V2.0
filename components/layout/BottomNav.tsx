@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Home, Search, PlusSquare, User, Bell } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Bell, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,48 +9,62 @@ export const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [hasUnread, setHasUnread] = useState(false);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
-  // Monitora notificações não lidas em tempo real
+  // Monitora notificações e mensagens
   useEffect(() => {
     if (!user) return;
 
     const checkUnread = async () => {
-      const { count } = await supabase
+      // Notificações
+      const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
-      setHasUnread((count || 0) > 0);
+      setHasUnreadNotifs((notifCount || 0) > 0);
+
+      // Mensagens
+      const { count: msgCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+      setUnreadMessages(msgCount || 0);
     };
 
     checkUnread();
 
-    const subscription = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${user.id}` 
-      }, () => {
-        setHasUnread(true);
+    const notifSub = supabase
+      .channel('nav:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+        setHasUnreadNotifs(true);
       })
       .subscribe();
 
-    return () => { subscription.unsubscribe(); };
-  }, [user, location.pathname]); // Reseta ao navegar
+    const msgSub = supabase
+      .channel('nav:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
+        setUnreadMessages(prev => prev + 1);
+      })
+      .subscribe();
 
-  // Se estiver na página de notificações, limpa o badge visualmente (a lógica de marcar como lida está na página)
+    return () => { 
+        notifSub.unsubscribe();
+        msgSub.unsubscribe();
+    };
+  }, [user, location.pathname]);
+
+  // Limpa badges ao visitar
   useEffect(() => {
-    if (location.pathname === '/notifications') {
-      setHasUnread(false);
-    }
+    if (location.pathname === '/notifications') setHasUnreadNotifs(false);
+    if (location.pathname === '/messages') setUnreadMessages(0); // Simplificação visual
   }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
 
-  const NavItem = ({ path, icon: Icon, label, isPrimary = false, hasBadge = false }: { path: string, icon: any, label: string, isPrimary?: boolean, hasBadge?: boolean }) => {
+  const NavItem = ({ path, icon: Icon, label, isPrimary = false, badgeCount = 0, hasDot = false }: { path: string, icon: any, label: string, isPrimary?: boolean, badgeCount?: number, hasDot?: boolean }) => {
     const active = isActive(path);
     
     if (isPrimary) {
@@ -77,8 +91,15 @@ export const BottomNav = () => {
         <div className={`p-1.5 rounded-xl transition-all duration-300 ${active ? 'text-ocean' : 'text-slate-500 group-hover:text-slate-300'}`}>
           <Icon size={26} strokeWidth={active ? 2.5 : 2} fill={active ? "currentColor" : "none"} fillOpacity={0.2} />
         </div>
-        {hasBadge && (
-          <span className="absolute top-3 right-[25%] w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-midnight-950 animate-pulse"></span>
+        
+        {hasDot && (
+          <span className="absolute top-3 right-[28%] w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-midnight-950 animate-pulse"></span>
+        )}
+        
+        {badgeCount > 0 && (
+           <span className="absolute top-2 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-midnight-950">
+             {badgeCount > 9 ? '9+' : badgeCount}
+           </span>
         )}
       </button>
     );
@@ -87,17 +108,13 @@ export const BottomNav = () => {
   return (
     <nav className="flex-none z-50 w-full pb-safe bg-midnight-950/90 backdrop-blur-xl border-t border-white/5">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
-        
         <NavItem path="/feed" icon={Home} label="Início" />
         <NavItem path="/discover" icon={Search} label="Buscar" />
-        
         <div className="px-2">
            <NavItem path="/create" icon={PlusSquare} label="Novo" isPrimary />
         </div>
-
-        <NavItem path="/notifications" icon={Bell} label="Alertas" hasBadge={hasUnread} />
-        <NavItem path="/profile" icon={User} label="Perfil" />
-
+        <NavItem path="/messages" icon={MessageCircle} label="Chat" badgeCount={unreadMessages} />
+        <NavItem path="/notifications" icon={Bell} label="Alertas" hasDot={hasUnreadNotifs} />
       </div>
     </nav>
   );
