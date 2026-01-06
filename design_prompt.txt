@@ -1,0 +1,38 @@
+# Prompt de Design e Desenvolvimento: ELO V2.0 (Rede Social Corporativa Premium)
+
+**Contexto:**
+Você é um Arquiteto de Software e UI/UX Designer Sênior. Sua tarefa é projetar e implementar a interface da "ELO V2.0", uma rede social corporativa moderna, focada em conexões significativas e produtividade.
+
+**Estilo Visual (Glassmorphism & Ocean Theme):**
+- **Tema:** Escuro (Dark Mode) profundo, utilizando tons de azul oceano (`#0EA5E9` a `#0284C7`) e roxo suave como acentos de luz.
+- **Glassmorphism:** Uso extensivo de painéis translúcidos (`backdrop-filter: blur(16px)`), bordas sutis brancas (`border-white/10`) e sombras difusas para criar profundidade.
+- **Tipografia:** Fonte sem serifa moderna (Inter ou Plus Jakarta Sans), com pesos variados para hierarquia clara. Títulos grandes e arejados.
+- **Animações:** Micro-interações suaves (hover, click), transições de página fluidas e esqueletos de carregamento (shimmer effects) em vez de spinners.
+
+**Estrutura da Aplicação (Mobile-First):**
+1.  **Tela de Login/Cadastro:** Visual impactante com "blobs" de luz animados ao fundo. Formulário minimalista em um cartão de vidro centralizado. Login social e biometria se possível.
+2.  **Feed Principal:**
+    -   **Topo:** Barra de "Stories" ou "Destaques do Dia" (EcoMomentos).
+    -   **Postagem:** Cards flutuantes com sombras suaves. Ações de Like/Comentar devem ter feedback tátil/visual imediato.
+    -   **Quick Create:** Um botão flutuante ou barra inferior expandida para criar postagens rapidamente.
+3.  **Navegação:**
+    -   **Bottom Bar (Mobile):** Flutuante, com efeito de vidro, ícones animados ao serem selecionados e sem labels de texto para limpeza visual.
+    -   **Sidebar (Desktop):** Coluna lateral esquerda fixa, também em vidro.
+4.  **Perfil de Usuário:** Cabeçalho com foto grande, estatísticas (seguidores, ecos) e abas deslizantes para "Posts", "Mídia" e "Sobre".
+5.  **Chat/Mensagens:** Lista de conversas limpa e interface de chat similar a apps modernos (iMessage/WhatsApp), mas com a estética do ELO.
+
+**Funcionalidades Chave (Melhoria de UX):**
+- **Loading States:** Nunca mostrar uma tela branca ou spinner sozinho. Usar esqueletos (placeholders animados) que imitam o layout final.
+- **Gestos:** Suporte a "swipe to back" e "pull to refresh".
+- **Feedback:** Toasts (notificações) não intrusivos no topo ou base da tela para confirmar ações.
+- **Offline Mode:** Cache básico para que o app abra instantaneamente mesmo sem internet.
+
+**Diretrizes Técnicas (Stack sugerida):**
+- React 18+ (Vite)
+- Tailwind CSS (com plugins de animação)
+- Framer Motion (para animações complexas)
+- Supabase (Backend/Auth/DB)
+- Lucide React (Ícones)
+
+**Objetivo:**
+Criar uma experiência que não pareça um "sistema", mas sim um lugar onde o usuário queira estar. O design deve ser "WOW" à primeira vista.

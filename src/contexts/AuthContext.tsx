@@ -67,32 +67,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // 1. Pega a sessão do armazenamento local (síncrono/rápido)
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
 
-        if (error) throw error;
+        if (error) {
+          if (mounted) setLoading(false);
+          return; // Para aqui se der erro na sessão inicial
+        }
 
-        if (mounted && initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
+        if (mounted) {
+          if (initialSession) {
+            setSession(initialSession);
+            setUser(initialSession.user);
 
-          // 2. Busca o perfil
-          let userProfile = await getProfile(initialSession.user.id);
+            // 2. Busca o perfil em background para não travar a UI inicial se possível?
+            // Não, precisamos do perfil para alguns guards. Mas vamos limitar o tempo.
 
-          // 3. Fallback: Se não tem perfil, cria um
-          if (!userProfile) {
-            userProfile = await ensureProfileExists(initialSession.user);
-            // Se ainda assim falhar, tenta buscar de novo caso tenha sido criado por trigger
-            if (!userProfile) userProfile = await getProfile(initialSession.user.id);
+            try {
+              let userProfile = await getProfile(initialSession.user.id);
+
+              // 3. Fallback: Se não tem perfil, cria um
+              if (!userProfile) {
+                userProfile = await ensureProfileExists(initialSession.user);
+              }
+
+              if (mounted && userProfile) setProfile(userProfile);
+            } catch (profileErr) {
+              console.error("Erro não-bloqueante ao buscar perfil:", profileErr);
+            }
           }
-
-          if (mounted) setProfile(userProfile);
         }
       } catch (err) {
-        console.error("Falha crítica na inicialização da Auth:", err);
-        // Em caso de erro crítico, limpamos tudo para evitar estados inconsistentes
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
+        console.error("Falha na inicialização da Auth:", err);
       } finally {
         // O LOADING *TEM* QUE PARAR AQUI, NÃO IMPORTA O QUE ACONTEÇA
         if (mounted) setLoading(false);
@@ -101,50 +104,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     init();
 
-    // Safety Timeout para evitar loading infinito
+    // Safety Timeout Reduzido e Agressivo
     const safetyTimeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("Auth loading forced stop due to timeout");
+        console.warn("⚠️ Auth loading force-stop (timeout 3s)");
         setLoading(false);
       }
-    }, 6000); // 6 segundos maximo
+    }, 3000); // 3 segundos é mais que suficiente para local session
+
+    // Window Focus Handler (Correção para Mobile Resume)
+    const handleFocus = () => {
+      const { data: { session: currentSession } } = supabase.auth.getSession().then(({ data }) => {
+        if (data.session && !session) setSession(data.session);
+      });
+      // Se voltarmos para o app e ele estiver preso carregando, soltamos.
+      if (loading) setLoading(false);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
 
     // ESCUTA EVENTOS DE MUDANÇA DE ESTADO
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
-
-      // Log para debug
       console.log(`Auth event: ${event}`);
 
-      // Atualiza sessão e usuário
       setSession(newSession);
       setUser(newSession?.user ?? null);
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        // Só busca perfil se tiver usuário
-        if (newSession?.user) {
-          const p = await getProfile(newSession.user.id);
-          if (mounted) setProfile(p);
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setLoading(false);
+      } else if (newSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        // Apenas busca perfil se ainda não tiver
+        if (!profile) {
+          getProfile(newSession.user.id).then(p => {
+            if (mounted && p) setProfile(p);
+          });
         }
-        if (mounted) setLoading(false);
-      }
-      else if (event === 'SIGNED_OUT') {
-        if (mounted) {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-        }
-      }
-      // Garante que qualquer outro evento também pare o loading se estiver travado
-      else {
-        if (mounted) setLoading(false);
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
     });
 
     return () => {
       mounted = false;
       clearTimeout(safetyTimeout);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
       subscription.unsubscribe();
     };
   }, [getProfile, ensureProfileExists]);
