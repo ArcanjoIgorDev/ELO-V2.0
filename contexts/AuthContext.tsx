@@ -27,13 +27,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) {
-        console.warn("Auth: Perfil não encontrado", error.message);
+      if (error || !data) {
         return null;
       }
       return data;
     } catch (e) {
-      console.error("Auth: Erro ao buscar perfil", e);
       return null;
     }
   };
@@ -50,14 +48,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // RACE CONDITION FIX: Se o getSession travar (comum em mobile wake-up),
-        // o timeout garante que o app carregue após 4 segundos.
+        // Timeout de segurança para evitar loading infinito
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
-          setTimeout(() => resolve({ data: { session: null } }), 4000)
+          setTimeout(() => resolve({ data: { session: null } }), 5000)
         );
 
-        // @ts-ignore - TS reclama da tipagem do timeout, mas a estrutura bate com a resposta do supabase
+        // @ts-ignore
         const { data: { session: initialSession } } = await Promise.race([
           sessionPromise,
           timeoutPromise
@@ -66,7 +63,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (initialSession && mounted.current) {
           setSession(initialSession);
           setUser(initialSession.user);
-          const userProfile = await fetchProfile(initialSession.user.id);
+          
+          let userProfile = await fetchProfile(initialSession.user.id);
+
+          // AUTOCURA: Se o usuário existe na Auth mas não tem perfil, cria um agora.
+          if (!userProfile && initialSession.user) {
+            console.log("Auth: Perfil ausente. Tentando recriar...");
+            const { user } = initialSession;
+            const newProfile = {
+                id: user.id,
+                username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${Date.now()}`,
+                full_name: user.user_metadata?.full_name || '',
+                avatar_url: user.user_metadata?.avatar_url || null,
+                has_seen_tutorial: false
+            };
+            
+            const { error: createError } = await supabase.from('profiles').insert(newProfile);
+            if (!createError) {
+               userProfile = newProfile as any;
+            } else {
+               console.error("Auth: Falha ao recriar perfil", createError);
+            }
+          }
+
           if (mounted.current) setProfile(userProfile);
         }
       } catch (err) {
@@ -81,7 +100,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted.current) return;
 
-      // Proteção contra loops de atualização
       if (newSession?.access_token !== session?.access_token) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
@@ -105,7 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       mounted.current = false;
       subscription.unsubscribe();
     };
-  }, []); // Dependência vazia obrigatória
+  }, []); 
 
   const signOut = async () => {
     try {

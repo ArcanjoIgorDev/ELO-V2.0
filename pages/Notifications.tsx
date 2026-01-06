@@ -18,50 +18,55 @@ export const NotificationsPage = () => {
     if (!user) return;
     
     try {
-      // 1. Notificações
-      const { data: notifsData } = await supabase
+      // FIX CRÍTICO: Usa !actor_id (nome da coluna) para o join, mais seguro que constraint name
+      const { data: notifsData, error } = await supabase
         .from('notifications')
-        .select(`*, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url, full_name)`)
+        .select(`*, actor:profiles!actor_id(id, username, avatar_url, full_name)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(50) as { data: any[], error: any };
+        .limit(50);
 
-      // 2. Solicitações Pendentes
+      if (error) {
+        console.error("Erro fetch notifications:", error);
+      }
+
+      // Solicitações Pendentes
       const { data: pendingRequests } = await supabase
         .from('connections')
         .select(`id, created_at, requester:profiles!requester_id(id, username, avatar_url, full_name)`)
         .eq('receiver_id', user.id)
-        .eq('status', 'pending') as { data: any[], error: any };
+        .eq('status', 'pending');
 
       let combined = [...(notifsData || [])];
       
-      // Merge
-      pendingRequests?.forEach((req: any) => {
-        const exists = combined.some(n => 
-          n.type === 'request_received' && 
-          (n.reference_id === req.id || n.actor_id === req.requester?.id)
-        );
-        
-        if (!exists) {
-          combined.unshift({
-            id: `sys-${req.id}`,
-            type: 'request_received',
-            user_id: user.id,
-            actor_id: req.requester?.id,
-            actor: req.requester,
-            reference_id: req.id,
-            is_read: false,
-            created_at: req.created_at,
-            is_virtual: true
-          });
-        }
-      });
+      // Merge seguro
+      if (pendingRequests) {
+        pendingRequests.forEach((req: any) => {
+          const exists = combined.some(n => 
+            n.type === 'request_received' && 
+            (n.reference_id === req.id || n.actor_id === req.requester?.id)
+          );
+          
+          if (!exists) {
+            combined.unshift({
+              id: `sys-${req.id}`,
+              type: 'request_received',
+              user_id: user.id,
+              actor_id: req.requester?.id,
+              actor: req.requester,
+              reference_id: req.id,
+              is_read: false,
+              created_at: req.created_at,
+              is_virtual: true
+            });
+          }
+        });
+      }
 
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      // REMOVIDO: .filter(n => !!n.actor) para não esconder notificações quebradas por RLS
       setNotifications(combined);
 
-      // Mark as read
+      // Mark as read (silencioso)
       const unreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
       if (unreadIds.length > 0) {
         supabase.from('notifications').update({ is_read: true }).in('id', unreadIds).then(() => {});
@@ -106,9 +111,12 @@ export const NotificationsPage = () => {
 
       if (!connectionId) {
         if (action === 'declined') {
+           // Cleanup de segurança
            await supabase.from('connections').delete().match({ requester_id: targetUserId, receiver_id: user.id });
         } else {
-           throw new Error("Solicitação não encontrada.");
+           // Tenta recuperar conexão aceita anteriormente
+           const { data: exists } = await supabase.from('connections').select('id').match({ requester_id: targetUserId, receiver_id: user.id, status: 'accepted' }).maybeSingle();
+           if (!exists) throw new Error("Solicitação não encontrada.");
         }
       } else {
         if (action === 'declined') {
@@ -138,7 +146,8 @@ export const NotificationsPage = () => {
       }));
 
     } catch (error: any) {
-      console.error("Erro ao aceitar:", error);
+      console.error("Erro ao processar:", error);
+      // Recarrega para garantir estado correto
       fetchData();
     } finally {
       setProcessingId(null);
@@ -176,7 +185,6 @@ export const NotificationsPage = () => {
             </div>
           ) : (
             notifications.map(n => {
-              // Fallback para actor null
               const actorName = n.actor?.username || "Alguém";
               const actorAvatar = n.actor?.avatar_url;
 

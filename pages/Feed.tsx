@@ -48,14 +48,14 @@ export const Feed = () => {
       
       if (isMounted.current) setError(false);
       
+      // Simplificado: Remove post_views(count) que pode causar erro 400 se a tabela não existir ou tiver RLS
       const { data, error: dbError } = await supabase
         .from('posts')
         .select(`
           *,
           author:profiles(*),
           likes(user_id),
-          comments(count),
-          post_views(count)
+          comments(count)
         `)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -66,9 +66,8 @@ export const Feed = () => {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
           ...post,
           likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
-          // Safety check for empty/undefined arrays from joins
           comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
-          views_count: post.post_views && post.post_views[0] ? post.post_views[0].count : 0,
+          views_count: 0, // Fallback safe
           user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);

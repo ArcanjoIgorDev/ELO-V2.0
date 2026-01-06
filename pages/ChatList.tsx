@@ -18,8 +18,7 @@ export const ChatList = () => {
   const fetchConversations = useCallback(async () => {
     if (!user) return;
     
-    // 1. Busca conexões aceitas (Amigos)
-    // Cast to any to avoid TS error on 'requester' and 'receiver' which are joined props
+    // FIX: Usa nome da coluna para join (!requester_id)
     const { data: connections } = await supabase
       .from('connections')
       .select(`
@@ -34,7 +33,6 @@ export const ChatList = () => {
       return;
     }
 
-    // 2. Para cada amigo, busca a última mensagem
     const friends = connections.map((c: any) => c.requester.id === user.id ? c.receiver : c.requester);
     
     const conversationsData = await Promise.all(friends.map(async (friend) => {
@@ -60,7 +58,6 @@ export const ChatList = () => {
       };
     }));
 
-    // 3. Ordena: Quem tem mensagem mais recente primeiro.
     conversationsData.sort((a, b) => {
       const timeA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
       const timeB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
@@ -74,14 +71,12 @@ export const ChatList = () => {
   useEffect(() => {
     fetchConversations();
     
-    // Realtime: Recarrega a lista se houver qualquer mudança nas mensagens recebidas
     const channel = supabase
       .channel('inbox_updates_list')
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` }, 
         () => {
-           // Em vez de manipular estado complexo, recarregamos para garantir a verdade
            fetchConversations();
         }
       )
