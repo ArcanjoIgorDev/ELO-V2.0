@@ -9,14 +9,13 @@ import { RefreshCw, Newspaper } from 'lucide-react';
 import { PullToRefresh } from '../components/ui/PullToRefresh';
 
 const FeedSkeleton = () => (
-  <div className="animate-pulse mb-4 p-4 border-b border-white/5 bg-midnight-950">
+  <div className="animate-pulse mb-0 p-5 border-b border-white/5 bg-midnight-950/50">
     <div className="flex space-x-4">
-      <div className="rounded-full bg-slate-800 h-10 w-10"></div>
+      <div className="rounded-full bg-slate-800 h-10 w-10 border border-white/5"></div>
       <div className="flex-1 space-y-3 py-1">
         <div className="h-4 bg-slate-800 rounded w-1/4"></div>
         <div className="space-y-2">
-          <div className="h-4 bg-slate-800 rounded w-full"></div>
-          <div className="h-4 bg-slate-800 rounded w-5/6"></div>
+          <div className="h-20 bg-slate-800 rounded-xl w-full"></div>
         </div>
       </div>
     </div>
@@ -29,7 +28,6 @@ export const Feed = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Ref para rastrear se o componente está montado
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -41,17 +39,18 @@ export const Feed = () => {
     if (!user) return;
     
     try {
-      // Só mostra loading na tela inteira se não for um refresh e não tiver posts
       if (!isRefresh && posts.length === 0 && isMounted.current) setLoading(true);
       if (isMounted.current) setError(false);
       
+      // Busca posts + dados relacionados (incluindo contagem de views)
       const { data, error } = await supabase
         .from('posts')
         .select(`
           *,
           author:profiles(*),
           likes(user_id),
-          comments(count)
+          comments(count),
+          post_views(count)
         `)
         .order('created_at', { ascending: false });
 
@@ -62,6 +61,7 @@ export const Feed = () => {
           ...post,
           likes_count: post.likes ? post.likes.length : 0,
           comments_count: post.comments ? post.comments[0].count : 0,
+          views_count: post.post_views ? post.post_views[0].count : 0,
           user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);
@@ -72,7 +72,7 @@ export const Feed = () => {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [user]); // 'posts.length' removido para evitar loops e stale closures
+  }, [user]);
 
   useEffect(() => {
     fetchPosts();
@@ -89,7 +89,7 @@ export const Feed = () => {
   if (loading && posts.length === 0) {
     return (
       <div className="min-h-full pt-safe">
-         <div className="h-32 bg-white/5 animate-pulse mb-6" /> 
+         <div className="h-32 bg-white/5 animate-pulse mb-2" /> 
          {[1, 2, 3, 4].map((i) => <FeedSkeleton key={i} />)}
       </div>
     );
@@ -98,12 +98,12 @@ export const Feed = () => {
   if (error) {
      return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] px-8 text-center animate-fade-in">
-           <div className="p-4 rounded-full bg-red-500/10 text-red-400 mb-4">
+           <div className="p-4 rounded-full bg-red-500/10 text-red-400 mb-4 border border-red-500/20">
               <RefreshCw size={32} />
            </div>
-           <h3 className="text-xl font-bold text-slate-200 mb-2">Erro de conexão</h3>
-           <p className="text-slate-500 mb-6">Não foi possível carregar o feed.</p>
-           <button onClick={() => fetchPosts()} className="px-6 py-2 bg-slate-800 text-white rounded-full font-bold">Tentar novamente</button>
+           <h3 className="text-xl font-bold text-slate-200 mb-2">Sem conexão</h3>
+           <p className="text-slate-500 mb-6 text-sm">Verifique sua internet e tente novamente.</p>
+           <button onClick={() => fetchPosts()} className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors">Tentar novamente</button>
         </div>
      )
   }
@@ -115,13 +115,13 @@ export const Feed = () => {
         
         <div>
           {posts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center pt-20 px-8 text-center animate-slide-up">
-              <div className="w-20 h-20 bg-midnight-900 rounded-full flex items-center justify-center mb-6 border border-white/5">
+            <div className="flex flex-col items-center justify-center pt-24 px-8 text-center animate-slide-up">
+              <div className="w-20 h-20 bg-midnight-900 rounded-3xl flex items-center justify-center mb-6 border border-white/5 shadow-2xl">
                 <Newspaper size={32} className="text-slate-600" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Seu feed está vazio</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Seu feed está silencioso</h3>
               <p className="text-slate-500 max-w-xs leading-relaxed font-medium text-sm">
-                Conecte-se com pessoas ou crie sua primeira publicação para iniciar.
+                Conecte-se com pessoas ou crie sua primeira publicação para iniciar as ondas.
               </p>
             </div>
           ) : (

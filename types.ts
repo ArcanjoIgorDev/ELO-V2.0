@@ -68,6 +68,20 @@ export interface Database {
           updated_at?: string
         }
       }
+      post_views: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          created_at?: string
+        }
+      }
       likes: {
         Row: {
           id: string
@@ -194,6 +208,7 @@ export interface Database {
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Post = Database['public']['Tables']['posts']['Row'];
+export type PostView = Database['public']['Tables']['post_views']['Row'];
 export type Like = Database['public']['Tables']['likes']['Row'];
 export type Comment = Database['public']['Tables']['comments']['Row'];
 export type Connection = Database['public']['Tables']['connections']['Row'];
@@ -205,6 +220,7 @@ export interface PostWithAuthor extends Post {
   author: Profile;
   likes_count: number;
   comments_count: number;
+  views_count: number;
   user_has_liked: boolean;
 }
 
