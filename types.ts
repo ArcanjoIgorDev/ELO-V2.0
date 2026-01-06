@@ -248,7 +248,7 @@ export interface PostWithAuthor extends Post {
   author: Profile;
   likes_count: number;
   comments_count: number;
-  views_count: number;
+  views_count?: number;
   user_has_liked: boolean;
 }
 
