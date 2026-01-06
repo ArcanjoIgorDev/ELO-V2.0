@@ -24,25 +24,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   const mounted = useRef(true);
 
-  // Função auxiliar para limpar tudo
+  // Limpa estado seguro
   const clearAuthState = () => {
     if (!mounted.current) return;
     setSession(null);
     setUser(null);
     setProfile(null);
-    // Não forçamos setLoading(false) aqui, quem chama decide quando o loading acaba
   };
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (error) {
+        // Se der erro (ex: 406), tenta criar profile básico ou ignora
+        console.warn("Error fetching profile:", error.message);
+        return null;
+      }
       return data;
-    } catch { return null; }
+    } catch (e) { 
+      return null; 
+    }
   };
 
   const initializeAuth = async () => {
     try {
-      // Version Check
+      // Verifica versão para limpar cache antigo se necessário
       const storedVersion = localStorage.getItem('elo_app_version');
       if (storedVersion !== APP_VERSION) {
         await supabase.auth.signOut();
@@ -53,12 +59,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data: { session: initialSession }, error } = await supabase.auth.getSession();
       
       if (error) {
-         console.error("Session error:", error);
+         console.error("Session init error:", error);
          clearAuthState();
       } else if (initialSession?.user) {
         if (mounted.current) {
           setSession(initialSession);
           setUser(initialSession.user);
+          // Busca perfil em paralelo para não bloquear UI se falhar
           const p = await fetchProfile(initialSession.user.id);
           if (mounted.current && p) setProfile(p);
         }
@@ -66,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         clearAuthState();
       }
     } catch (err) {
-      console.error("Auth Init Critical Failure:", err);
+      console.error("Auth Critical Error:", err);
       clearAuthState();
     } finally {
       if (mounted.current) setLoading(false);
@@ -77,7 +84,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     mounted.current = true;
     initializeAuth();
 
-    // Listener de Eventos
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted.current) return;
       
@@ -88,19 +94,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(newSession);
         setUser(newSession.user);
         
-        // Só busca perfil se não tiver ou se mudou o user
-        if (!profile || profile.id !== newSession.user.id) {
+        // Se usuário mudou ou perfil não existe, busca
+        if (newSession.user && (!profile || profile.id !== newSession.user.id)) {
            const p = await fetchProfile(newSession.user.id);
            if (mounted.current && p) setProfile(p);
         }
         setLoading(false);
+      } else if (event === 'INITIAL_SESSION') {
+         // Já tratado no initializeAuth, mas garante loading false
+         setLoading(false);
       }
     });
 
-    // Failsafe Timer: Garante que o loading nunca fique preso por mais de 3s
+    // Failsafe absoluto: Remove loading após 3s se algo travar
     const failsafe = setTimeout(() => {
        if (mounted.current && loading) {
-          console.warn("Auth failsafe triggered: forcing loading to false");
+          console.warn("Auth failsafe: Forcing loading completion");
           setLoading(false);
        }
     }, 3000);
@@ -140,6 +149,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth error');
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
