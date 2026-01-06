@@ -50,7 +50,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // RACE CONDITION FIX: Se o getSession travar (comum em mobile wake-up),
+        // o timeout garante que o app carregue após 4 segundos.
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
+          setTimeout(() => resolve({ data: { session: null } }), 4000)
+        );
+
+        // @ts-ignore - TS reclama da tipagem do timeout, mas a estrutura bate com a resposta do supabase
+        const { data: { session: initialSession } } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]);
 
         if (initialSession && mounted.current) {
           setSession(initialSession);
@@ -70,14 +81,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted.current) return;
 
-      // Só atualiza estado se o token mudou realmente, evitando re-renders desnecessários
+      // Proteção contra loops de atualização
       if (newSession?.access_token !== session?.access_token) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
       }
 
       if (event === 'SIGNED_IN' && newSession?.user) {
-        // Se já temos perfil carregado e o ID é o mesmo, evita refetch imediato
         if (!profile || profile.id !== newSession.user.id) {
            const p = await fetchProfile(newSession.user.id);
            if (mounted.current) setProfile(p);
@@ -95,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       mounted.current = false;
       subscription.unsubscribe();
     };
-  }, []); // Dependência vazia é intencional
+  }, []); // Dependência vazia obrigatória
 
   const signOut = async () => {
     try {
@@ -116,7 +126,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Memoiza o valor do contexto para garantir estabilidade referencial
   const value = useMemo(() => ({
     session,
     user,

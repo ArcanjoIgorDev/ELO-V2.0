@@ -42,13 +42,25 @@ export const BottomNav = () => {
 
     fetchBadges();
 
-    // Evento manual disparado pelo ChatPage para zerar badge instantaneamente
+    // Evento manual disparado pelo ChatPage
     const handleManualRefresh = () => fetchBadges();
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
 
+    // FIX: Atualiza badges quando a aba volta a ficar visível (recuperação de background)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchBadges();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const channel = supabase.channel('badges_realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
-        () => setUnreadMessagesCount(p => p + 1))
+        () => {
+           // Incrementa localmente para feedback instantâneo, depois valida
+           setUnreadMessagesCount(p => p + 1);
+           fetchBadges(); 
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
         () => fetchBadges()) 
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
@@ -57,6 +69,7 @@ export const BottomNav = () => {
 
     return () => {
       window.removeEventListener('elo:refresh-badges', handleManualRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       supabase.removeChannel(channel);
     };
   }, [user, fetchBadges]);
@@ -67,7 +80,6 @@ export const BottomNav = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Esconder BottomNav no Chat para ganhar espaço
   if (location.pathname.startsWith('/chat/')) return null;
 
   const NavItem = ({ path, icon: Icon, label, isPrimary = false, badgeCount = 0, hasDot = false }: { path: string, icon: any, label: string, isPrimary?: boolean, badgeCount?: number, hasDot?: boolean }) => {
