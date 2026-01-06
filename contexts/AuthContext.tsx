@@ -22,34 +22,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Refs para controle interno sem re-render
   const mounted = useRef(true);
 
-  // Busca perfil sem travar a UI
+  // Busca perfil de forma isolada
   const fetchProfile = async (userId: string) => {
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
       return data;
-    } catch (e) { 
-      return null; 
-    }
+    } catch (e) { return null; }
   };
 
   useEffect(() => {
     mounted.current = true;
 
-    // 1. TIMEOUT DE SEGURANÇA ABSOLUTA (FAIL-OPEN)
-    // Se o Supabase demorar ou travar, liberamos o app em 3 segundos no máximo.
-    const hardStopTimer = setTimeout(() => {
-      if (mounted.current && loading) {
-        console.warn("Auth: Timeout de segurança atingido. Forçando liberação da UI.");
-        setLoading(false);
-      }
-    }, 2500);
-
-    const initializeAuth = async () => {
+    const initAuth = async () => {
       try {
-        // Version Check
+        // Checagem de versão
         const storedVersion = localStorage.getItem('elo_app_version');
         if (storedVersion !== APP_VERSION) {
           await supabase.auth.signOut();
@@ -57,69 +45,69 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // Recupera sessão inicial
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        // SOLUÇÃO NUCLEAR: Promise.race
+        // Criamos uma promessa que resolve em 1.5s
+        const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 1500));
+        
+        // A promessa do Supabase
+        const supabasePromise = supabase.auth.getSession();
 
-        if (mounted.current) {
-          if (initialSession?.user) {
-            setSession(initialSession);
-            setUser(initialSession.user);
-            
-            // Busca perfil em paralelo
-            fetchProfile(initialSession.user.id).then(p => {
-              if (mounted.current && p) setProfile(p);
-            });
-          }
+        // Quem terminar primeiro ganha. Se o Supabase travar, o timeout libera o app.
+        const result: any = await Promise.race([supabasePromise, timeoutPromise]);
+
+        // Se o resultado veio do Supabase e tem dados:
+        if (result && result.data && mounted.current) {
+           const { session: initialSession } = result.data;
+           if (initialSession) {
+             setSession(initialSession);
+             setUser(initialSession.user);
+             // Busca perfil em background (não await)
+             fetchProfile(initialSession.user.id).then(p => {
+               if (mounted.current && p) setProfile(p);
+             });
+           }
         }
       } catch (err) {
-        console.error("Auth: Erro na inicialização", err);
+        console.warn("Auth init bypassed:", err);
       } finally {
-        // Libera o loading se ainda não tiver sido liberado pelo timeout
+        // INDEPENDENTE do que aconteça, liberamos o loading.
         if (mounted.current) setLoading(false);
       }
     };
 
-    initializeAuth();
+    initAuth();
 
-    // Listener de Eventos - Totalmente Passivo
-    // NUNCA altera 'loading' para true.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted.current) return;
-
-      // Sincroniza estado da sessão
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-
-      if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      } else if (newSession?.user) {
-        // Se temos usuário mas não perfil, tenta buscar
-        if (!profile || profile.id !== newSession.user.id) {
-           const p = await fetchProfile(newSession.user.id);
-           if (mounted.current && p) setProfile(p);
+      
+      // Atualiza estado reativamente
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        if (newSession?.user && (!profile || profile.id !== newSession.user.id)) {
+           fetchProfile(newSession.user.id).then(p => {
+             if (mounted.current && p) setProfile(p);
+           });
         }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
       }
     });
 
     return () => {
       mounted.current = false;
-      clearTimeout(hardStopTimer);
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      if (mounted.current) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-        // Não resetamos loading aqui para manter fluidez
-      }
+    await supabase.auth.signOut();
+    if (mounted.current) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
     }
   };
 
