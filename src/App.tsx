@@ -77,8 +77,8 @@ import { ToastProvider } from './contexts/ToastContext';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
+    <ToastProvider>
+      <AuthProvider>
         <HashRouter>
           <Routes>
             <Route path="/" element={<RootRoute />} />
@@ -102,6 +102,7 @@ export default function App() {
 
           <CookieConsent />
         </HashRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
