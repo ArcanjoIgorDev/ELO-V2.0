@@ -19,7 +19,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind -->
+    <!-- Tailwind (Mantido via CDN para preservar configuração customizada) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -106,7 +106,6 @@
 
       .page-enter { animation: fadeIn 0.3s ease-out; }
 
-      /* CORREÇÃO CRÍTICA DE ANIMAÇÃO */
       .reveal-hidden {
         opacity: 0;
         transform: translateY(30px);
@@ -133,22 +132,22 @@
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
-    "react-dom": "https://esm.sh/react-dom@18.2.0?external=react",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.22.1?external=react,react-dom",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
-    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
-    "date-fns": "https://esm.sh/date-fns@3.3.1",
-    "date-fns/": "https://esm.sh/date-fns@3.3.1/",
+    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "date-fns/": "https://esm.sh/date-fns@^4.1.0/",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
