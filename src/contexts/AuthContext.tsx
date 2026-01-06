@@ -101,21 +101,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     init();
 
+    // Safety Timeout para evitar loading infinito
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth loading forced stop due to timeout");
+        setLoading(false);
+      }
+    }, 6000); // 6 segundos maximo
+
     // ESCUTA EVENTOS DE MUDANÇA DE ESTADO
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
+
+      // Log para debug
+      console.log(`Auth event: ${event}`);
 
       // Atualiza sessão e usuário
       setSession(newSession);
       setUser(newSession?.user ?? null);
 
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // Só busca perfil se tiver usuário e ele mudou ou não temos perfil carregado
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+        // Só busca perfil se tiver usuário
         if (newSession?.user) {
           const p = await getProfile(newSession.user.id);
           if (mounted) setProfile(p);
         }
-        if (mounted) setLoading(false); // Garante que destrava
+        if (mounted) setLoading(false);
       }
       else if (event === 'SIGNED_OUT') {
         if (mounted) {
@@ -125,10 +136,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setLoading(false);
         }
       }
+      // Garante que qualquer outro evento também pare o loading se estiver travado
+      else {
+        if (mounted) setLoading(false);
+      }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [getProfile, ensureProfileExists]);
