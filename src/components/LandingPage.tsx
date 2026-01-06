@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ELOLogo } from './ui/Logo';
 import { Waves, ArrowRight, Heart, MessageCircle, Send, Plus, Search, Bell, User, LogIn } from 'lucide-react';
 
 // --- UTILITÁRIOS DE ANIMAÇÃO ---
@@ -167,11 +168,6 @@ export const LandingPage = () => {
       </div>
 
       {/* Navbar Fixa e Consolidada */}
-      import {ELOLogo} from './ui/Logo';
-
-      // ... (imports)
-
-      // ... (dentro de LandingPage)
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-midnight-950/80 backdrop-blur-xl transition-all supports-[backdrop-filter]:bg-midnight-950/60">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 select-none cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
