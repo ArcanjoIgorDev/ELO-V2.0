@@ -25,6 +25,7 @@ export const ChatPage = () => {
     }
   };
 
+  // Carrega dados iniciais e Marca como lido
   useEffect(() => {
     if (!userId || !user) return;
 
@@ -43,13 +44,15 @@ export const ChatPage = () => {
         
         if (msgs) setMessages(msgs);
 
-        // 3. Marcar lido
+        // 3. CRÍTICO: Marca como lido IMEDIATAMENTE e avisa o BottomNav
         await supabase
            .from('messages')
            .update({ is_read: true })
-           .match({ sender_id: userId, receiver_id: user.id });
+           .match({ sender_id: userId, receiver_id: user.id, is_read: false }); // Update apenas nos não lidos para otimizar
          
-         window.dispatchEvent(new Event('elo:refresh-badges'));
+        // Dispara evento local para zerar o badge no BottomNav instantaneamente
+        window.dispatchEvent(new Event('elo:refresh-badges'));
+
       } catch (err) {
         console.error("Erro carregando chat:", err);
       } finally {
@@ -60,20 +63,27 @@ export const ChatPage = () => {
 
     loadChatData();
 
-    // Realtime
+    // 4. Realtime Listener
     const channel = supabase
       .channel(`chat:${userId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
         table: 'messages',
-        filter: `receiver_id=eq.${user.id}` 
+        filter: `receiver_id=eq.${user.id}` // Escuta mensagens para MIM
       }, async (payload) => {
         const msg = payload.new as any;
+        
+        // Se a mensagem veio da pessoa com quem estou falando agora
         if (msg.sender_id === userId) {
           setMessages(prev => [...prev, msg]);
+          
+          // Marca como lida instantaneamente pois estou na tela
           await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
+          
+          // Mantém badge zerado
           window.dispatchEvent(new Event('elo:refresh-badges'));
+          
           setTimeout(() => scrollToBottom(), 100);
         }
       })
@@ -89,6 +99,8 @@ export const ChatPage = () => {
     const textToSend = newMessage.trim();
     setNewMessage(''); 
     setSending(true);
+    
+    // Focus back on input? No, mobile keeps it generally.
 
     // Otimistic UI Update
     const optimisticMsg = {

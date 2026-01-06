@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -16,12 +17,13 @@ import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
 import { Loader2 } from 'lucide-react';
 
-// Layout Protegido Limpo
+// Layout Protegido
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
 
-  // O AuthContext agora garante que loading se torna false em max 2s.
+  // Só mostra loader se for o LOADING INICIAL do AuthContext.
+  // Atualizações de sessão subsequentes não travam a tela.
   if (loading) {
     return (
       <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
@@ -30,7 +32,7 @@ const ProtectedLayout = () => {
     );
   }
 
-  // Se terminou de carregar e não tem sessão, expulsa
+  // Se não tem sessão após o loading inicial, manda pro login/landing
   if (!session) {
     return <Navigate to="/" replace />;
   }
@@ -58,9 +60,6 @@ const ProtectedLayout = () => {
 const RootRoute = () => {
   const { session, loading } = useAuth();
   
-  // CORREÇÃO CRÍTICA: Nunca retorne null aqui.
-  // Em produção, a latência de rede causa uma tela preta de 2-4 segundos.
-  // Mostramos o Loader para indicar que o app está inicializando.
   if (loading) {
     return (
       <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">

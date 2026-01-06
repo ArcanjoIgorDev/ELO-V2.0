@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Home, Search, PlusSquare, User, Bell, MessageCircle } from 'lucide-react';
+import { Home, Search, PlusSquare, Bell, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,78 +9,93 @@ export const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  
+  // Estados de Badges
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
-  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-  const checkUnread = useCallback(async () => {
+  // Função para buscar dados reais do banco
+  const fetchBadges = useCallback(async () => {
     if (!user) return;
     
-    // Notificações
-    const { count: notifCount } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false);
-    setHasUnreadNotifs((notifCount || 0) > 0);
+    try {
+      // 1. Mensagens Não Lidas (Count Real)
+      const { count: msgCount, error: msgError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+      
+      if (!msgError) setUnreadMessagesCount(msgCount || 0);
 
-    // Mensagens
-    const { count: msgCount } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('receiver_id', user.id)
-      .eq('is_read', false);
-    setUnreadMessages(msgCount || 0);
+      // 2. Notificações Não Lidas (Boleano basta para o ponto vermelho)
+      const { count: notifCount, error: notifError } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+        
+      if (!notifError) setHasUnreadNotifs((notifCount || 0) > 0);
+
+    } catch (e) {
+      console.error("Erro fetching badges:", e);
+    }
   }, [user]);
 
-  // Monitora notificações e mensagens
+  // Efeito Principal
   useEffect(() => {
     if (!user) return;
 
-    checkUnread();
+    // Busca inicial
+    fetchBadges();
 
-    // Notificações (Apenas Insert para avisar nova)
-    const notifSub = supabase
-      .channel('nav:notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+    // Listener para Atualização Manual (Vindo do ChatPage)
+    const handleManualRefresh = () => fetchBadges();
+    window.addEventListener('elo:refresh-badges', handleManualRefresh);
+
+    // Listener Realtime Supabase (Mensagens e Notificações)
+    const channel = supabase.channel('badges_realtime')
+      // Nova mensagem recebida -> Atualiza count
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages', 
+        filter: `receiver_id=eq.${user.id}` 
+      }, () => {
+        setUnreadMessagesCount(prev => prev + 1);
+      })
+      // Mensagem lida (UPDATE) -> Refaz o count pra garantir precisão
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'messages', 
+        filter: `receiver_id=eq.${user.id}` 
+      }, () => {
+        fetchBadges();
+      })
+      // Nova notificação -> Mostra badge
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'notifications', 
+        filter: `user_id=eq.${user.id}` 
+      }, () => {
         setHasUnreadNotifs(true);
       })
       .subscribe();
 
-    // Mensagens: Estratégia Híbrida Robustez
-    const msgSub = supabase
-      .channel('nav:messages_global')
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            // Nova mensagem: Incremento otimista
-            setUnreadMessages(prev => prev + 1);
-          } else {
-            // Update ou Delete: Recalcula do servidor para garantir precisão absoluta
-            // Isso resolve o problema de contadores negativos ou travados
-            checkUnread();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => { 
-        notifSub.unsubscribe();
-        msgSub.unsubscribe();
+    return () => {
+      window.removeEventListener('elo:refresh-badges', handleManualRefresh);
+      supabase.removeChannel(channel);
     };
-  }, [user, checkUnread]);
+  }, [user, fetchBadges]);
 
-  // Event Listener para Atualização Forçada (vindo do ChatPage)
+  // Limpa badge de notificação ao entrar na página de notificações
   useEffect(() => {
-    const handleForceRefresh = () => checkUnread();
-    window.addEventListener('elo:refresh-badges', handleForceRefresh);
-    return () => window.removeEventListener('elo:refresh-badges', handleForceRefresh);
-  }, [checkUnread]);
-
-  // Limpa apenas notificações ao visitar a página
-  useEffect(() => {
-    if (location.pathname === '/notifications') setHasUnreadNotifs(false);
+    if (location.pathname === '/notifications') {
+      setHasUnreadNotifs(false);
+      // Opcional: Marcar como lido no banco aqui, ou deixar a página fazer isso
+    }
   }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
@@ -113,10 +128,12 @@ export const BottomNav = () => {
           <Icon size={26} strokeWidth={active ? 2.5 : 2} fill={active ? "currentColor" : "none"} fillOpacity={0.2} />
         </div>
         
-        {hasDot && (
+        {/* Ponto Vermelho (Notificações) */}
+        {hasDot && !active && (
           <span className="absolute top-3 right-[28%] w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-midnight-950 animate-pulse"></span>
         )}
         
+        {/* Contador Numérico (Chat) */}
         {badgeCount > 0 && (
            <span className="absolute top-2 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-midnight-950 transition-all transform scale-100 animate-in zoom-in">
              {badgeCount > 9 ? '9+' : badgeCount}
@@ -134,7 +151,7 @@ export const BottomNav = () => {
         <div className="px-2">
            <NavItem path="/create" icon={PlusSquare} label="Novo" isPrimary />
         </div>
-        <NavItem path="/messages" icon={MessageCircle} label="Chat" badgeCount={unreadMessages} />
+        <NavItem path="/messages" icon={MessageCircle} label="Chat" badgeCount={unreadMessagesCount} />
         <NavItem path="/notifications" icon={Bell} label="Alertas" hasDot={hasUnreadNotifs} />
       </div>
     </nav>
