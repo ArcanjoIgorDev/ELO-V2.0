@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BottomNav } from './components/layout/BottomNav';
@@ -15,30 +15,14 @@ import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { supabase } from './lib/supabase';
+import { Loader2 } from 'lucide-react';
 
-// Componente Layout que gerencia animações e estrutura protegida
+// Componente Layout Protegido
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
-  
-  // Timer de segurança interno: Se o AuthContext disser que está carregando por mais de 2s,
-  // nós ignoramos e mostramos a UI (ou redirecionamos) para evitar tela branca eterna.
-  const [forceShow, setForceShow] = useState(false);
 
-  useEffect(() => {
-    let timer: any;
-    if (loading) {
-       timer = setTimeout(() => {
-         setForceShow(true);
-       }, 2000); // 2 segundos max de espera visual
-    }
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  // Se estiver carregando E não passamos do tempo limite, mostra spinner
-  if (loading && !forceShow) {
+  if (loading) {
     return (
       <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
         <Loader2 className="animate-spin text-ocean" size={40} />
@@ -46,7 +30,6 @@ const ProtectedLayout = () => {
     );
   }
 
-  // Se não tem sessão (e parou de carregar ou forçamos), manda pra home
   if (!session) {
     return <Navigate to="/" replace />;
   }
@@ -55,7 +38,6 @@ const ProtectedLayout = () => {
     <div className="fixed inset-0 flex flex-col w-full bg-midnight-950 overflow-hidden">
       <Header />
       
-      {/* Wrapper de Animação */}
       <main className="flex-1 w-full max-w-lg mx-auto bg-midnight-950 relative overflow-hidden">
         <div 
           key={location.pathname} 
@@ -66,24 +48,16 @@ const ProtectedLayout = () => {
       </main>
       
       <BottomNav />
-      
-      {/* Tutorial Overlay - Só aparece se necessário */}
       <OnboardingTutorial />
     </div>
   );
 };
 
+// Rota Raiz Inteligente
 const RootRoute = () => {
   const { session, loading } = useAuth();
   
-  // Mesma lógica de bypass do loading aqui para a Home
-  const [forceShow, setForceShow] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setForceShow(true), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (loading && !forceShow) return null; 
+  if (loading) return null; // Deixa o ProtectedLayout ou o AuthProvider lidar com o loading visual se necessário
   
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;

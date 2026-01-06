@@ -20,94 +20,90 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  
-  // O loading inicia true para verificar a sessão local.
-  // Uma vez false, ele PERMANECE false para sempre durante o ciclo de vida da janela.
   const [loading, setLoading] = useState(true);
   
-  // Ref para garantir que não busquemos perfil múltiplas vezes desnecessariamente
-  const isFetchingProfile = useRef(false);
+  // Refs para controle interno sem re-render
+  const mounted = useRef(true);
 
+  // Busca perfil sem travar a UI
   const fetchProfile = async (userId: string) => {
-    if (isFetchingProfile.current) return null;
-    isFetchingProfile.current = true;
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error || !data) return null;
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
       return data;
     } catch (e) { 
       return null; 
-    } finally {
-      isFetchingProfile.current = false;
     }
   };
 
   useEffect(() => {
-    let mounted = true;
+    mounted.current = true;
+
+    // 1. TIMEOUT DE SEGURANÇA ABSOLUTA (FAIL-OPEN)
+    // Se o Supabase demorar ou travar, liberamos o app em 3 segundos no máximo.
+    const hardStopTimer = setTimeout(() => {
+      if (mounted.current && loading) {
+        console.warn("Auth: Timeout de segurança atingido. Forçando liberação da UI.");
+        setLoading(false);
+      }
+    }, 2500);
 
     const initializeAuth = async () => {
       try {
-        // 1. Version Check Rápido
+        // Version Check
         const storedVersion = localStorage.getItem('elo_app_version');
         if (storedVersion !== APP_VERSION) {
-          // Limpa tudo se versão mudar, força login novo
           await supabase.auth.signOut();
           localStorage.clear();
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // 2. Busca Sessão Local (Síncrono/Rápido na maioria das vezes)
+        // Recupera sessão inicial
         const { data: { session: initialSession } } = await supabase.auth.getSession();
 
-        if (mounted) {
+        if (mounted.current) {
           if (initialSession?.user) {
             setSession(initialSession);
             setUser(initialSession.user);
             
-            // Busca perfil sem bloquear se demorar
+            // Busca perfil em paralelo
             fetchProfile(initialSession.user.id).then(p => {
-              if (mounted && p) setProfile(p);
+              if (mounted.current && p) setProfile(p);
             });
           }
         }
       } catch (err) {
-        console.error("Auth init warning:", err);
+        console.error("Auth: Erro na inicialização", err);
       } finally {
-        // 3. Libera o App IMEDIATAMENTE após checar sessão local.
-        // Não esperamos rede ou validação remota para liberar a UI.
-        if (mounted) setLoading(false);
+        // Libera o loading se ainda não tiver sido liberado pelo timeout
+        if (mounted.current) setLoading(false);
       }
     };
 
     initializeAuth();
 
-    // 4. Listener de Eventos (Totalmente passivo)
-    // Esse listener NUNCA mexe no estado 'loading'.
+    // Listener de Eventos - Totalmente Passivo
+    // NUNCA altera 'loading' para true.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted) return;
+      if (!mounted.current) return;
 
-      // Se o token for renovado ou usuário logar, atualizamos o estado
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user) {
-           // Atualiza perfil silenciosamente
-           const p = await fetchProfile(newSession.user.id);
-           if (mounted && p) setProfile(p);
-        }
-      } 
-      else if (event === 'SIGNED_OUT') {
-        // Apenas limpa dados, o router cuidará do redirecionamento
-        setSession(null);
-        setUser(null);
+      // Sincroniza estado da sessão
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+
+      if (event === 'SIGNED_OUT') {
         setProfile(null);
+      } else if (newSession?.user) {
+        // Se temos usuário mas não perfil, tenta buscar
+        if (!profile || profile.id !== newSession.user.id) {
+           const p = await fetchProfile(newSession.user.id);
+           if (mounted.current && p) setProfile(p);
+        }
       }
-      // NOTA: Ignoramos eventos de erro de rede para não travar a UI
     });
 
     return () => {
-      mounted = false;
+      mounted.current = false;
+      clearTimeout(hardStopTimer);
       subscription.unsubscribe();
     };
   }, []);
@@ -118,17 +114,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (e) {
       console.error(e);
     } finally {
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      // Não setamos loading=true aqui para manter a fluidez da saída
+      if (mounted.current) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        // Não resetamos loading aqui para manter fluidez
+      }
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
       const data = await fetchProfile(user.id);
-      if (data) setProfile(data);
+      if (data && mounted.current) setProfile(data);
     }
   };
 
