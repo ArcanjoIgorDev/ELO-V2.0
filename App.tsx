@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -59,9 +58,16 @@ const ProtectedLayout = () => {
 const RootRoute = () => {
   const { session, loading } = useAuth();
   
-  // Enquanto carrega, não mostra nada (ou poderia mostrar um spinner minimalista)
-  // Isso evita o "flash" da Landing Page antes de redirecionar pro Feed
-  if (loading) return null; 
+  // CORREÇÃO CRÍTICA: Nunca retorne null aqui.
+  // Em produção, a latência de rede causa uma tela preta de 2-4 segundos.
+  // Mostramos o Loader para indicar que o app está inicializando.
+  if (loading) {
+    return (
+      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
+        <Loader2 className="animate-spin text-ocean" size={40} />
+      </div>
+    );
+  }
   
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
