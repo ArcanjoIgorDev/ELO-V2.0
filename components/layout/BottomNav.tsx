@@ -36,6 +36,7 @@ export const BottomNav = () => {
 
     checkUnread();
 
+    // Notificações (Apenas Insert para avisar nova)
     const notifSub = supabase
       .channel('nav:notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
@@ -43,23 +44,42 @@ export const BottomNav = () => {
       })
       .subscribe();
 
+    // Mensagens (Insert E Update para contagem precisa)
     const msgSub = supabase
-      .channel('nav:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => {
-        setUnreadMessages(prev => prev + 1);
-      })
+      .channel('nav:messages_global')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Nova mensagem chegando
+            setUnreadMessages(prev => prev + 1);
+          } else if (payload.eventType === 'UPDATE') {
+            // Mensagem sendo marcada como lida
+            const oldRecord = payload.old as any;
+            const newRecord = payload.new as any;
+            
+            // Se mudou de não lida para lida, decrementa
+            // Nota: O payload.old as vezes vem vazio dependendo da config do Supabase (REPLICA IDENTITY),
+            // então checamos se a nova é is_read=true.
+            if (newRecord.is_read === true) {
+               // Decrementamos 1. Se várias forem lidas ao mesmo tempo, receberemos vários eventos.
+               setUnreadMessages(prev => Math.max(0, prev - 1));
+            }
+          }
+        }
+      )
       .subscribe();
 
     return () => { 
         notifSub.unsubscribe();
         msgSub.unsubscribe();
     };
-  }, [user, location.pathname]);
+  }, [user]);
 
-  // Limpa badges ao visitar
+  // Limpa apenas notificações ao visitar a página, mensagens são geridas pelo Realtime/DB
   useEffect(() => {
     if (location.pathname === '/notifications') setHasUnreadNotifs(false);
-    if (location.pathname === '/messages') setUnreadMessages(0); // Simplificação visual
   }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
@@ -97,7 +117,7 @@ export const BottomNav = () => {
         )}
         
         {badgeCount > 0 && (
-           <span className="absolute top-2 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-midnight-950">
+           <span className="absolute top-2 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-midnight-950 transition-all transform scale-100 animate-in zoom-in">
              {badgeCount > 9 ? '9+' : badgeCount}
            </span>
         )}

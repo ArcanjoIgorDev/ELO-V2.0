@@ -59,7 +59,7 @@ export const ChatList = () => {
       };
     }));
 
-    // 3. Ordena: Quem tem mensagem mais recente primeiro. Se não tem mensagem, fica no fim.
+    // 3. Ordena: Quem tem mensagem mais recente primeiro.
     conversationsData.sort((a, b) => {
       const timeA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
       const timeB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
@@ -72,8 +72,34 @@ export const ChatList = () => {
 
   useEffect(() => {
     fetchConversations();
-    // Realtime update simples (recarrega tudo se houver nova mensagem para mim)
-    const channel = supabase.channel('inbox_updates').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` }, fetchConversations).subscribe();
+    
+    // Realtime complexo: Ouve INSERT (nova msg) e UPDATE (msg lida)
+    const channel = supabase
+      .channel('inbox_updates_list')
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` }, 
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            // Nova mensagem: Recarrega para ordenar corretamente
+            fetchConversations();
+          } else if (payload.eventType === 'UPDATE') {
+             // Atualização (Leitura): Atualiza o contador localmente
+             const newMsg = payload.new as any;
+             if (newMsg.is_read === true) {
+               setConversations(prev => prev.map(conv => {
+                 // Se a mensagem lida pertence a essa conversa (enviada pelo amigo), decrementa
+                 if (conv.friend.id === newMsg.sender_id) {
+                   return { ...conv, unread: Math.max(0, conv.unread - 1) };
+                 }
+                 return conv;
+               }));
+             }
+          }
+        }
+      )
+      .subscribe();
+
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
