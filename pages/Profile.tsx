@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -130,7 +131,7 @@ export const ProfilePage = () => {
       const formatted: PostWithAuthor[] = data.map((post: any) => ({
         ...post,
         likes_count: post.likes ? post.likes.length : 0,
-        comments_count: post.comments ? post.comments[0].count : 0,
+        comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
         user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
       }));
       setPosts(formatted);

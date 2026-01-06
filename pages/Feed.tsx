@@ -62,8 +62,8 @@ export const Feed = () => {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
           ...post,
           likes_count: post.likes ? post.likes.length : 0,
-          comments_count: post.comments ? post.comments[0].count : 0,
-          views_count: post.post_views ? post.post_views[0].count : 0,
+          comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
+          views_count: post.post_views && post.post_views[0] ? post.post_views[0].count : 0,
           user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);
