@@ -16,6 +16,7 @@ import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { supabase } from './lib/supabase';
 
 // Componente Layout que gerencia animações e estrutura protegida
 const ProtectedLayout = () => {
@@ -23,11 +24,28 @@ const ProtectedLayout = () => {
   const location = useLocation();
   const [showRescue, setShowRescue] = useState(false);
 
-  // Timer para mostrar botão de resgate se o loading demorar muito
+  // Revalidação Silenciosa ao focar na aba/app
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && session) {
+        // Verifica sessão em background sem setar loading global
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data.session) {
+          // Se sessão morreu no background, aí sim podemos recarregar
+          console.log("Sessão perdida em background, recarregando...");
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [session]);
+
+  // Timer de Resgate (Failsafe UI)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     if (loading) {
-      timer = setTimeout(() => setShowRescue(true), 4000); // 4 segundos
+      timer = setTimeout(() => setShowRescue(true), 5000); // Aumentado para 5s
     } else {
       setShowRescue(false);
     }
@@ -40,13 +58,13 @@ const ProtectedLayout = () => {
         <Loader2 className="animate-spin text-ocean" size={40} />
         
         {showRescue && (
-          <div className="animate-fade-in flex flex-col items-center gap-2 mt-4">
-            <p className="text-slate-500 text-sm">A conexão está lenta...</p>
+          <div className="animate-fade-in flex flex-col items-center gap-3 mt-4 px-6 text-center">
+            <p className="text-slate-500 text-sm">O carregamento está demorando mais que o normal.</p>
             <button 
               onClick={() => window.location.reload()} 
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full text-white text-sm font-bold hover:bg-white/20 transition-colors"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white/10 rounded-full text-white text-sm font-bold hover:bg-white/20 transition-colors border border-white/5"
             >
-              <RefreshCw size={14} /> Recarregar App
+              <RefreshCw size={14} /> Tentar Novamente
             </button>
           </div>
         )}
@@ -82,7 +100,7 @@ const ProtectedLayout = () => {
 
 const RootRoute = () => {
   const { session, loading } = useAuth();
-  if (loading) return null; // Deixa o ProtectedLayout lidar com o loading UI global se necessário, ou retorna null rápido
+  if (loading) return null; 
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
 };
@@ -99,7 +117,6 @@ export default function App() {
             <Route path="/feed" element={<Feed />} />
             <Route path="/create" element={<CreatePost />} />
             
-            {/* Rotas de Perfil */}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/:userId" element={<ProfilePage />} />
 
@@ -112,7 +129,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         
-        {/* Cookie Consent Global */}
         <CookieConsent />
       </HashRouter>
     </AuthProvider>
