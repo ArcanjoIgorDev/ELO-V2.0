@@ -232,6 +232,3 @@ export const Discover = () => {
     </div>
   );
 };
-
-  );
-};

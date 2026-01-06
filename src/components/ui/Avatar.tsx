@@ -17,10 +17,10 @@ export const Avatar: React.FC<AvatarProps> = ({ url, alt, size = 'md' }) => {
   const fallbackUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${alt}`;
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex-shrink-0`}>
-      <img 
-        src={url || fallbackUrl} 
-        alt={alt} 
+    <div className={`${sizeClasses[size]} rounded-full overflow-hidden border border-white/10 bg-midnight-950 flex-shrink-0 shadow-lg`}>
+      <img
+        src={url || fallbackUrl}
+        alt={alt}
         className="w-full h-full object-cover"
         loading="lazy"
       />

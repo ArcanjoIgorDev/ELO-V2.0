@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from '../components/ui/Avatar';
@@ -8,9 +9,27 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PullToRefresh } from '../components/ui/PullToRefresh';
 
+interface Notification {
+  id: string;
+  type: string;
+  actor_id: string;
+  user_id: string;
+  created_at: string;
+  is_read: boolean;
+  reference_id?: string;
+  actor?: {
+    id: string;
+    username: string;
+    avatar_url?: string;
+    full_name?: string;
+  } | null;
+  is_virtual?: boolean;
+}
+
 export const NotificationsPage = () => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -37,7 +56,7 @@ export const NotificationsPage = () => {
         .eq('receiver_id', user.id)
         .eq('status', 'pending');
 
-      let combined = [...(notifsData || [])];
+      let combined: Notification[] = [...(notifsData as any || [])];
 
       // Merge seguro
       if (pendingRequests) {
@@ -89,7 +108,7 @@ export const NotificationsPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  const handleFriendRequest = async (notification: any, action: 'accepted' | 'declined') => {
+  const handleFriendRequest = async (notification: Notification, action: 'accepted' | 'declined') => {
     if (processingId || !user) return;
     setProcessingId(notification.id);
 
@@ -138,7 +157,7 @@ export const NotificationsPage = () => {
         }
       }
 
-      setNotifications(prev => prev.map(n => {
+      setNotifications((prev: Notification[]) => prev.map((n: Notification) => {
         if (n.id === notification.id) {
           return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };
         }
