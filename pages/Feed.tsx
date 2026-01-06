@@ -5,7 +5,7 @@ import { PostWithAuthor } from '../types';
 import { PostCard } from '../components/PostCard';
 import { EcosBar } from '../components/EcosBar';
 import { useAuth } from '../contexts/AuthContext';
-import { RefreshCw, Newspaper, Image, AlertCircle, Sparkles } from 'lucide-react';
+import { RefreshCw, Newspaper, AlertCircle, Sparkles } from 'lucide-react';
 import { PullToRefresh } from '../components/ui/PullToRefresh';
 import { Avatar } from '../components/ui/Avatar';
 import { useNavigate } from 'react-router-dom';
@@ -42,7 +42,11 @@ export const Feed = () => {
     if (!user) return;
     
     try {
-      if (!isRefresh && posts.length === 0 && isMounted.current) setLoading(true);
+      // CORREÇÃO: Só mostra loading se não houver posts (primeira carga) ou se for refresh explícito
+      if (!isRefresh && posts.length === 0 && isMounted.current) {
+        setLoading(true);
+      }
+      
       if (isMounted.current) setError(false);
       
       const { data, error: dbError } = await supabase
@@ -75,7 +79,7 @@ export const Feed = () => {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [user]);
+  }, [user]); // user é estável graças ao AuthContext refatorado
 
   useEffect(() => {
     fetchPosts();
@@ -110,7 +114,7 @@ export const Feed = () => {
               <div className="p-4 rounded-full bg-red-500/10 text-red-400 mb-4 border border-red-500/20 shadow-lg shadow-red-500/10"><AlertCircle size={32} /></div>
               <p className="text-white font-bold mb-1 text-lg">Não foi possível carregar</p>
               <p className="text-slate-500 mb-6 text-sm">Verifique sua conexão e tente novamente.</p>
-              <button onClick={() => fetchPosts()} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+              <button onClick={() => fetchPosts(true)} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
                  <RefreshCw size={18} /> Tentar novamente
               </button>
            </div>

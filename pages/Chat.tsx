@@ -18,7 +18,6 @@ export const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // Scroll Helper
   const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -30,11 +29,9 @@ export const ChatPage = () => {
 
     const loadChatData = async () => {
       try {
-        // 1. Info do Amigo
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
         setFriend(profile);
 
-        // 2. Mensagens
         const { data: msgs } = await supabase
           .from('messages')
           .select('*')
@@ -43,7 +40,7 @@ export const ChatPage = () => {
         
         if (msgs) setMessages(msgs);
 
-        // 3. Marcar como lido (Silent Update)
+        // Marca como lido e avisa a UI global para zerar contador
         await supabase
            .from('messages')
            .update({ is_read: true })
@@ -60,7 +57,6 @@ export const ChatPage = () => {
 
     loadChatData();
 
-    // 4. Realtime Subscription
     const channel = supabase
       .channel(`chat:${userId}`)
       .on('postgres_changes', { 
@@ -72,7 +68,8 @@ export const ChatPage = () => {
         const msg = payload.new as any;
         if (msg.sender_id === userId) {
           setMessages(prev => [...prev, msg]);
-          // Mark read immediately since we are here
+          
+          // Marca lido imediatamente se a conversa está aberta
           await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
           window.dispatchEvent(new Event('elo:refresh-badges'));
           setTimeout(scrollToBottom, 100);
@@ -85,12 +82,12 @@ export const ChatPage = () => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !userId) return; // Removido 'sending' check para permitir digitação rápida
+    if (!newMessage.trim() || !user || !userId) return; 
     
     const textToSend = newMessage.trim();
     setNewMessage(''); 
     
-    // Optimistic UI: Adiciona mensagem instantaneamente
+    // UI Otimista: A mensagem aparece NA HORA
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
       id: tempId,
@@ -114,25 +111,25 @@ export const ChatPage = () => {
 
       if (error) throw error;
 
-      // Substitui mensagem temporária pela real
+      // Sucesso: Troca a mensagem fake pela real
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
     } catch (err) {
       console.error("Erro envio:", err);
-      // Remove a mensagem otimista em caso de erro e alerta
+      // Falha: Remove a mensagem e devolve o texto pro input
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(textToSend); // Devolve o texto pro input
-      alert("Não foi possível enviar a mensagem.");
+      setNewMessage(textToSend);
+      alert("Não foi possível enviar. Verifique sua conexão.");
     }
   };
 
   if (loadingInitial) return <div className="h-screen w-full flex items-center justify-center bg-midnight-950"><Loader2 className="animate-spin text-ocean" size={32}/></div>;
 
   return (
-    // Layout Fixado para Mobile (100dvh previne scroll da página inteira)
-    <div className="flex flex-col h-[100dvh] bg-midnight-950 fixed inset-0 z-50 overflow-hidden">
+    // Container Flex Principal - Garante que o input fique na base da viewport visível
+    <div className="flex flex-col h-[100dvh] bg-midnight-950 overflow-hidden">
       
-      {/* Header Fixo */}
-      <div className="flex-none h-16 flex items-center justify-between px-4 border-b border-white/5 bg-midnight-950/90 backdrop-blur-md z-20">
+      {/* Header Fixo no Topo */}
+      <div className="flex-none h-16 flex items-center justify-between px-4 border-b border-white/5 bg-midnight-950/90 backdrop-blur-md z-30">
         <div className="flex items-center gap-2">
            <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full active:scale-90 transition-transform">
              <ArrowLeft size={22} />
@@ -153,13 +150,12 @@ export const ChatPage = () => {
         <button className="p-2 text-slate-500 hover:text-white rounded-full"><MoreVertical size={20} /></button>
       </div>
 
-      {/* Área de Mensagens (Flex-1 com scroll próprio) */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-midnight-950 scroll-smooth overscroll-contain" ref={scrollRef}>
+      {/* Área de Scroll das Mensagens */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-midnight-950 scroll-smooth" ref={scrollRef}>
         {messages.map((msg, idx) => {
           const isMe = msg.sender_id === user?.id;
           const prevMsg = messages[idx - 1];
           const nextMsg = messages[idx + 1];
-          
           const isFirstInSequence = !prevMsg || prevMsg.sender_id !== msg.sender_id;
           const isLastInSequence = !nextMsg || nextMsg.sender_id !== msg.sender_id;
 
@@ -190,13 +186,12 @@ export const ChatPage = () => {
             </div>
           );
         })}
-        {/* Espaçador invisível para garantir que a última mensagem não fique escondida pelo input */}
         <div className="h-2" />
       </div>
 
-      {/* Input Area (Flex-none, fixado no fundo do container flex) */}
-      <div className="flex-none bg-midnight-950 border-t border-white/5 pb-safe z-20">
-        <form onSubmit={handleSend} className="flex gap-2 items-end p-3">
+      {/* Input Area - Flex None para ficar no rodapé */}
+      <div className="flex-none bg-midnight-950 border-t border-white/5 pb-safe z-40">
+        <form onSubmit={handleSend} className="flex gap-2 items-end p-3 bg-midnight-950">
           <textarea 
             rows={1}
             value={newMessage}

@@ -10,14 +10,11 @@ export const BottomNav = () => {
   const location = useLocation();
   const { user } = useAuth();
   
-  // Estados de Badges
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-  // Função para buscar dados reais do banco
   const fetchBadges = useCallback(async () => {
     if (!user) return;
-    
     try {
       const { count: msgCount } = await supabase
         .from('messages')
@@ -36,16 +33,16 @@ export const BottomNav = () => {
       if (notifCount !== null) setHasUnreadNotifs(notifCount > 0);
 
     } catch (e) {
-      console.error("Erro fetching badges:", e);
+      console.error(e);
     }
   }, [user]);
 
-  // Efeito Principal
   useEffect(() => {
     if (!user) return;
 
     fetchBadges();
 
+    // Evento manual disparado pelo ChatPage para zerar badge instantaneamente
     const handleManualRefresh = () => fetchBadges();
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
 
@@ -53,7 +50,7 @@ export const BottomNav = () => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
         () => setUnreadMessagesCount(p => p + 1))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
-        () => fetchBadges()) // Recalcular se msg for lida
+        () => fetchBadges()) 
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
         () => setHasUnreadNotifs(true))
       .subscribe();
@@ -69,6 +66,9 @@ export const BottomNav = () => {
   }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Esconder BottomNav no Chat para ganhar espaço
+  if (location.pathname.startsWith('/chat/')) return null;
 
   const NavItem = ({ path, icon: Icon, label, isPrimary = false, badgeCount = 0, hasDot = false }: { path: string, icon: any, label: string, isPrimary?: boolean, badgeCount?: number, hasDot?: boolean }) => {
     const active = isActive(path);
