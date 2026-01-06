@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Avatar } from '../components/ui/Avatar';
@@ -15,7 +15,7 @@ export const ChatList = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
     
     // 1. Busca conexões aceitas (Amigos)
@@ -68,40 +68,26 @@ export const ChatList = () => {
 
     setConversations(conversationsData);
     setLoading(false);
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchConversations();
     
-    // Realtime complexo: Ouve INSERT (nova msg) e UPDATE (msg lida)
+    // Realtime: Recarrega a lista se houver qualquer mudança nas mensagens recebidas
     const channel = supabase
       .channel('inbox_updates_list')
       .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` }, 
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            // Nova mensagem: Recarrega para ordenar corretamente
-            fetchConversations();
-          } else if (payload.eventType === 'UPDATE') {
-             // Atualização (Leitura): Atualiza o contador localmente
-             const newMsg = payload.new as any;
-             if (newMsg.is_read === true) {
-               setConversations(prev => prev.map(conv => {
-                 // Se a mensagem lida pertence a essa conversa (enviada pelo amigo), decrementa
-                 if (conv.friend.id === newMsg.sender_id) {
-                   return { ...conv, unread: Math.max(0, conv.unread - 1) };
-                 }
-                 return conv;
-               }));
-             }
-          }
+        () => {
+           // Em vez de manipular estado complexo, recarregamos para garantir a verdade
+           fetchConversations();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, fetchConversations]);
 
   return (
     <PullToRefresh onRefresh={fetchConversations}>

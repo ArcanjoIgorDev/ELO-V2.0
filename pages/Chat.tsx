@@ -17,14 +17,23 @@ export const ChatPage = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [sending, setSending] = useState(false);
 
-  // Carrega dados do amigo
+  // Carrega dados do amigo e marca lido
   useEffect(() => {
-    if (userId) {
+    if (userId && user) {
+      // 1. Carrega Info Amigo
       supabase.from('profiles').select('*').eq('id', userId).single().then(({ data }) => setFriend(data));
-      // Marca como lido
-      if (user) {
-         supabase.from('messages').update({ is_read: true }).match({ sender_id: userId, receiver_id: user.id }).then();
-      }
+      
+      // 2. Marca mensagens como lidas e força atualização da UI Global
+      const markAsRead = async () => {
+         await supabase
+           .from('messages')
+           .update({ is_read: true })
+           .match({ sender_id: userId, receiver_id: user.id });
+         
+         // Dispara evento para atualizar BottomNav imediatamente
+         window.dispatchEvent(new Event('elo:refresh-badges'));
+      };
+      markAsRead();
     }
   }, [userId, user]);
 
@@ -44,8 +53,6 @@ export const ChatPage = () => {
     fetchMessages();
 
     // Subscrição Realtime
-    // Escutamos mensagens onde o RECEPTOR sou EU (vindas do amigo)
-    // Mensagens enviadas por mim são tratadas localmente para velocidade imediata
     const channel = supabase
       .channel(`chat:${userId}`)
       .on('postgres_changes', { 
@@ -55,15 +62,17 @@ export const ChatPage = () => {
         filter: `receiver_id=eq.${user.id}` 
       }, (payload) => {
         const msg = payload.new as any;
-        // Verifica se a mensagem é deste chat específico (do amigo atual)
+        // Verifica se a mensagem é deste chat específico
         if (msg.sender_id === userId) {
           setMessages(prev => {
-            // Evita duplicatas se houver lag
             if (prev.some(m => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
-          // Marca como lido instantaneamente
-          supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then();
+          
+          // Marca como lido instantaneamente e atualiza badge
+          supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then(() => {
+             window.dispatchEvent(new Event('elo:refresh-badges'));
+          });
         }
       })
       .subscribe();
@@ -85,11 +94,10 @@ export const ChatPage = () => {
     if (!newMessage.trim() || !user || !userId || sending) return;
     
     const textToSend = newMessage.trim();
-    setNewMessage(''); // Limpa UI imediatamente
+    setNewMessage(''); 
     setSending(true);
 
     try {
-      // Insere e retorna o registro criado
       const { data, error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: userId,
@@ -99,12 +107,11 @@ export const ChatPage = () => {
       if (error) throw error;
 
       if (data) {
-        // Atualiza estado local imediatamente com a mensagem real do banco
         setMessages(prev => [...prev, data]);
       }
     } catch (err) {
       console.error("Erro ao enviar:", err);
-      setNewMessage(textToSend); // Restaura texto em caso de erro
+      setNewMessage(textToSend);
       alert("Falha ao enviar mensagem.");
     } finally {
       setSending(false);

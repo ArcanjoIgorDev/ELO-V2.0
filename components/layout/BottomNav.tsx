@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Home, Search, PlusSquare, User, Bell, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -12,27 +12,29 @@ export const BottomNav = () => {
   const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
+  const checkUnread = useCallback(async () => {
+    if (!user) return;
+    
+    // Notificações
+    const { count: notifCount } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('is_read', false);
+    setHasUnreadNotifs((notifCount || 0) > 0);
+
+    // Mensagens
+    const { count: msgCount } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', user.id)
+      .eq('is_read', false);
+    setUnreadMessages(msgCount || 0);
+  }, [user]);
+
   // Monitora notificações e mensagens
   useEffect(() => {
     if (!user) return;
-
-    const checkUnread = async () => {
-      // Notificações
-      const { count: notifCount } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      setHasUnreadNotifs((notifCount || 0) > 0);
-
-      // Mensagens
-      const { count: msgCount } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
-        .eq('is_read', false);
-      setUnreadMessages(msgCount || 0);
-    };
 
     checkUnread();
 
@@ -44,7 +46,7 @@ export const BottomNav = () => {
       })
       .subscribe();
 
-    // Mensagens (Insert E Update para contagem precisa)
+    // Mensagens: Estratégia Híbrida Robustez
     const msgSub = supabase
       .channel('nav:messages_global')
       .on(
@@ -52,20 +54,12 @@ export const BottomNav = () => {
         { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            // Nova mensagem chegando
+            // Nova mensagem: Incremento otimista
             setUnreadMessages(prev => prev + 1);
-          } else if (payload.eventType === 'UPDATE') {
-            // Mensagem sendo marcada como lida
-            const oldRecord = payload.old as any;
-            const newRecord = payload.new as any;
-            
-            // Se mudou de não lida para lida, decrementa
-            // Nota: O payload.old as vezes vem vazio dependendo da config do Supabase (REPLICA IDENTITY),
-            // então checamos se a nova é is_read=true.
-            if (newRecord.is_read === true) {
-               // Decrementamos 1. Se várias forem lidas ao mesmo tempo, receberemos vários eventos.
-               setUnreadMessages(prev => Math.max(0, prev - 1));
-            }
+          } else {
+            // Update ou Delete: Recalcula do servidor para garantir precisão absoluta
+            // Isso resolve o problema de contadores negativos ou travados
+            checkUnread();
           }
         }
       )
@@ -75,9 +69,16 @@ export const BottomNav = () => {
         notifSub.unsubscribe();
         msgSub.unsubscribe();
     };
-  }, [user]);
+  }, [user, checkUnread]);
 
-  // Limpa apenas notificações ao visitar a página, mensagens são geridas pelo Realtime/DB
+  // Event Listener para Atualização Forçada (vindo do ChatPage)
+  useEffect(() => {
+    const handleForceRefresh = () => checkUnread();
+    window.addEventListener('elo:refresh-badges', handleForceRefresh);
+    return () => window.removeEventListener('elo:refresh-badges', handleForceRefresh);
+  }, [checkUnread]);
+
+  // Limpa apenas notificações ao visitar a página
   useEffect(() => {
     if (location.pathname === '/notifications') setHasUnreadNotifs(false);
   }, [location.pathname]);
