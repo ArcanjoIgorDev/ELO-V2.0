@@ -39,16 +39,16 @@ const ProtectedLayout = () => {
   return (
     <div className="fixed inset-0 flex flex-col w-full bg-midnight-950 overflow-hidden">
       <Header />
-      
+
       <main className="flex-1 w-full max-w-lg mx-auto bg-midnight-950 relative overflow-hidden">
-        <div 
-          key={location.pathname} 
+        <div
+          key={location.pathname}
           className="absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar page-enter"
         >
-           <Outlet />
+          <Outlet />
         </div>
       </main>
-      
+
       <BottomNav />
       <OnboardingTutorial />
     </div>
@@ -58,47 +58,50 @@ const ProtectedLayout = () => {
 // Rota Raiz (Landing ou Feed)
 const RootRoute = () => {
   const { session, loading } = useAuth();
-  
+
   if (loading) return <FullScreenLoader />;
-  
+
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
 };
 
 // Rota de Auth (Login/Register)
 const AuthRoute = () => {
-    const { session, loading } = useAuth();
-    if (loading) return <FullScreenLoader />;
-    if (session) return <Navigate to="/feed" replace />;
-    return <Auth />;
+  const { session, loading } = useAuth();
+  if (loading) return <FullScreenLoader />;
+  if (session) return <Navigate to="/feed" replace />;
+  return <Auth />;
 }
+
+import { ToastProvider } from './contexts/ToastContext';
 
 export default function App() {
   return (
     <AuthProvider>
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<RootRoute />} />
-          <Route path="/auth" element={<AuthRoute />} />
-          
-          <Route element={<ProtectedLayout />}>
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/create" element={<CreatePost />} />
-            
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/profile/:userId" element={<ProfilePage />} />
+      <ToastProvider>
+        <HashRouter>
+          <Routes>
+            <Route path="/" element={<RootRoute />} />
+            <Route path="/auth" element={<AuthRoute />} />
 
-            <Route path="/discover" element={<Discover />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/messages" element={<ChatList />} />
-            <Route path="/chat/:userId" element={<ChatPage />} />
-          </Route>
-          
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        
-        <CookieConsent />
-      </HashRouter>
+            <Route element={<ProtectedLayout />}>
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/create" element={<CreatePost />} />
+
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/profile/:userId" element={<ProfilePage />} />
+
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/messages" element={<ChatList />} />
+              <Route path="/chat/:userId" element={<ChatPage />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+
+          <CookieConsent />
+        </HashRouter>
     </AuthProvider>
   );
 }

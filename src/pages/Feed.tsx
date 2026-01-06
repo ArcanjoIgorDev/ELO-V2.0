@@ -9,6 +9,7 @@ import { RefreshCw, Newspaper, AlertCircle, Sparkles } from 'lucide-react';
 import { PullToRefresh } from '../components/ui/PullToRefresh';
 import { Avatar } from '../components/ui/Avatar';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 const FeedSkeleton = () => (
   <div className="animate-pulse mb-4 p-5 border border-white/5 bg-midnight-900/40 rounded-3xl mx-2">
@@ -26,11 +27,12 @@ const FeedSkeleton = () => (
 
 export const Feed = () => {
   const { user, profile } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  
+
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -44,14 +46,14 @@ export const Feed = () => {
       if (isMounted.current) setLoading(false);
       return;
     }
-    
+
     try {
       if (!isRefresh && posts.length === 0 && isMounted.current) {
         setLoading(true);
       }
-      
+
       if (isMounted.current) setError(false);
-      
+
       const { data, error: dbError } = await supabase
         .from('posts')
         .select(`
@@ -86,7 +88,7 @@ export const Feed = () => {
 
   useEffect(() => {
     fetchPosts();
-    
+
     // Safety Valve: Se por algum milagre o loading travar por 8 segundos, força parada.
     const safetyTimer = setTimeout(() => {
       if (loading && isMounted.current) {
@@ -106,31 +108,31 @@ export const Feed = () => {
     <PullToRefresh onRefresh={() => fetchPosts(true)}>
       <div className="min-h-full pb-32 bg-midnight-950">
         <EcosBar />
-        
+
         {/* Quick Create Box */}
         <div className="mx-3 mb-6 bg-gradient-to-r from-midnight-900 to-midnight-900/50 border border-white/10 rounded-[2rem] p-4 flex items-center gap-3 shadow-lg active:scale-[0.99] transition-transform cursor-pointer" onClick={() => navigate('/create')}>
-           <div className="opacity-80"><Avatar url={profile?.avatar_url} alt="" size="md" /></div>
-           <div className="flex-1 bg-white/5 h-11 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium hover:bg-white/10 transition-colors border border-white/5">
-              No que você está pensando?
-           </div>
-           <button className="p-2.5 text-ocean bg-ocean/10 rounded-full hover:bg-ocean/20 transition-colors border border-ocean/20">
-             <Sparkles size={20} />
-           </button>
+          <div className="opacity-80"><Avatar url={profile?.avatar_url} alt="" size="md" /></div>
+          <div className="flex-1 bg-white/5 h-11 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium hover:bg-white/10 transition-colors border border-white/5">
+            No que você está pensando?
+          </div>
+          <button className="p-2.5 text-ocean bg-ocean/10 rounded-full hover:bg-ocean/20 transition-colors border border-ocean/20">
+            <Sparkles size={20} />
+          </button>
         </div>
 
         {loading ? (
           <div className="pt-2 px-1">
-             {[1, 2, 3].map((i) => <FeedSkeleton key={i} />)}
+            {[1, 2, 3].map((i) => <FeedSkeleton key={i} />)}
           </div>
         ) : error ? (
-           <div className="flex flex-col items-center justify-center min-h-[40vh] px-8 text-center animate-fade-in mt-4">
-              <div className="p-4 rounded-full bg-red-500/10 text-red-400 mb-4 border border-red-500/20 shadow-lg shadow-red-500/10"><AlertCircle size={32} /></div>
-              <p className="text-white font-bold mb-1 text-lg">Não foi possível carregar</p>
-              <p className="text-slate-500 mb-6 text-sm">Verifique sua conexão e tente novamente.</p>
-              <button onClick={() => fetchPosts(true)} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
-                 <RefreshCw size={18} /> Tentar novamente
-              </button>
-           </div>
+          <div className="flex flex-col items-center justify-center min-h-[40vh] px-8 text-center animate-fade-in mt-4">
+            <div className="p-4 rounded-full bg-red-500/10 text-red-400 mb-4 border border-red-500/20 shadow-lg shadow-red-500/10"><AlertCircle size={32} /></div>
+            <p className="text-white font-bold mb-1 text-lg">Não foi possível carregar</p>
+            <p className="text-slate-500 mb-6 text-sm">Verifique sua conexão e tente novamente.</p>
+            <button onClick={() => fetchPosts(true)} className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+              <RefreshCw size={18} /> Tentar novamente
+            </button>
+          </div>
         ) : (
           <div className="px-2 space-y-4">
             {posts.length === 0 ? (

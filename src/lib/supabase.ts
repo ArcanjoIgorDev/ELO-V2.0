@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '../types';
 
-const supabaseUrl = 'https://cyxsdewmlqeypdmfdiho.supabase.co';
-const supabaseAnonKey = 'sb_publishable_ekAS5w464DSz_817-zbi9w_9XpC2DrL';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase credentials missing. Check your constants.");
+  console.error("Supabase credentials missing. Check your .env file.");
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);

@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useMe
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
+import { useToast } from './ToastContext';
 
 interface AuthContextType {
   session: Session | null;
@@ -20,6 +21,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   // Função auxiliar isolada para buscar perfil
   const getProfile = useCallback(async (userId: string): Promise<Profile | null> => {
@@ -29,7 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .select('*')
         .eq('id', userId)
         .single();
-      
+
       if (error && error.code !== 'PGRST116') {
         console.error("Erro ao buscar perfil:", error.message);
       }
@@ -49,7 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       avatar_url: u.user_metadata?.avatar_url || null,
       has_seen_tutorial: false
     };
-    
+
     // Tenta criar. Se falhar, provavelmente já existe (race condition resolvida pelo banco)
     const { error } = await supabase.from('profiles').insert(newProfile);
     if (!error) return newProfile as Profile;
@@ -64,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // 1. Pega a sessão do armazenamento local (síncrono/rápido)
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
+
         if (error) throw error;
 
         if (mounted && initialSession) {
@@ -108,13 +110,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(newSession?.user ?? null);
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-         // Só busca perfil se tiver usuário e ele mudou ou não temos perfil carregado
-         if (newSession?.user) {
-             const p = await getProfile(newSession.user.id);
-             if (mounted) setProfile(p);
-         }
-         if (mounted) setLoading(false); // Garante que destrava
-      } 
+        // Só busca perfil se tiver usuário e ele mudou ou não temos perfil carregado
+        if (newSession?.user) {
+          const p = await getProfile(newSession.user.id);
+          if (mounted) setProfile(p);
+        }
+        if (mounted) setLoading(false); // Garante que destrava
+      }
       else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setSession(null);

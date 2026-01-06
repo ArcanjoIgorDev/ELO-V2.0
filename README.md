@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# ELO V2 - Setup & Deploy
 
-# Run and deploy your AI Studio app
+Este projeto está configurado para ser implantado facilmente na Vercel e otimizado para dispositivos móveis.
 
-This contains everything you need to run your app locally.
+## 🚀 Como fazer Deploy ("Zero Config")
 
-View your app in AI Studio: https://ai.studio/apps/drive/16rBCxB_X48QLZiMx5Qn9WvxPF5O5rkZx
+Como você quer facilidade, aqui está o fluxo mais simples possível:
 
-## Run Locally
+1. **Crie um Repositório no GitHub** e envie este código para lá.
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+   git push -u origin main
+   ```
 
-**Prerequisites:**  Node.js
+2. **Conecte na Vercel**:
+   - Acesse [vercel.com](https://vercel.com) e faça login.
+   - Clique em "Add New..." -> "Project".
+   - Importe o repositório do GitHub que você acabou de criar.
 
+3. **Configure as Variáveis de Ambiente**:
+   - Na tela de configuração do projeto na Vercel (antes de clicar em Deploy), procure a seção **Environment Variables**.
+   - Adicione as seguintes chaves (copie os valores do arquivo `.env` que gerei para você):
+     - `VITE_SUPABASE_URL`
+     - `VITE_SUPABASE_ANON_KEY`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+4. **Clique em Deploy**:
+   - A Vercel vai instalar as dependências, construir o projeto e publicar automaticamente.
+   - Sempre que você fizer um `git push` no GitHub, a Vercel vai atualizar o site sozinha!
+
+## 📱 Mobile First
+
+O projeto foi otimizado para mobile com:
+- **Safe Area Support**: Prevê o "notch" e a barra inferior do iPhone (`pt-safe`, `pb-safe`).
+- **Touch Targets**: Botões com tamanho adequado para o toque.
+- **Pull to Refresh**: Funcionalidade nativa de arrastar para atualizar no Feed.
+- **PWA Ready**: Meta tags configuradas para funcionar como app se adicionado à tela inicial.
+
+## 🛠 Comandos Locais (Opcional)
+
+Se você instalar o Node.js no futuro:
+- `npm install` (Instalar dependências)
+- `npm run dev` (Rodar localmente)
+- `npm run build` (Gerar versão de produção)
