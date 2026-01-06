@@ -18,7 +18,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  if (!post || !post.author) return null;
+  // FALLBACK: Se post vier nulo, não renderiza. 
+  // Se author vier nulo (RLS error), usa fallback.
+  if (!post) return null;
+
+  const author = post.author || {
+    id: 'unknown',
+    username: 'Usuário Desconhecido',
+    avatar_url: null,
+    full_name: 'Desconhecido'
+  };
 
   const [hasLiked, setHasLiked] = useState(post.user_has_liked);
   const [likesCount, setLikesCount] = useState(post.likes_count);
@@ -53,6 +62,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
   const goToProfile = (e: React.MouseEvent, targetId: string) => {
     e.stopPropagation();
+    if (targetId === 'unknown') return;
     navigate(targetId === user?.id ? '/profile' : `/profile/${targetId}`);
   };
 
@@ -94,6 +104,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     if (data) {
       const formattedComments = data.map((c: any) => ({
         ...c,
+        author: c.author || { username: 'Usuário', avatar_url: null },
         likes_count: 0,
         user_has_liked: false
       }));
@@ -121,7 +132,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
       if (error) throw error;
       if (data) {
-        const newCommentObj: CommentWithAuthor = { ...data, author: data.author as any, likes_count: 0, user_has_liked: false };
+        const newCommentObj: CommentWithAuthor = { 
+            ...data, 
+            author: data.author || { username: 'Eu', avatar_url: user.user_metadata?.avatar_url } as any, 
+            likes_count: 0, 
+            user_has_liked: false 
+        };
         setComments([...comments, newCommentObj]);
         setCommentsCount(prev => prev + 1);
         setNewComment('');
@@ -156,14 +172,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={(e) => goToProfile(e, post.user_id)}>
             <div className="ring-2 ring-transparent group-hover:ring-ocean/50 rounded-full transition-all">
-               <Avatar url={post.author.avatar_url} alt={post.author.username} size="md" />
+               <Avatar url={author.avatar_url} alt={author.username} size="md" />
             </div>
             <div>
               <h3 className="font-bold text-slate-100 text-[15px] leading-tight group-hover:text-ocean transition-colors">
-                {post.author.username}
+                {author.username}
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR })}
+                {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : 'agora'}
               </p>
             </div>
           </div>
@@ -232,7 +248,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                     <div className="flex-1">
                        <div className="bg-white/5 rounded-2xl rounded-tl-sm p-3 relative hover:bg-white/10 transition-colors">
                           <div className="flex justify-between items-baseline mb-1">
-                             <span className="font-bold text-xs text-slate-200 cursor-pointer" onClick={(e) => goToProfile(e, c.user_id)}>{c.author?.username}</span>
+                             <span className="font-bold text-xs text-slate-200 cursor-pointer" onClick={(e) => goToProfile(e, c.user_id)}>{c.author?.username || 'Usuário'}</span>
                              <span className="text-[10px] text-slate-500">{formatDistanceToNow(new Date(c.created_at), { locale: ptBR })}</span>
                           </div>
                           <p className="text-sm text-slate-300 leading-snug">{c.content}</p>

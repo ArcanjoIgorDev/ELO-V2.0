@@ -42,7 +42,6 @@ export const Feed = () => {
     if (!user) return;
     
     try {
-      // CORREÇÃO: Só mostra loading se não houver posts (primeira carga) ou se for refresh explícito
       if (!isRefresh && posts.length === 0 && isMounted.current) {
         setLoading(true);
       }
@@ -66,20 +65,21 @@ export const Feed = () => {
       if (data && isMounted.current) {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
           ...post,
-          likes_count: post.likes ? post.likes.length : 0,
+          likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
+          // Safety check for empty/undefined arrays from joins
           comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
           views_count: post.post_views && post.post_views[0] ? post.post_views[0].count : 0,
-          user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
+          user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Feed error:", err);
       if (isMounted.current) setError(true);
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [user]); // user é estável graças ao AuthContext refatorado
+  }, [user]);
 
   useEffect(() => {
     fetchPosts();
