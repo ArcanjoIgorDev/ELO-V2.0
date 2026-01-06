@@ -167,12 +167,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   };
 
   return (
-    <article className="mb-4 bg-gradient-to-b from-midnight-900/50 to-midnight-950/80 border-b border-white/5 sm:border sm:rounded-3xl sm:shadow-lg backdrop-blur-md overflow-hidden animate-fade-in relative z-10">
-      <div className="p-5">
+    <article className="glass-panel rounded-[2rem] overflow-hidden animate-fade-in relative z-10 transition-all hover:bg-midnight-800/60">
+      <div className="p-6">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={(e) => goToProfile(e, post.user_id)}>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3.5 cursor-pointer group" onClick={(e) => goToProfile(e, post.user_id)}>
             <div className="ring-2 ring-transparent group-hover:ring-ocean/50 rounded-full transition-all">
               <Avatar url={author.avatar_url} alt={author.username} size="md" />
             </div>
@@ -180,7 +180,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
               <h3 className="font-bold text-slate-100 text-[15px] leading-tight group-hover:text-ocean transition-colors">
                 {author.username}
               </h3>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
                 {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : 'agora'}
               </p>
             </div>
@@ -189,9 +189,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+              className="p-2 -mr-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
             >
-              <MoreHorizontal size={18} />
+              <MoreHorizontal size={20} />
             </button>
             {showMenu && (
               <>
@@ -212,16 +212,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         </div>
 
         {/* Content */}
-        <div className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap break-words mb-4">
+        <div className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap break-words mb-5 font-normal">
           {post.content}
         </div>
 
         {/* Actions Bar */}
-        <div className="flex items-center gap-6 pt-1">
+        <div className="flex items-center gap-6 pt-2 border-t border-white/5">
           <button
             onClick={handleLike}
-            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-90 p-2 -ml-2 rounded-full hover:bg-white/5
-                ${hasLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'}`}
+            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-95 py-2 px-1 rounded-lg
+                ${hasLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400 hover:bg-rose-500/10'}`}
           >
             <Heart size={20} className={hasLiked ? 'fill-current' : ''} strokeWidth={2.5} />
             <span>{likesCount || ''}</span>
@@ -229,8 +229,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
           <button
             onClick={toggleComments}
-            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-90 p-2 rounded-full hover:bg-white/5
-                ${showComments ? 'text-ocean' : 'text-slate-500 hover:text-ocean'}`}
+            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-95 py-2 px-1 rounded-lg
+                ${showComments ? 'text-ocean' : 'text-slate-500 hover:text-ocean hover:bg-ocean/10'}`}
           >
             <MessageCircle size={20} strokeWidth={2.5} />
             <span>{commentsCount || ''}</span>

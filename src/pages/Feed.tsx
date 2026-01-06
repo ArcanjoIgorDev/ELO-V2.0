@@ -110,18 +110,27 @@ export const Feed = () => {
         <EcosBar />
 
         {/* Quick Create Box */}
-        <div className="mx-3 mb-6 bg-gradient-to-r from-midnight-900 to-midnight-900/50 border border-white/10 rounded-[2rem] p-4 flex items-center gap-3 shadow-lg active:scale-[0.99] transition-transform cursor-pointer" onClick={() => navigate('/create')}>
-          <div className="opacity-80"><Avatar url={profile?.avatar_url} alt="" size="md" /></div>
-          <div className="flex-1 bg-white/5 h-11 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium hover:bg-white/10 transition-colors border border-white/5">
+        <div
+          className="mx-4 mb-8 glass-panel rounded-[2rem] p-4 flex items-center gap-4 shadow-xl active:scale-[0.99] transition-all cursor-pointer group relative overflow-hidden"
+          onClick={() => navigate('/create')}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-ocean-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+          <div className="shrink-0 p-0.5 rounded-full border border-white/10 group-hover:border-ocean/40 transition-colors">
+            <Avatar url={profile?.avatar_url} alt="" size="md" />
+          </div>
+
+          <div className="flex-1 bg-midnight-950/50 h-12 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium border border-white/5 group-hover:bg-midnight-950/80 group-hover:border-ocean/20 transition-all">
             No que você está pensando?
           </div>
-          <button className="p-2.5 text-ocean bg-ocean/10 rounded-full hover:bg-ocean/20 transition-colors border border-ocean/20">
-            <Sparkles size={20} />
+
+          <button className="p-3 text-ocean-400 bg-ocean-500/10 rounded-full group-hover:bg-ocean-500/20 group-hover:scale-105 transition-all border border-ocean-500/20 shadow-lg shadow-ocean-500/10">
+            <Sparkles size={20} className="fill-current" />
           </button>
         </div>
 
         {loading ? (
-          <div className="pt-2 px-1">
+          <div className="pt-2 px-3 space-y-4">
             {[1, 2, 3].map((i) => <FeedSkeleton key={i} />)}
           </div>
         ) : error ? (
@@ -134,7 +143,7 @@ export const Feed = () => {
             </button>
           </div>
         ) : (
-          <div className="px-2 space-y-4">
+          <div className="px-3 space-y-5 pb-safe">
             {posts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 px-8 text-center animate-slide-up">
                 <div className="w-24 h-24 bg-midnight-900 rounded-[2rem] flex items-center justify-center mb-6 border border-white/5 shadow-2xl rotate-3">
