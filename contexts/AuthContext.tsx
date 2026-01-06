@@ -1,9 +1,8 @@
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
-import { APP_VERSION } from '../lib/constants';
 
 interface AuthContextType {
   session: Session | null;
@@ -22,82 +21,107 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  // Função auxiliar isolada para buscar perfil
+  const getProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error || !data) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Erro ao buscar perfil:", error.message);
+      }
       return data;
     } catch (e) {
+      console.error("Exceção ao buscar perfil:", e);
       return null;
     }
-  };
+  }, []);
+
+  // Lógica de Autocura de Perfil (caso usuário exista no Auth mas não na tabela profiles)
+  const ensureProfileExists = useCallback(async (u: User) => {
+    const newProfile = {
+      id: u.id,
+      username: u.user_metadata?.username || u.email?.split('@')[0] || `user_${Date.now().toString().slice(-4)}`,
+      full_name: u.user_metadata?.full_name || '',
+      avatar_url: u.user_metadata?.avatar_url || null,
+      has_seen_tutorial: false
+    };
+    
+    // Tenta criar. Se falhar, provavelmente já existe (race condition resolvida pelo banco)
+    const { error } = await supabase.from('profiles').insert(newProfile);
+    if (!error) return newProfile as Profile;
+    return null;
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
+    // INICIALIZAÇÃO ÚNICA E DETERMINÍSTICA
+    const init = async () => {
       try {
-        const storedVersion = localStorage.getItem('elo_app_version');
-        if (storedVersion !== APP_VERSION) {
-          await supabase.auth.signOut();
-          localStorage.clear();
-          localStorage.setItem('elo_app_version', APP_VERSION);
-        }
+        // 1. Pega a sessão do armazenamento local (síncrono/rápido)
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
 
-        // Obtém a sessão atual sem timeout agressivo que quebra o estado
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (mounted && initialSession) {
+          setSession(initialSession);
+          setUser(initialSession.user);
 
-        if (mounted) {
-          if (initialSession) {
-            setSession(initialSession);
-            setUser(initialSession.user);
-            
-            let userProfile = await fetchProfile(initialSession.user.id);
+          // 2. Busca o perfil
+          let userProfile = await getProfile(initialSession.user.id);
 
-            // Auto-cura de perfil
-            if (!userProfile && initialSession.user) {
-              const { user: u } = initialSession;
-              const newProfile = {
-                  id: u.id,
-                  username: u.user_metadata?.username || u.email?.split('@')[0] || `user_${Date.now()}`,
-                  full_name: u.user_metadata?.full_name || '',
-                  avatar_url: u.user_metadata?.avatar_url || null,
-                  has_seen_tutorial: false
-              };
-              const { error: createError } = await supabase.from('profiles').insert(newProfile);
-              if (!createError) userProfile = newProfile as any;
-            }
-
-            setProfile(userProfile);
+          // 3. Fallback: Se não tem perfil, cria um
+          if (!userProfile) {
+            userProfile = await ensureProfileExists(initialSession.user);
+            // Se ainda assim falhar, tenta buscar de novo caso tenha sido criado por trigger
+            if (!userProfile) userProfile = await getProfile(initialSession.user.id);
           }
+
+          if (mounted) setProfile(userProfile);
         }
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Falha crítica na inicialização da Auth:", err);
+        // Em caso de erro crítico, limpamos tudo para evitar estados inconsistentes
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
+        // O LOADING *TEM* QUE PARAR AQUI, NÃO IMPORTA O QUE ACONTEÇA
         if (mounted) setLoading(false);
       }
     };
 
-    initializeAuth();
+    init();
 
+    // ESCUTA EVENTOS DE MUDANÇA DE ESTADO
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
-      // Atualiza sessão se mudou
-      if (newSession?.access_token !== session?.access_token) {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-      }
+      // Atualiza sessão e usuário
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
 
-      if (event === 'SIGNED_IN' && newSession?.user) {
-        const p = await fetchProfile(newSession.user.id);
-        if (mounted) setProfile(p);
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+         // Só busca perfil se tiver usuário e ele mudou ou não temos perfil carregado
+         if (newSession?.user) {
+             const p = await getProfile(newSession.user.id);
+             if (mounted) setProfile(p);
+         }
+         if (mounted) setLoading(false); // Garante que destrava
+      } 
+      else if (event === 'SIGNED_OUT') {
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+        }
       }
     });
 
@@ -105,22 +129,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); 
+  }, [getProfile, ensureProfileExists]);
 
   const signOut = async () => {
+    setLoading(true); // Feedback visual imediato
     try {
       await supabase.auth.signOut();
-      setSession(null);
-      setUser(null);
-      setProfile(null);
+      // O listener onAuthStateChange vai lidar com a limpeza do estado
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Erro ao sair:", error);
+      setLoading(false);
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
-      const data = await fetchProfile(user.id);
+      const data = await getProfile(user.id);
       if (data) setProfile(data);
     }
   };

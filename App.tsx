@@ -17,22 +17,21 @@ import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
 import { Loader2 } from 'lucide-react';
 
+// Componente de Loading Centralizado
+const FullScreenLoader = () => (
+  <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-midnight-950">
+    <Loader2 className="animate-spin text-ocean mb-4" size={48} />
+    <p className="text-slate-500 text-sm font-medium animate-pulse">Conectando...</p>
+  </div>
+);
+
 // Layout Protegido
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
 
-  // Só mostra loader se for o LOADING INICIAL do AuthContext.
-  // Atualizações de sessão subsequentes não travam a tela.
-  if (loading) {
-    return (
-      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
-        <Loader2 className="animate-spin text-ocean" size={40} />
-      </div>
-    );
-  }
+  if (loading) return <FullScreenLoader />;
 
-  // Se não tem sessão após o loading inicial, manda pro login/landing
   if (!session) {
     return <Navigate to="/" replace />;
   }
@@ -56,21 +55,23 @@ const ProtectedLayout = () => {
   );
 };
 
-// Rota Raiz
+// Rota Raiz (Landing ou Feed)
 const RootRoute = () => {
   const { session, loading } = useAuth();
   
-  if (loading) {
-    return (
-      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
-        <Loader2 className="animate-spin text-ocean" size={40} />
-      </div>
-    );
-  }
+  if (loading) return <FullScreenLoader />;
   
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
 };
+
+// Rota de Auth (Login/Register)
+const AuthRoute = () => {
+    const { session, loading } = useAuth();
+    if (loading) return <FullScreenLoader />;
+    if (session) return <Navigate to="/feed" replace />;
+    return <Auth />;
+}
 
 export default function App() {
   return (
@@ -78,7 +79,7 @@ export default function App() {
       <HashRouter>
         <Routes>
           <Route path="/" element={<RootRoute />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/auth" element={<AuthRoute />} />
           
           <Route element={<ProtectedLayout />}>
             <Route path="/feed" element={<Feed />} />
