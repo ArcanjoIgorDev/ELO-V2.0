@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -19,17 +20,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  
-  // O loading começa true e só vira false UMA VEZ.
   const [loading, setLoading] = useState(true);
   
-  // Refs para garantir integridade em componentes desmontados
+  // Ref para evitar atualizações em componentes desmontados
   const mounted = useRef(true);
 
-  // Função auxiliar segura para buscar perfil
   const fetchProfile = async (userId: string) => {
     try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (error) throw error;
       return data;
     } catch (e) {
       console.error("Auth: Erro ao buscar perfil", e);
@@ -39,76 +38,66 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     mounted.current = true;
-    let authListener: any = null;
 
-    const initAuth = async () => {
+    const initializeAuth = async () => {
       try {
-        // 0. Verifica versão para limpar cache se necessário
+        // 1. Version Check (Limpeza de cache se versão mudar)
         const storedVersion = localStorage.getItem('elo_app_version');
         if (storedVersion !== APP_VERSION) {
-          console.log("Auth: Nova versão detectada, limpando sessão.");
+          console.log("Auth: Nova versão, limpando sessão local.");
           await supabase.auth.signOut();
           localStorage.clear();
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // 1. Obtem sessão inicial com Timeout de Segurança (Race Condition proposital)
-        // Isso garante que se a rede cair ou o Supabase demorar > 4s, o app carrega (como deslogado ou erro)
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
+        // 2. Busca Sessão Inicial
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
 
-        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
-
-        if (mounted.current) {
-          if (data?.session) {
-            setSession(data.session);
-            setUser(data.session.user);
-            // Busca perfil antes de liberar o loading para evitar flash de conteúdo
-            const userProfile = await fetchProfile(data.session.user.id);
-            if (mounted.current && userProfile) {
-              setProfile(userProfile);
-            }
-          }
+        if (initialSession && mounted.current) {
+          setSession(initialSession);
+          setUser(initialSession.user);
+          
+          // Busca perfil
+          const userProfile = await fetchProfile(initialSession.user.id);
+          if (mounted.current) setProfile(userProfile);
         }
       } catch (err) {
-        console.warn("Auth: Inicialização falhou ou timeout (o usuário será tratado como deslogado).", err);
+        console.error("Auth: Falha na inicialização", err);
       } finally {
-        // 2. PONTO CRÍTICO: Loading vira false AQUI, independente de erro ou sucesso.
-        if (mounted.current) {
-          setLoading(false);
-        }
+        if (mounted.current) setLoading(false);
       }
-      
-      // 3. Configura listener para eventos FUTUROS
-      const { data: listener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-        if (!mounted.current) return;
-        
-        // Atualiza estados
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-           if (newSession?.user) {
-             const p = await fetchProfile(newSession.user.id);
-             if (mounted.current && p) setProfile(p);
-           }
-        } else if (event === 'SIGNED_OUT') {
-           setProfile(null);
-           setSession(null);
-           setUser(null);
-        }
-        
-        // NOTA: Nunca voltamos loading para true aqui para evitar loops na UI.
-        // O app deve lidar com re-renders reativos.
-      });
-      authListener = listener.subscription;
     };
 
-    initAuth();
+    initializeAuth();
+
+    // 3. Listener de Eventos (Realtime Auth)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      if (!mounted.current) return;
+
+      // Token Refreshed não deve causar loading state na UI
+      if (event === 'TOKEN_REFRESHED_OR_UPDATED') {
+        setSession(newSession);
+        return;
+      }
+
+      // Signed In/Out
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+
+      if (event === 'SIGNED_IN') {
+        if (newSession?.user) {
+          const p = await fetchProfile(newSession.user.id);
+          if (mounted.current) setProfile(p);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        // Limpa cache local sensível se necessário
+      }
+    });
 
     return () => {
       mounted.current = false;
-      if (authListener) authListener.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -122,15 +111,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(null);
         setUser(null);
         setProfile(null);
-        // Opcional: Redirecionar via router se necessário, mas o ProtectedLayout cuida disso
+        setLoading(false);
       }
     }
   };
 
   const refreshProfile = async () => {
-    if (user) {
+    if (user && mounted.current) {
       const data = await fetchProfile(user.id);
-      if (data && mounted.current) setProfile(data);
+      if (data) setProfile(data);
     }
   };
 
