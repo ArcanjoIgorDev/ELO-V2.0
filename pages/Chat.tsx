@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,22 +18,53 @@ export const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // UseLayoutEffect é mais rápido que useEffect para scroll, evitando "pulos" visuais
   useLayoutEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, loadingInitial]);
 
+  // Função centralizada e robusta para marcar como lido
+  const markAsRead = useCallback(async () => {
+    if (!user || !userId) return;
+    
+    try {
+      // 1. Atualiza no banco
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .match({ sender_id: userId, receiver_id: user.id, is_read: false });
+      
+      if (!error) {
+        // 2. Dispara evento global para o BottomNav limpar o badge IMEDIATAMENTE
+        window.dispatchEvent(new Event('elo:refresh-badges'));
+      }
+    } catch (err) {
+      console.error("Erro ao marcar lido:", err);
+    }
+  }, [user, userId]);
+
   useEffect(() => {
     if (!userId || !user) return;
 
+    // Listener para quando o usuário volta para a aba do navegador
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        markAsRead();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const loadChatData = async () => {
       try {
+        // Marca como lido imediatamente ao carregar
+        await markAsRead();
+
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
         setFriend(profile);
 
-        const { data: msgs, error } = await supabase
+        const { data: msgs } = await supabase
           .from('messages')
           .select('*')
           .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`)
@@ -41,15 +72,6 @@ export const ChatPage = () => {
         
         if (msgs) setMessages(msgs);
 
-        // Marca como lido apenas se houver mensagens não lidas
-        if (msgs && msgs.some(m => !m.is_read && m.sender_id === userId)) {
-          await supabase
-             .from('messages')
-             .update({ is_read: true })
-             .match({ sender_id: userId, receiver_id: user.id, is_read: false });
-           
-          window.dispatchEvent(new Event('elo:refresh-badges'));
-        }
       } catch (err) {
         console.error("Erro carregando chat:", err);
       } finally {
@@ -69,23 +91,24 @@ export const ChatPage = () => {
       }, async (payload) => {
         const msg = payload.new as any;
         
-        // Verifica se é desta conversa
         if (msg.sender_id === userId) {
           setMessages(prev => {
-             // Deduplicação básica por ID
              if (prev.some(m => m.id === msg.id)) return prev;
              return [...prev, msg];
           });
           
-          // Marca lido imediatamente se a conversa está aberta
+          // Se receber mensagem com chat aberto, marca lido na hora e força refresh
           await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
           window.dispatchEvent(new Event('elo:refresh-badges'));
         }
       })
       .subscribe();
 
-    return () => { channel.unsubscribe(); };
-  }, [userId, user]);
+    return () => { 
+      channel.unsubscribe(); 
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId, user, markAsRead]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,7 +117,6 @@ export const ChatPage = () => {
     const textToSend = newMessage.trim();
     setNewMessage(''); 
     
-    // UI Otimista com ID temporário
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
       id: tempId,
@@ -116,12 +138,9 @@ export const ChatPage = () => {
       }).select().single();
 
       if (error) throw error;
-
-      // Sucesso: Substitui a mensagem temporária pela real
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
     } catch (err) {
       console.error("Erro envio:", err);
-      // Falha: Remove a mensagem e devolve o texto pro input
       setMessages(prev => prev.filter(m => m.id !== tempId));
       setNewMessage(textToSend);
       alert("Não foi possível enviar. Verifique sua conexão.");
@@ -133,7 +152,6 @@ export const ChatPage = () => {
   return (
     <div className="flex flex-col h-[100dvh] bg-midnight-950 overflow-hidden">
       
-      {/* Header Fixo */}
       <div className="flex-none h-16 flex items-center justify-between px-4 border-b border-white/5 bg-midnight-950/90 backdrop-blur-md z-30">
         <div className="flex items-center gap-2">
            <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full active:scale-90 transition-transform">
@@ -155,7 +173,6 @@ export const ChatPage = () => {
         <button className="p-2 text-slate-500 hover:text-white rounded-full"><MoreVertical size={20} /></button>
       </div>
 
-      {/* Área de Scroll */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-midnight-950" ref={scrollRef}>
         {messages.map((msg, idx) => {
           const isMe = msg.sender_id === user?.id;
@@ -191,11 +208,9 @@ export const ChatPage = () => {
             </div>
           );
         })}
-        {/* Espaçador para garantir que o último item não fique colado */}
         <div className="h-2" />
       </div>
 
-      {/* Input Area */}
       <div className="flex-none bg-midnight-950 border-t border-white/5 pb-safe z-40">
         <form onSubmit={handleSend} className="flex gap-2 items-end p-3 bg-midnight-950">
           <textarea 

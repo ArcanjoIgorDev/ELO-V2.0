@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
@@ -21,15 +21,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const mounted = useRef(true);
 
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error || !data) {
-        return null;
-      }
+      if (error || !data) return null;
       return data;
     } catch (e) {
       return null;
@@ -37,7 +33,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
-    mounted.current = true;
+    let mounted = true;
 
     const initializeAuth = async () => {
       try {
@@ -48,68 +44,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // Timeout de segurança para evitar loading infinito
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => 
-          setTimeout(() => resolve({ data: { session: null } }), 5000)
-        );
+        // Obtém a sessão atual sem timeout agressivo que quebra o estado
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
 
-        // @ts-ignore
-        const { data: { session: initialSession } } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]);
-
-        if (initialSession && mounted.current) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          
-          let userProfile = await fetchProfile(initialSession.user.id);
-
-          // AUTOCURA: Se o usuário existe na Auth mas não tem perfil, cria um agora.
-          if (!userProfile && initialSession.user) {
-            console.log("Auth: Perfil ausente. Tentando recriar...");
-            const { user } = initialSession;
-            const newProfile = {
-                id: user.id,
-                username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${Date.now()}`,
-                full_name: user.user_metadata?.full_name || '',
-                avatar_url: user.user_metadata?.avatar_url || null,
-                has_seen_tutorial: false
-            };
+        if (mounted) {
+          if (initialSession) {
+            setSession(initialSession);
+            setUser(initialSession.user);
             
-            const { error: createError } = await supabase.from('profiles').insert(newProfile);
-            if (!createError) {
-               userProfile = newProfile as any;
-            } else {
-               console.error("Auth: Falha ao recriar perfil", createError);
-            }
-          }
+            let userProfile = await fetchProfile(initialSession.user.id);
 
-          if (mounted.current) setProfile(userProfile);
+            // Auto-cura de perfil
+            if (!userProfile && initialSession.user) {
+              const { user: u } = initialSession;
+              const newProfile = {
+                  id: u.id,
+                  username: u.user_metadata?.username || u.email?.split('@')[0] || `user_${Date.now()}`,
+                  full_name: u.user_metadata?.full_name || '',
+                  avatar_url: u.user_metadata?.avatar_url || null,
+                  has_seen_tutorial: false
+              };
+              const { error: createError } = await supabase.from('profiles').insert(newProfile);
+              if (!createError) userProfile = newProfile as any;
+            }
+
+            setProfile(userProfile);
+          }
         }
       } catch (err) {
-        console.error("Auth: Init error", err);
+        console.error("Auth init error:", err);
       } finally {
-        if (mounted.current) setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      if (!mounted.current) return;
+      if (!mounted) return;
 
+      // Atualiza sessão se mudou
       if (newSession?.access_token !== session?.access_token) {
         setSession(newSession);
         setUser(newSession?.user ?? null);
       }
 
       if (event === 'SIGNED_IN' && newSession?.user) {
-        if (!profile || profile.id !== newSession.user.id) {
-           const p = await fetchProfile(newSession.user.id);
-           if (mounted.current) setProfile(p);
-        }
+        const p = await fetchProfile(newSession.user.id);
+        if (mounted) setProfile(p);
       }
       
       if (event === 'SIGNED_OUT') {
@@ -120,7 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     return () => {
-      mounted.current = false;
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []); 
@@ -128,17 +110,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-    } finally {
-      if (mounted.current) {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-      }
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.error("Error signing out:", error);
     }
   };
 
   const refreshProfile = async () => {
-    if (user && mounted.current) {
+    if (user) {
       const data = await fetchProfile(user.id);
       if (data) setProfile(data);
     }

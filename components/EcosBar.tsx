@@ -18,8 +18,6 @@ export const EcosBar = () => {
   // Interaction States
   const [vibeLikes, setVibeLikes] = useState(0);
   const [hasLikedVibe, setHasLikedVibe] = useState(false);
-  const [vibeComments, setVibeComments] = useState<any[]>([]);
-  const [newVibeComment, setNewVibeComment] = useState('');
 
   const fetchEchos = async () => {
     if (!user) return;
@@ -57,17 +55,6 @@ export const EcosBar = () => {
     if (viewingEcho) {
       setVibeLikes(viewingEcho.likes_count);
       setHasLikedVibe(viewingEcho.user_has_liked);
-      
-      const loadComments = async () => {
-        const { data } = await supabase
-          .from('echo_comments')
-          .select('*, author:profiles(username)')
-          .eq('echo_id', viewingEcho.id)
-          .order('created_at', { ascending: true })
-          .limit(5);
-        if (data) setVibeComments(data);
-      };
-      loadComments();
     }
   }, [viewingEcho]);
 
@@ -91,7 +78,7 @@ export const EcosBar = () => {
   const hasMyVibe = myEchos.length > 0;
 
   return (
-    <div className="pt-5 pb-3 bg-midnight-950/50 backdrop-blur-sm border-b border-white/5 mb-2">
+    <div className="pt-5 pb-3 bg-midnight-950/50 backdrop-blur-sm border-b border-white/5 mb-2 relative z-10">
       <div className="flex gap-4 overflow-x-auto px-5 no-scrollbar items-center pb-2">
         
         {/* Create / My Vibe */}
@@ -121,12 +108,12 @@ export const EcosBar = () => {
         ))}
       </div>
 
-      {/* CREATE MODAL */}
+      {/* CREATE MODAL - Layout corrigido para mobile e Z-Index 200 */}
       {isCreating && (
-        <div className="fixed inset-0 z-[60] bg-midnight-950/95 backdrop-blur-xl flex flex-col p-6 animate-fade-in">
-          <button onClick={() => setIsCreating(false)} className="self-end p-2 bg-white/10 rounded-full text-white mb-10 hover:bg-white/20"><X /></button>
-          <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full">
-             <div className="w-20 h-20 bg-gradient-to-tr from-ocean to-emerald-400 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-ocean/30 rotate-3">
+        <div className="fixed inset-0 z-[200] bg-midnight-950/95 backdrop-blur-xl flex flex-col p-6 animate-fade-in justify-start pt-32">
+          <button onClick={() => setIsCreating(false)} className="absolute top-6 right-6 p-2 bg-white/10 rounded-full text-white hover:bg-white/20"><X /></button>
+          <div className="flex-1 flex flex-col items-center w-full max-w-md mx-auto">
+             <div className="w-20 h-20 bg-gradient-to-tr from-ocean to-emerald-400 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-ocean/30 rotate-3 shrink-0">
                 <Zap size={40} className="text-white fill-white"/>
              </div>
              <h3 className="text-white font-bold text-xl mb-6">O que você está sentindo?</h3>
@@ -136,15 +123,15 @@ export const EcosBar = () => {
                className="w-full bg-transparent text-center text-4xl font-black text-white placeholder:text-white/10 focus:outline-none resize-none mb-4 leading-tight"
                rows={2}
              />
-             <div className="text-sm text-slate-500 font-bold tracking-wider">{newEchoContent.length}/60</div>
+             <div className="text-sm text-slate-500 font-bold tracking-wider mb-8">{newEchoContent.length}/60</div>
+             <button onClick={handleCreateEcho} disabled={!newEchoContent.trim()} className="w-full bg-ocean hover:bg-ocean-600 text-white font-bold py-4 rounded-2xl disabled:opacity-50 transition-all shadow-lg shadow-ocean/20">PUBLICAR ECOS</button>
           </div>
-          <button onClick={handleCreateEcho} disabled={!newEchoContent.trim()} className="w-full max-w-md mx-auto bg-ocean hover:bg-ocean-600 text-white font-bold py-4 rounded-2xl mb-8 disabled:opacity-50 transition-all shadow-lg shadow-ocean/20">PUBLICAR ECOS</button>
         </div>
       )}
 
       {/* VIEW MODAL */}
       {viewingEcho && (
-        <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-3xl flex flex-col animate-fade-in">
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-3xl flex flex-col animate-fade-in">
           {/* Progress Bar */}
           <div className="pt-2 px-2"><div className="h-1 bg-white/20 rounded-full overflow-hidden"><div className="h-full bg-white w-full animate-[width_10s_linear] origin-left" onAnimationEnd={() => setViewingEcho(null)}></div></div></div>
           
@@ -160,7 +147,6 @@ export const EcosBar = () => {
           </div>
 
           <div className="flex-1 flex items-center justify-center p-8 text-center relative overflow-hidden">
-             {/* Background Glow */}
              <div className="absolute inset-0 bg-gradient-to-tr from-ocean/20 to-purple-500/20 blur-[100px] pointer-events-none"></div>
              <p className="text-4xl md:text-6xl font-black text-white drop-shadow-2xl relative z-10">{viewingEcho.content}</p>
           </div>
@@ -181,7 +167,6 @@ export const EcosBar = () => {
                 <button onClick={() => {
                    if (!hasLikedVibe) setVibeLikes(p => p + 1);
                    setHasLikedVibe(true);
-                   // Lógica de like simplificada
                    supabase.from('echo_likes').insert({ user_id: user?.id, echo_id: viewingEcho.id }).then();
                 }} className="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
                    <div className={`p-3.5 rounded-full ${hasLikedVibe ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' : 'bg-white/10 text-white'} transition-colors`}>

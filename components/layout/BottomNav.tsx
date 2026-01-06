@@ -22,6 +22,7 @@ export const BottomNav = () => {
         .eq('receiver_id', user.id)
         .eq('is_read', false);
       
+      // Sempre atualiza, não depende de visibilidade, para garantir consistência
       if (msgCount !== null) setUnreadMessagesCount(msgCount);
 
       const { count: notifCount } = await supabase
@@ -42,11 +43,12 @@ export const BottomNav = () => {
 
     fetchBadges();
 
-    // Evento manual disparado pelo ChatPage
-    const handleManualRefresh = () => fetchBadges();
+    // Evento manual disparado pelo ChatPage para limpar badges imediatamente
+    const handleManualRefresh = () => {
+        fetchBadges();
+    };
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
 
-    // FIX: Atualiza badges quando a aba volta a ficar visível (recuperação de background)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchBadges();
@@ -57,8 +59,7 @@ export const BottomNav = () => {
     const channel = supabase.channel('badges_realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
         () => {
-           // Incrementa localmente para feedback instantâneo, depois valida
-           setUnreadMessagesCount(p => p + 1);
+           setUnreadMessagesCount(p => p + 1); // Feedback otimista
            fetchBadges(); 
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
