@@ -22,56 +22,31 @@ import { supabase } from './lib/supabase';
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
-  const [showRescue, setShowRescue] = useState(false);
+  
+  // Timer de segurança interno: Se o AuthContext disser que está carregando por mais de 2s,
+  // nós ignoramos e mostramos a UI (ou redirecionamos) para evitar tela branca eterna.
+  const [forceShow, setForceShow] = useState(false);
 
-  // Revalidação Silenciosa ao focar na aba/app
   useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && session) {
-        // Verifica sessão em background sem setar loading global
-        const { data, error } = await supabase.auth.getSession();
-        if (error || !data.session) {
-          // Se sessão morreu no background, aí sim podemos recarregar
-          console.log("Sessão perdida em background, recarregando...");
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [session]);
-
-  // Timer de Resgate (Failsafe UI)
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
+    let timer: any;
     if (loading) {
-      timer = setTimeout(() => setShowRescue(true), 5000); // Aumentado para 5s
-    } else {
-      setShowRescue(false);
+       timer = setTimeout(() => {
+         setForceShow(true);
+       }, 2000); // 2 segundos max de espera visual
     }
     return () => clearTimeout(timer);
   }, [loading]);
 
-  if (loading) {
+  // Se estiver carregando E não passamos do tempo limite, mostra spinner
+  if (loading && !forceShow) {
     return (
-      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950 gap-4">
+      <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-midnight-950">
         <Loader2 className="animate-spin text-ocean" size={40} />
-        
-        {showRescue && (
-          <div className="animate-fade-in flex flex-col items-center gap-3 mt-4 px-6 text-center">
-            <p className="text-slate-500 text-sm">O carregamento está demorando mais que o normal.</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="flex items-center gap-2 px-5 py-2.5 bg-white/10 rounded-full text-white text-sm font-bold hover:bg-white/20 transition-colors border border-white/5"
-            >
-              <RefreshCw size={14} /> Tentar Novamente
-            </button>
-          </div>
-        )}
       </div>
     );
   }
 
+  // Se não tem sessão (e parou de carregar ou forçamos), manda pra home
   if (!session) {
     return <Navigate to="/" replace />;
   }
@@ -100,7 +75,16 @@ const ProtectedLayout = () => {
 
 const RootRoute = () => {
   const { session, loading } = useAuth();
-  if (loading) return null; 
+  
+  // Mesma lógica de bypass do loading aqui para a Home
+  const [forceShow, setForceShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setForceShow(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading && !forceShow) return null; 
+  
   if (session) return <Navigate to="/feed" replace />;
   return <LandingPage />;
 };
