@@ -38,16 +38,13 @@ export const ProfilePage = () => {
   const isOwnProfile = !userId || (user && userId === user.id);
   const targetId = isOwnProfile ? user?.id : userId;
 
-  // 1. CARREGAR DADOS DO PERFIL
   useEffect(() => {
     if (!targetId) return;
 
     const loadProfileData = async () => {
       setLoadingProfile(true);
-      
       try {
         let profileData = null;
-
         if (isOwnProfile && myProfile) {
            profileData = myProfile;
         } else {
@@ -77,7 +74,6 @@ export const ProfilePage = () => {
   const checkConnectionStatus = async (otherId: string) => {
     if (!user || isOwnProfile) return;
 
-    // Busca qualquer conexão entre eu e ele
     const { data } = await supabase
       .from('connections')
       .select('*')
@@ -94,7 +90,6 @@ export const ProfilePage = () => {
       } else if (data.status === 'blocked') {
         setConnectionState('blocked');
       } else if (data.status === 'pending') {
-        // Se eu sou o requester, é sent_pending. Se sou receiver, é received_pending
         setConnectionState(data.requester_id === user.id ? 'sent_pending' : 'received_pending');
       }
     }
@@ -141,10 +136,8 @@ export const ProfilePage = () => {
     setProcessingConnect(true);
 
     try {
-      // Limpa qualquer lixo anterior antes de inserir
-      if (connectionId) {
-        await supabase.from('connections').delete().eq('id', connectionId);
-      }
+      // Deleta anterior se existir (limpeza)
+      if (connectionId) await supabase.from('connections').delete().eq('id', connectionId);
 
       const { data, error } = await supabase
         .from('connections')
@@ -154,20 +147,19 @@ export const ProfilePage = () => {
 
       if (error) throw error;
 
-      if (data) {
-        setConnectionState('sent_pending');
-        setConnectionId(data.id);
-        
-        // Notificação
-        supabase.from('notifications').insert({
-           user_id: targetId,
-           actor_id: user.id,
-           type: 'request_received',
-           reference_id: data.id
-        }).then(() => {});
-      }
-    } catch (err) {
-      alert("Erro ao enviar pedido.");
+      setConnectionState('sent_pending');
+      setConnectionId(data.id);
+      
+      // Notificação
+      supabase.from('notifications').insert({
+          user_id: targetId,
+          actor_id: user.id,
+          type: 'request_received',
+          reference_id: data.id
+      }).then(() => {});
+
+    } catch (err: any) {
+      alert("Erro ao conectar: " + err.message);
     } finally {
       setProcessingConnect(false);
     }
@@ -177,29 +169,43 @@ export const ProfilePage = () => {
     if (!connectionId || processingConnect) return;
     setProcessingConnect(true);
     try {
-      await supabase.from('connections').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', connectionId);
+      const { error } = await supabase
+        .from('connections')
+        .update({ status: 'accepted', updated_at: new Date().toISOString() })
+        .eq('id', connectionId);
+
+      if (error) throw error;
+
       setConnectionState('accepted');
-      // Notifica volta
+      // Notifica
       supabase.from('notifications').insert({
          user_id: targetId!,
          actor_id: user!.id,
          type: 'request_accepted',
          reference_id: connectionId
       }).then(() => {});
-    } catch (err) {
-      alert("Erro ao aceitar.");
+    } catch (err: any) {
+      alert("Erro ao aceitar: " + err.message);
     } finally {
       setProcessingConnect(false);
     }
   };
 
   const removeConnection = async () => {
-    if (!connectionId || processingConnect) return;
-    if (!window.confirm("Tem certeza que deseja remover esta conexão?")) return;
+    if (processingConnect) return;
+    if (!window.confirm("Remover conexão?")) return;
     
     setProcessingConnect(true);
     try {
-      await supabase.from('connections').delete().eq('id', connectionId);
+      // Tenta deletar pelo ID
+      if (connectionId) {
+        await supabase.from('connections').delete().eq('id', connectionId);
+      } else {
+        // Fallback: match IDs
+        await supabase.from('connections').delete().match({ requester_id: user?.id, receiver_id: targetId });
+        await supabase.from('connections').delete().match({ requester_id: targetId, receiver_id: user?.id });
+      }
+      
       setConnectionState('none');
       setConnectionId(null);
       setShowUnfriendMenu(false);
@@ -211,17 +217,7 @@ export const ProfilePage = () => {
   };
 
   const cancelRequest = async () => {
-    if (!connectionId || processingConnect) return;
-    setProcessingConnect(true);
-    try {
-      await supabase.from('connections').delete().eq('id', connectionId);
-      setConnectionState('none');
-      setConnectionId(null);
-    } catch (err) {
-      alert("Erro ao cancelar.");
-    } finally {
-      setProcessingConnect(false);
-    }
+    await removeConnection();
   };
 
   // --- UPLOAD ---
@@ -341,7 +337,7 @@ export const ProfilePage = () => {
                        <button onClick={acceptRequest} disabled={processingConnect} className="bg-ocean hover:bg-ocean-600 text-white px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 shadow-lg">
                           {processingConnect ? <Loader2 size={16} className="animate-spin" /> : <Check size={18} />} Aceitar
                        </button>
-                       <button onClick={removeConnection} disabled={processingConnect} className="bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-full">
+                       <button onClick={cancelRequest} disabled={processingConnect} className="bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-full">
                           <X size={18} />
                        </button>
                      </div>

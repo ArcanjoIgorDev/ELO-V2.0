@@ -18,35 +18,33 @@ export const NotificationsPage = () => {
     if (!user) return;
     
     try {
-      // 1. Busca notificações tradicionais
+      // 1. Busca notificações do banco
       const { data: notifsData } = await supabase
         .from('notifications')
         .select(`*, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url, full_name)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(40);
+        .limit(50);
 
-      // 2. Busca solicitações de amizade PENDENTES reais na tabela connections
-      // Isso é a fonte da verdade, ignorando se a notificação existe ou não
+      // 2. Busca solicitações pendentes reais (Fonte da verdade)
       const { data: pendingRequests } = await supabase
         .from('connections')
         .select(`id, created_at, requester:profiles!requester_id(id, username, avatar_url, full_name)`)
         .eq('receiver_id', user.id)
         .eq('status', 'pending');
 
-      // 3. Merge Inteligente
+      // 3. Merge para garantir que solicitações sem notificação apareçam
       let combined = [...(notifsData || [])];
       
-      // Adiciona solicitações pendentes que talvez não tenham notificação visual
       pendingRequests?.forEach((req: any) => {
-        const alreadyHasNotification = combined.some(n => 
+        const exists = combined.some(n => 
           n.type === 'request_received' && 
           (n.reference_id === req.id || n.actor_id === req.requester.id)
         );
         
-        if (!alreadyHasNotification) {
+        if (!exists) {
           combined.unshift({
-            id: `sys-${req.id}`, // ID temporário para UI
+            id: `sys-${req.id}`,
             type: 'request_received',
             user_id: user.id,
             actor_id: req.requester.id,
@@ -54,20 +52,19 @@ export const NotificationsPage = () => {
             reference_id: req.id,
             is_read: false,
             created_at: req.created_at,
-            is_virtual: true // Marca como gerado pelo sistema
+            is_virtual: true
           });
         }
       });
 
-      // Ordenar por data
+      // Ordenar e filtrar
       combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      
-      setNotifications(combined.filter(n => !!n.actor)); // Remove nulos
+      setNotifications(combined.filter(n => !!n.actor));
 
-      // Marcar como lidas em background
-      const realUnreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
-      if (realUnreadIds.length > 0) {
-        supabase.from('notifications').update({ is_read: true }).in('id', realUnreadIds).then(() => {});
+      // Marcar como lidas
+      const unreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
+      if (unreadIds.length > 0) {
+        supabase.from('notifications').update({ is_read: true }).in('id', unreadIds).then(() => {});
       }
 
     } catch (err) {
@@ -80,78 +77,78 @@ export const NotificationsPage = () => {
   useEffect(() => {
     fetchData();
     if (!user) return;
-
     const channel = supabase
       .channel('notifications_feed')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, fetchData)
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Lógica Blindada de Aceitação
   const handleFriendRequest = async (notification: any, action: 'accepted' | 'declined') => {
     if (processingId || !user) return;
     setProcessingId(notification.id);
 
-    const targetUserId = notification.actor_id;
-
     try {
-      // Passo 1: Encontrar a conexão exata no banco de dados
-      // Não confiamos apenas no ID da notificação, buscamos a relação ativa
-      const { data: connection, error: fetchError } = await supabase
-        .from('connections')
-        .select('id, status')
-        .eq('requester_id', targetUserId)
-        .eq('receiver_id', user.id)
-        .eq('status', 'pending')
-        .maybeSingle();
+      let connectionId = notification.reference_id;
+      const targetUserId = notification.actor_id;
 
-      if (fetchError) throw fetchError;
-
-      if (!connection) {
-        // Se não achou conexão pendente, talvez já tenha sido aceita ou cancelada
-        alert("Esta solicitação não está mais disponível.");
-        // Atualiza UI para remover o botão
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        return;
+      // Se não tivermos o ID da conexão direto, buscamos no banco
+      if (!connectionId) {
+        const { data: conn } = await supabase
+          .from('connections')
+          .select('id')
+          .eq('requester_id', targetUserId)
+          .eq('receiver_id', user.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        
+        if (conn) connectionId = conn.id;
       }
 
-      // Passo 2: Executar a ação na conexão encontrada
-      const { error: updateError } = await supabase
-        .from('connections')
-        .update({ 
-          status: action,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.id);
+      if (!connectionId) {
+        // Fallback final: Tenta atualizar direto pelo par de IDs se o ID da row falhar
+        // Nota: RLS deve permitir isso
+        if (action === 'declined') {
+           await supabase.from('connections').delete().match({ requester_id: targetUserId, receiver_id: user.id });
+        } else {
+           // Se não achou ID, não dá pra dar update.
+           throw new Error("Solicitação não encontrada ou já processada.");
+        }
+      } else {
+        // Temos o ID, fazemos a ação
+        if (action === 'declined') {
+          await supabase.from('connections').delete().eq('id', connectionId);
+        } else {
+          const { error } = await supabase
+            .from('connections')
+            .update({ status: 'accepted', updated_at: new Date().toISOString() })
+            .eq('id', connectionId);
+          
+          if (error) throw error;
 
-      if (updateError) throw updateError;
+          // Notifica o solicitante
+          await supabase.from('notifications').insert({
+            user_id: targetUserId,
+            actor_id: user.id,
+            type: 'request_accepted',
+            reference_id: connectionId
+          });
+        }
+      }
 
-      // Passo 3: Feedback Visual Otimista e Notificação Reversa
+      // Atualiza UI Otimista
       setNotifications(prev => prev.map(n => {
-        if (n.actor_id === targetUserId && n.type === 'request_received') {
-          return {
-            ...n,
-            type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me'
-          };
+        if (n.id === notification.id) {
+          return { ...n, type: action === 'accepted' ? 'request_accepted_by_me' : 'request_declined_by_me' };
         }
         return n;
       }));
 
-      if (action === 'accepted') {
-        // Envia notificação para quem pediu, avisando que aceitamos
-        await supabase.from('notifications').insert({
-          user_id: targetUserId,
-          actor_id: user.id,
-          type: 'request_accepted',
-          reference_id: connection.id
-        });
-      }
-
     } catch (error: any) {
-      console.error("Erro ao processar amizade:", error);
-      alert("Erro ao processar. Tente novamente.");
+      console.error("Erro ao aceitar:", error);
+      alert(`Erro: ${error.message || "Falha ao processar."}`);
+      // Recarrega para garantir estado real
+      fetchData();
     } finally {
       setProcessingId(null);
     }
@@ -165,7 +162,6 @@ export const NotificationsPage = () => {
       case 'request_received': return <UserPlus className="text-ocean" size={14} />;
       case 'request_accepted': return <Check className="text-emerald-500" size={14} />;
       case 'request_accepted_by_me': return <Check className="text-emerald-500" size={14} />;
-      case 'request_declined': return <X className="text-red-500" size={14} />;
       case 'request_declined_by_me': return <X className="text-slate-500" size={14} />;
       default: return <div className="w-2 h-2 bg-ocean rounded-full" />;
     }

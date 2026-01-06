@@ -22,7 +22,6 @@ export const Discover = () => {
     setResults([]);
     
     try {
-      // 1. Busca perfis
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -33,7 +32,6 @@ export const Discover = () => {
       if (error) throw error;
       
       if (profiles) {
-        // 2. Busca status de conexão para cada perfil
         const profilesWithStatus = await Promise.all(profiles.map(async (p) => {
           const { data: conn } = await supabase
             .from('connections')
@@ -57,7 +55,7 @@ export const Discover = () => {
     setProcessingId(receiverId);
     
     try {
-      // Verifica limpeza antes de inserir
+      // Cleanup para garantir insert limpo
       const { data: existing } = await supabase
          .from('connections')
          .select('id, status')
@@ -65,12 +63,14 @@ export const Discover = () => {
          .maybeSingle();
 
       if (existing) {
-         if (existing.status === 'blocked') { alert("Não permitido."); return; }
-         // Se já existe e não está bloqueado, deleta para recriar (reset limpo)
+         if (existing.status === 'blocked') { 
+           alert("Não permitido."); 
+           setProcessingId(null);
+           return; 
+         }
          await supabase.from('connections').delete().eq('id', existing.id);
       }
 
-      // Inserção Limpa
       const { data: newConn, error } = await supabase
         .from('connections')
         .insert({
@@ -84,7 +84,7 @@ export const Discover = () => {
       if (error) throw error;
 
       if (newConn) {
-         // Notificação (Fire & Forget)
+         // Fire & forget notification
          supabase.from('notifications').insert({
            user_id: receiverId,
            actor_id: user.id,
@@ -92,12 +92,11 @@ export const Discover = () => {
            reference_id: newConn.id
          }).then(() => {});
          
-         // Update UI
          setResults(prev => prev.map(r => r.id === receiverId ? { ...r, connection: newConn } : r));
       }
 
     } catch (err) {
-      alert("Erro ao conectar.");
+      alert("Erro ao conectar. Tente novamente.");
     } finally {
       setProcessingId(null);
     }
