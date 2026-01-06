@@ -11,7 +11,7 @@ export const Header = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="flex-none z-40 w-full pt-safe bg-midnight-950/80 backdrop-blur-md border-b border-white/5">
+    <header className="flex-none z-40 w-full pt-safe bg-black/5 backdrop-blur-md border-b border-white/5 sticky top-0">
       <div className="h-16 w-full flex items-center justify-between px-5 max-w-lg mx-auto">
 
         {/* Esquerda: Avatar do Perfil */}

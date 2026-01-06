@@ -37,13 +37,13 @@ const ProtectedLayout = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col w-full bg-midnight-950 overflow-hidden">
+    <div className="flex flex-col w-full h-full overflow-hidden">
       <Header />
 
-      <main className="flex-1 w-full max-w-lg mx-auto bg-midnight-950 relative overflow-hidden">
+      <main className="flex-1 w-full max-w-lg mx-auto relative overflow-hidden">
         <div
           key={location.pathname}
-          className="absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar page-enter"
+          className="absolute inset-0 w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar page-enter pb-32"
         >
           <Outlet />
         </div>
@@ -80,25 +80,36 @@ export default function App() {
     <ToastProvider>
       <AuthProvider>
         <HashRouter>
-          <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/auth" element={<AuthRoute />} />
+          {/* Main Container with Global Background & Ambient Blobs */}
+          <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background-dark text-white font-display selection:bg-primary selection:text-white">
 
-            <Route element={<ProtectedLayout />}>
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/create" element={<CreatePost />} />
+            {/* Ambient Background Blobs (Global) */}
+            <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[100px] pointer-events-none z-0" />
+            <div className="fixed bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-primary/10 rounded-full blur-[80px] pointer-events-none z-0" />
 
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/profile/:userId" element={<ProfilePage />} />
+            {/* Content Area */}
+            <div className="relative z-10 w-full h-full flex flex-col">
+              <Routes>
+                <Route path="/" element={<RootRoute />} />
+                <Route path="/auth" element={<AuthRoute />} />
 
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/messages" element={<ChatList />} />
-              <Route path="/chat/:userId" element={<ChatPage />} />
-            </Route>
+                <Route element={<ProtectedLayout />}>
+                  <Route path="/feed" element={<Feed />} />
+                  <Route path="/create" element={<CreatePost />} />
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/profile/:userId" element={<ProfilePage />} />
+
+                  <Route path="/discover" element={<Discover />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/messages" element={<ChatList />} />
+                  <Route path="/chat/:userId" element={<ChatPage />} />
+                </Route>
+
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
+          </div>
 
           <CookieConsent />
         </HashRouter>

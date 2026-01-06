@@ -167,7 +167,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   };
 
   return (
-    <article className="glass-panel rounded-[2rem] overflow-hidden animate-fade-in relative z-10 transition-all hover:bg-midnight-800/60">
+    <article className="glass-panel rounded-[2rem] overflow-hidden animate-fade-in relative z-10 transition-all hover:bg-white/5 border border-white/5 shadow-lg">
       <div className="p-6">
 
         {/* Header */}
@@ -248,7 +248,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                   <Avatar url={c.author?.avatar_url} alt="" size="sm" />
                 </div>
                 <div className="flex-1">
-                  <div className="bg-white/5 rounded-2xl rounded-tl-sm p-3 relative hover:bg-white/10 transition-colors">
+                  <div className="bg-white/5 rounded-2xl p-3 relative hover:bg-white/10 transition-colors border border-white/5">
                     <div className="flex justify-between items-baseline mb-1">
                       <span className="font-bold text-xs text-slate-200 cursor-pointer" onClick={(e) => goToProfile(e, c.user_id)}>{c.author?.username || 'Usuário'}</span>
                       <span className="text-[10px] text-slate-500">{formatDistanceToNow(new Date(c.created_at), { locale: ptBR })}</span>
@@ -278,7 +278,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                 placeholder="Escreva um comentário..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="w-full bg-midnight-950 border border-white/10 rounded-2xl pl-4 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-ocean/50 focus:ring-1 focus:ring-ocean/50 transition-all placeholder:text-slate-600"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all placeholder:text-slate-500"
               />
               <button
                 type="submit"

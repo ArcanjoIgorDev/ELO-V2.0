@@ -122,19 +122,15 @@ export const Auth = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-midnight-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-
-      {/* Background Ambient Glow */}
-      <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-ocean-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen" />
+    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
       {/* Back Button */}
       <div className="absolute top-0 left-0 p-6 z-20 w-full">
-        <button onClick={() => navigate('/')} className="text-slate-400 hover:text-white flex items-center gap-2 transition-colors group">
-          <div className="p-2 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-all">
+        <button onClick={() => navigate('/')} className="text-slate-300 hover:text-white flex items-center gap-2 transition-colors group">
+          <div className="p-2 rounded-full glass-button group-hover:bg-white/10 transition-all">
             <ArrowLeft size={18} />
           </div>
-          <span className="text-sm font-medium">Voltar</span>
+          <span className="text-sm font-bold">Voltar</span>
         </button>
       </div>
 
@@ -155,96 +151,94 @@ export const Auth = () => {
         </div>
 
         {/* Card */}
-        <div className="glass p-1 rounded-[2rem] shadow-2xl">
-          <div className="bg-midnight-950/40 backdrop-blur-sm rounded-[1.8rem] p-6 sm:p-8">
+        <div className="glass-panel p-8 rounded-[2rem] shadow-2xl relative overflow-hidden backdrop-blur-2xl">
 
-            {/* Toggle */}
-            <div className="flex p-1 bg-midnight-950/50 rounded-xl mb-8 border border-white/5 relative isolate">
-              <div
-                className={`absolute inset-y-1 w-[calc(50%-4px)] bg-ocean-500 rounded-lg shadow-lg shadow-ocean-500/20 transition-all duration-300 ease-spring ${isLogin ? 'left-1' : 'left-[calc(50%+0px)]'}`}
-              />
-              <button
-                onClick={() => { setIsLogin(true); setError(null); }}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                Entrar
-              </button>
-              <button
-                onClick={() => { setIsLogin(false); setError(null); }}
-                className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                Cadastro
-              </button>
+          {/* Toggle */}
+          <div className="flex p-1 bg-black/20 rounded-xl mb-8 border border-white/5 relative isolate">
+            <div
+              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-spring ${isLogin ? 'left-1' : 'left-[calc(50%+0px)]'}`}
+            />
+            <button
+              onClick={() => { setIsLogin(true); setError(null); }}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Entrar
+            </button>
+            <button
+              onClick={() => { setIsLogin(false); setError(null); }}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Cadastro
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-fade-in">
+              <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-200 font-medium leading-tight">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-widest">Usuário</label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
+                  className={`w-full bg-black/20 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-primary/50 focus:bg-white/5 hover:border-white/20'}`}
+                  placeholder="Seu nome de usuário"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck="false"
+                />
+
+                {!isLogin && username.length >= 3 && (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300">
+                    {isCheckingUser ? (
+                      <Loader2 size={18} className="animate-spin text-slate-500" />
+                    ) : isUserAvailable ? (
+                      <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-lg" />
+                    ) : (
+                      <XCircle size={20} className="text-red-500 drop-shadow-lg" />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-fade-in">
-                <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
-                <p className="text-sm text-red-200 font-medium leading-tight">{error}</p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-widest">Senha</label>
+              <div className="relative group">
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full bg-black/20 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-primary/50 focus:bg-white/5 hover:border-white/20'}`}
+                  placeholder="••••••"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
+                />
               </div>
-            )}
+            </div>
 
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-widest">Usuário</label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    required
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
-                    className={`w-full bg-midnight-900/50 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-ocean-400/50 focus:bg-ocean-400/5 hover:border-white/20'}`}
-                    placeholder="Seu nome de usuário"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck="false"
-                  />
-
-                  {!isLogin && username.length >= 3 && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300">
-                      {isCheckingUser ? (
-                        <Loader2 size={18} className="animate-spin text-slate-500" />
-                      ) : isUserAvailable ? (
-                        <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-lg" />
-                      ) : (
-                        <XCircle size={20} className="text-red-500 drop-shadow-lg" />
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-widest">Senha</label>
-                <div className="relative group">
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full bg-midnight-900/50 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-ocean-400/50 focus:bg-ocean-400/5 hover:border-white/20'}`}
-                    placeholder="••••••"
-                    autoComplete={isLogin ? "current-password" : "new-password"}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || (!isLogin && !isUserAvailable)}
-                className="w-full bg-ocean-500 text-white font-bold py-3.5 rounded-xl hover:bg-ocean-600 active:scale-[0.98] transition-all shadow-lg shadow-ocean-500/25 hover:shadow-ocean-500/40 flex items-center justify-center gap-2 mt-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none bg-gradient-to-r from-ocean-500 to-ocean-600"
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <>
-                    <span>{isLogin ? 'Entrar no ELO' : 'Criar Conta'}</span>
-                    <ArrowRight size={18} />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading || (!isLogin && !isUserAvailable)}
+              className="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-sky-400 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(13,162,231,0.3)] hover:shadow-[0_0_30px_rgba(13,162,231,0.5)] flex items-center justify-center gap-2 mt-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  <span>{isLogin ? 'Entrar no ELO' : 'Criar Conta'}</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>

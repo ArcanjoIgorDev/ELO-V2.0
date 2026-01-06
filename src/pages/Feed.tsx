@@ -12,15 +12,22 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
 
 const FeedSkeleton = () => (
-  <div className="animate-pulse mb-4 p-5 border border-white/5 bg-midnight-900/40 rounded-3xl mx-2">
-    <div className="flex space-x-4">
-      <div className="rounded-full bg-slate-800 h-10 w-10"></div>
-      <div className="flex-1 space-y-3 py-1">
-        <div className="h-4 bg-slate-800 rounded w-1/4"></div>
-        <div className="space-y-2">
-          <div className="h-24 bg-slate-800 rounded-xl w-full"></div>
-        </div>
+  <div className="animate-pulse mb-6 p-6 glass-panel rounded-[2rem] mx-0">
+    <div className="flex items-center gap-4 mb-4">
+      <div className="rounded-full bg-white/10 h-10 w-10 shrink-0"></div>
+      <div className="flex-1 space-y-2">
+        <div className="h-3 bg-white/10 rounded-full w-1/3"></div>
+        <div className="h-2 bg-white/5 rounded-full w-1/4"></div>
       </div>
+    </div>
+    <div className="space-y-2 mb-4">
+      <div className="h-3 bg-white/5 rounded-full w-full"></div>
+      <div className="h-3 bg-white/5 rounded-full w-5/6"></div>
+      <div className="h-3 bg-white/5 rounded-full w-4/6"></div>
+    </div>
+    <div className="flex gap-4 pt-2 border-t border-white/5">
+      <div className="h-6 w-12 bg-white/5 rounded-lg"></div>
+      <div className="h-6 w-12 bg-white/5 rounded-lg"></div>
     </div>
   </div>
 );
@@ -106,25 +113,26 @@ export const Feed = () => {
 
   return (
     <PullToRefresh onRefresh={() => fetchPosts(true)}>
-      <div className="min-h-full pb-32 bg-midnight-950">
+      <div className="min-h-full pb-32">
         <EcosBar />
 
         {/* Quick Create Box */}
+        {/* Quick Create Box */}
         <div
-          className="mx-4 mb-8 glass-panel rounded-[2rem] p-4 flex items-center gap-4 shadow-xl active:scale-[0.99] transition-all cursor-pointer group relative overflow-hidden"
+          className="mx-4 mb-6 glass-panel rounded-[2rem] p-4 flex items-center gap-4 shadow-xl active:scale-[0.99] transition-all cursor-pointer group relative overflow-hidden"
           onClick={() => navigate('/create')}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-ocean-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-          <div className="shrink-0 p-0.5 rounded-full border border-white/10 group-hover:border-ocean/40 transition-colors">
+          <div className="shrink-0 p-0.5 rounded-full border border-white/10 group-hover:border-primary/40 transition-colors">
             <Avatar url={profile?.avatar_url} alt="" size="md" />
           </div>
 
-          <div className="flex-1 bg-midnight-950/50 h-12 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium border border-white/5 group-hover:bg-midnight-950/80 group-hover:border-ocean/20 transition-all">
-            No que você está pensando?
+          <div className="flex-1 bg-white/5 h-12 rounded-full flex items-center px-5 text-slate-400 text-sm font-medium border border-white/5 group-hover:bg-white/10 group-hover:border-primary/20 transition-all">
+            Compartilhe suas ideias...
           </div>
 
-          <button className="p-3 text-ocean-400 bg-ocean-500/10 rounded-full group-hover:bg-ocean-500/20 group-hover:scale-105 transition-all border border-ocean-500/20 shadow-lg shadow-ocean-500/10">
+          <button className="p-3 text-primary bg-primary/10 rounded-full group-hover:bg-primary/20 group-hover:scale-105 transition-all border border-primary/20 shadow-lg shadow-primary/10">
             <Sparkles size={20} className="fill-current" />
           </button>
         </div>

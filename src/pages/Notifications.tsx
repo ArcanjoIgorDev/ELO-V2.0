@@ -16,7 +16,7 @@ export const NotificationsPage = () => {
 
   const fetchData = async () => {
     if (!user) return;
-    
+
     try {
       // FIX CRÍTICO: Usa !actor_id (nome da coluna) para o join, mais seguro que constraint name
       const { data: notifsData, error } = await supabase
@@ -38,15 +38,15 @@ export const NotificationsPage = () => {
         .eq('status', 'pending');
 
       let combined = [...(notifsData || [])];
-      
+
       // Merge seguro
       if (pendingRequests) {
         pendingRequests.forEach((req: any) => {
-          const exists = combined.some(n => 
-            n.type === 'request_received' && 
+          const exists = combined.some(n =>
+            n.type === 'request_received' &&
             (n.reference_id === req.id || n.actor_id === req.requester?.id)
           );
-          
+
           if (!exists) {
             combined.unshift({
               id: `sys-${req.id}`,
@@ -69,7 +69,7 @@ export const NotificationsPage = () => {
       // Mark as read (silencioso)
       const unreadIds = notifsData?.filter((n: any) => !n.is_read).map((n: any) => n.id) || [];
       if (unreadIds.length > 0) {
-        supabase.from('notifications').update({ is_read: true }).in('id', unreadIds).then(() => {});
+        supabase.from('notifications').update({ is_read: true }).in('id', unreadIds).then(() => { });
       }
 
     } catch (err) {
@@ -105,18 +105,18 @@ export const NotificationsPage = () => {
           .eq('receiver_id', user.id)
           .eq('status', 'pending')
           .maybeSingle();
-        
+
         if (conn) connectionId = conn.id;
       }
 
       if (!connectionId) {
         if (action === 'declined') {
-           // Cleanup de segurança
-           await supabase.from('connections').delete().match({ requester_id: targetUserId, receiver_id: user.id });
+          // Cleanup de segurança
+          await supabase.from('connections').delete().match({ requester_id: targetUserId, receiver_id: user.id });
         } else {
-           // Tenta recuperar conexão aceita anteriormente
-           const { data: exists } = await supabase.from('connections').select('id').match({ requester_id: targetUserId, receiver_id: user.id, status: 'accepted' }).maybeSingle();
-           if (!exists) throw new Error("Solicitação não encontrada.");
+          // Tenta recuperar conexão aceita anteriormente
+          const { data: exists } = await supabase.from('connections').select('id').match({ requester_id: targetUserId, receiver_id: user.id, status: 'accepted' }).maybeSingle();
+          if (!exists) throw new Error("Solicitação não encontrada.");
         }
       } else {
         if (action === 'declined') {
@@ -126,7 +126,7 @@ export const NotificationsPage = () => {
             .from('connections')
             .update({ status: 'accepted', updated_at: new Date().toISOString() })
             .eq('id', connectionId);
-          
+
           if (error) throw error;
 
           await supabase.from('notifications').insert({
@@ -169,63 +169,83 @@ export const NotificationsPage = () => {
 
   return (
     <PullToRefresh onRefresh={fetchData}>
-      <div className="min-h-full pb-20 bg-midnight-950">
-        <div className="px-5 py-4 sticky top-0 bg-midnight-950/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white tracking-tight">Atividade</h1>
-          {loading && <Loader2 className="animate-spin text-ocean" size={16} />}
+      <div className="min-h-full pb-32">
+        {/* Sticky Header */}
+        <div className="px-5 py-5 sticky top-0 z-30 transition-all">
+          <div className="absolute inset-0 bg-background-dark/20 backdrop-blur-xl border-b border-white/5" />
+          <div className="relative z-10 max-w-lg mx-auto flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Atividade</h1>
+            {loading && <Loader2 className="animate-spin text-primary" size={20} />}
+          </div>
         </div>
 
-        <div className="divide-y divide-white/5">
+        <div className="px-4 py-6 space-y-3 max-w-lg mx-auto">
           {!loading && notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in">
-              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 text-slate-600 ring-1 ring-white/10">
-                 <Bell size={24} />
+            <div className="flex flex-col items-center justify-center py-24 px-8 text-center animate-fade-in glass-panel rounded-[2rem]">
+              <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-6 border border-primary/20 rotate-6 shadow-xl shadow-primary/5">
+                <Bell size={32} className="text-primary" />
               </div>
-              <p className="text-slate-400 font-medium">Você não tem novas notificações.</p>
+              <h3 className="text-white font-bold mb-2">Tudo calmo no oceano</h3>
+              <p className="text-slate-500 text-sm leading-relaxed max-w-[200px]">
+                Você ainda não tem novas notificações. Suas interações aparecerão aqui.
+              </p>
             </div>
           ) : (
             notifications.map(n => {
               const actorName = n.actor?.username || "Alguém";
               const actorAvatar = n.actor?.avatar_url;
+              const isUnread = !n.is_read;
 
               return (
-                <div key={n.id} className={`p-4 flex gap-4 transition-colors ${!n.is_read ? 'bg-ocean-900/10' : ''}`}>
-                  <div className="relative shrink-0 pt-1">
+                <div
+                  key={n.id}
+                  className={`relative p-4 glass-panel rounded-[1.5rem] flex gap-4 transition-all group hover:bg-white/5 active:scale-[0.99] border-white/5 ${isUnread ? 'ring-1 ring-primary/30 border-primary/20 bg-primary/5' : ''}`}
+                >
+                  {isUnread && (
+                    <div className="absolute top-4 right-4 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_#0da2e7]" />
+                  )}
+
+                  <div className="relative shrink-0">
                     <Avatar url={actorAvatar} alt={actorName} size="md" />
-                    <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-1 border border-white/10 ring-2 ring-midnight-950">
-                       <NotificationIcon type={n.type} />
+                    <div className="absolute -bottom-1 -right-1 bg-background-dark rounded-full p-1.5 border border-white/10 shadow-lg">
+                      <NotificationIcon type={n.type} />
                     </div>
                   </div>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] text-slate-300 leading-snug">
-                      <span className="font-bold text-slate-100">{actorName}</span>
-                      {n.type === 'like_post' && ' curtiu seu post.'}
-                      {n.type === 'comment' && ' comentou na sua publicação.'}
-                      {n.type === 'request_received' && ' quer conectar com você.'}
-                      {n.type === 'request_accepted' && ' agora é sua conexão!'}
-                      {n.type === 'request_accepted_by_me' && ' • Conexão aceita.'}
-                      {n.type === 'request_declined_by_me' && ' • Solicitação removida.'}
+                    <p className="text-[14px] text-slate-300 leading-snug">
+                      <span className="font-bold text-white group-hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/profile/${n.actor?.id}`)}>
+                        {actorName}
+                      </span>
+                      <span className="ml-1">
+                        {n.type === 'like_post' && 'curtiu seu post.'}
+                        {n.type === 'comment' && 'comentou na sua publicação.'}
+                        {n.type === 'request_received' && 'quer conectar com você.'}
+                        {n.type === 'request_accepted' && 'agora é sua conexão!'}
+                        {n.type === 'request_accepted_by_me' && '• Conexão aceita.'}
+                        {n.type === 'request_declined_by_me' && '• Solicitação removida.'}
+                      </span>
                     </p>
-                    
-                    <span className="text-xs text-slate-500 mt-1 block font-medium">
+
+                    <span className="text-[11px] text-slate-500 mt-1 block font-bold uppercase tracking-wider opacity-60">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                     </span>
-                    
+
                     {n.type === 'request_received' && (
-                      <div className="flex gap-3 mt-3 animate-fade-in">
-                        <button 
+                      <div className="flex gap-2 mt-4 animate-slide-up">
+                        <button
                           onClick={() => handleFriendRequest(n, 'accepted')}
                           disabled={!!processingId}
-                          className="flex-1 bg-ocean hover:bg-ocean-600 text-white text-sm font-bold py-2 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-ocean/20 flex items-center justify-center gap-2"
+                          className="flex-1 bg-primary hover:bg-sky-400 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
                         >
-                          {processingId === n.id ? <Loader2 size={16} className="animate-spin" /> : 'Confirmar'}
+                          {processingId === n.id ? <Loader2 size={14} className="animate-spin" /> : 'Aceitar'}
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleFriendRequest(n, 'declined')}
                           disabled={!!processingId}
-                          className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 text-sm font-bold py-2 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 border border-white/10"
+                          className="flex-1 glass-button text-slate-400 hover:text-red-400 hover:bg-red-500/10 text-xs font-bold py-2.5 px-4 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                         >
-                          Excluir
+                          Recusar
                         </button>
                       </div>
                     )}
@@ -237,5 +257,6 @@ export const NotificationsPage = () => {
         </div>
       </div>
     </PullToRefresh>
+
   );
 };

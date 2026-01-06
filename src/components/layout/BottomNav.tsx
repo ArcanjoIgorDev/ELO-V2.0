@@ -95,8 +95,8 @@ export const BottomNav = () => {
           onClick={() => navigate(path)}
           className="group active:scale-95 transition-transform"
         >
-          <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl border-2 border-midnight-950 px-0.5
-            ${active ? 'bg-ocean-500 text-white shadow-ocean/40 scale-105' : 'bg-ocean text-white shadow-ocean/20'}`}>
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl border-2 border-white/10 px-0.5
+            ${active ? 'bg-primary text-white shadow-primary/40 scale-105' : 'bg-primary text-white shadow-primary/20'}`}>
             <Icon size={26} strokeWidth={2.5} />
           </div>
         </button>
@@ -108,12 +108,12 @@ export const BottomNav = () => {
         onClick={() => navigate(path)}
         className="flex-1 flex flex-col items-center justify-center h-full relative group"
       >
-        <div className={`p-2 rounded-xl transition-all duration-300 relative ${active ? 'text-ocean scale-110' : 'text-slate-400 hover:text-slate-200'}`}>
+        <div className={`p-2 rounded-xl transition-all duration-300 relative ${active ? 'text-primary scale-110' : 'text-slate-400 hover:text-white'}`}>
           <Icon size={24} strokeWidth={active ? 2.5 : 2} fill={active ? "currentColor" : "none"} fillOpacity={0.2} />
 
           {/* Active Indicator Dot under icon */}
           {active && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-ocean rounded-full shadow-[0_0_8px_currentColor]"></span>
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_currentColor]"></span>
           )}
         </div>
 
@@ -133,9 +133,9 @@ export const BottomNav = () => {
 
   return (
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-[360px] pb-0">
-      <div className="bg-midnight-950/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] shadow-2xl flex justify-between items-center h-[72px] px-2 relative overflow-hidden">
+      <div className="glass-panel backdrop-blur-2xl rounded-[2rem] shadow-2xl flex justify-between items-center h-[72px] px-2 relative overflow-hidden bg-black/20 border-white/10">
         {/* Ambient Glow */}
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-ocean/30 to-transparent opacity-50" />
+        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-50" />
 
         <NavItem path="/feed" icon={Home} label="Início" />
         <NavItem path="/discover" icon={Search} label="Buscar" />
