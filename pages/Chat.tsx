@@ -18,20 +18,19 @@ export const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
-  // Scroll to bottom helper
-  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+  // Scroll Helper
+  const scrollToBottom = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
 
-  // Carrega dados iniciais e Marca como lido
   useEffect(() => {
     if (!userId || !user) return;
 
     const loadChatData = async () => {
       try {
-        // 1. Info Amigo
+        // 1. Info do Amigo
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
         setFriend(profile);
 
@@ -44,47 +43,39 @@ export const ChatPage = () => {
         
         if (msgs) setMessages(msgs);
 
-        // 3. CRÍTICO: Marca como lido IMEDIATAMENTE e avisa o BottomNav
+        // 3. Marcar como lido (Silent Update)
         await supabase
            .from('messages')
            .update({ is_read: true })
-           .match({ sender_id: userId, receiver_id: user.id, is_read: false }); // Update apenas nos não lidos para otimizar
+           .match({ sender_id: userId, receiver_id: user.id, is_read: false });
          
-        // Dispara evento local para zerar o badge no BottomNav instantaneamente
         window.dispatchEvent(new Event('elo:refresh-badges'));
-
       } catch (err) {
         console.error("Erro carregando chat:", err);
       } finally {
         setLoadingInitial(false);
-        setTimeout(() => scrollToBottom('auto'), 100);
+        setTimeout(scrollToBottom, 100);
       }
     };
 
     loadChatData();
 
-    // 4. Realtime Listener
+    // 4. Realtime Subscription
     const channel = supabase
       .channel(`chat:${userId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
         table: 'messages',
-        filter: `receiver_id=eq.${user.id}` // Escuta mensagens para MIM
+        filter: `receiver_id=eq.${user.id}` 
       }, async (payload) => {
         const msg = payload.new as any;
-        
-        // Se a mensagem veio da pessoa com quem estou falando agora
         if (msg.sender_id === userId) {
           setMessages(prev => [...prev, msg]);
-          
-          // Marca como lida instantaneamente pois estou na tela
+          // Mark read immediately since we are here
           await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
-          
-          // Mantém badge zerado
           window.dispatchEvent(new Event('elo:refresh-badges'));
-          
-          setTimeout(() => scrollToBottom(), 100);
+          setTimeout(scrollToBottom, 100);
         }
       })
       .subscribe();
@@ -94,17 +85,15 @@ export const ChatPage = () => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !userId || sending) return;
+    if (!newMessage.trim() || !user || !userId) return; // Removido 'sending' check para permitir digitação rápida
     
     const textToSend = newMessage.trim();
     setNewMessage(''); 
-    setSending(true);
     
-    // Focus back on input? No, mobile keeps it generally.
-
-    // Otimistic UI Update
+    // Optimistic UI: Adiciona mensagem instantaneamente
+    const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       sender_id: user.id,
       receiver_id: userId,
       content: textToSend,
@@ -112,8 +101,9 @@ export const ChatPage = () => {
       is_read: false,
       pending: true
     };
+    
     setMessages(prev => [...prev, optimisticMsg]);
-    setTimeout(() => scrollToBottom(), 50);
+    setTimeout(scrollToBottom, 50);
 
     try {
       const { data, error } = await supabase.from('messages').insert({
@@ -124,52 +114,52 @@ export const ChatPage = () => {
 
       if (error) throw error;
 
-      // Replace optimistic message
-      setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? data : m));
+      // Substitui mensagem temporária pela real
+      setMessages(prev => prev.map(m => m.id === tempId ? data : m));
     } catch (err) {
-      console.error("Erro ao enviar:", err);
-      alert("Falha ao enviar mensagem.");
-      setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      setNewMessage(textToSend);
-    } finally {
-      setSending(false);
+      console.error("Erro envio:", err);
+      // Remove a mensagem otimista em caso de erro e alerta
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(textToSend); // Devolve o texto pro input
+      alert("Não foi possível enviar a mensagem.");
     }
   };
 
   if (loadingInitial) return <div className="h-screen w-full flex items-center justify-center bg-midnight-950"><Loader2 className="animate-spin text-ocean" size={32}/></div>;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-midnight-950 fixed inset-0 z-50">
-      {/* Header Glass */}
-      <div className="flex-none h-16 flex items-center justify-between px-4 border-b border-white/5 bg-midnight-950/80 backdrop-blur-md z-20">
+    // Layout Fixado para Mobile (100dvh previne scroll da página inteira)
+    <div className="flex flex-col h-[100dvh] bg-midnight-950 fixed inset-0 z-50 overflow-hidden">
+      
+      {/* Header Fixo */}
+      <div className="flex-none h-16 flex items-center justify-between px-4 border-b border-white/5 bg-midnight-950/90 backdrop-blur-md z-20">
         <div className="flex items-center gap-2">
-           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full hover:bg-white/10 active:scale-90 transition-transform">
+           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-400 hover:text-white rounded-full active:scale-90 transition-transform">
              <ArrowLeft size={22} />
            </button>
            {friend && (
-             <div className="flex items-center gap-3 cursor-pointer active:opacity-70 transition-opacity" onClick={() => navigate(`/profile/${friend.id}`)}>
+             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${friend.id}`)}>
                 <div className="relative">
                   <Avatar url={friend.avatar_url} alt={friend.username} size="sm" />
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-midnight-950"></div>
                 </div>
                 <div>
                    <div className="font-bold text-white text-sm leading-tight">{friend.username}</div>
-                   <div className="text-[10px] text-slate-400 font-medium leading-tight">Online agora</div>
+                   <div className="text-[10px] text-slate-400 font-medium leading-tight">Online</div>
                 </div>
              </div>
            )}
         </div>
-        <button className="p-2 text-slate-500 hover:text-white rounded-full hover:bg-white/10"><MoreVertical size={20} /></button>
+        <button className="p-2 text-slate-500 hover:text-white rounded-full"><MoreVertical size={20} /></button>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-midnight-950 scroll-smooth" ref={scrollRef}>
+      {/* Área de Mensagens (Flex-1 com scroll próprio) */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-midnight-950 scroll-smooth overscroll-contain" ref={scrollRef}>
         {messages.map((msg, idx) => {
           const isMe = msg.sender_id === user?.id;
           const prevMsg = messages[idx - 1];
           const nextMsg = messages[idx + 1];
           
-          // Agrupamento visual
           const isFirstInSequence = !prevMsg || prevMsg.sender_id !== msg.sender_id;
           const isLastInSequence = !nextMsg || nextMsg.sender_id !== msg.sender_id;
 
@@ -188,9 +178,9 @@ export const ChatPage = () => {
               </div>
               
               {isLastInSequence && (
-                 <div className="flex items-center gap-1 mt-1 px-1">
+                 <div className="flex items-center gap-1 mt-1 px-1 min-h-[14px]">
                     <span className="text-[10px] text-slate-500 font-medium">
-                        {format(new Date(msg.created_at), 'HH:mm')}
+                        {msg.pending ? 'Enviando...' : format(new Date(msg.created_at), 'HH:mm')}
                     </span>
                     {isMe && !msg.pending && (
                       <CheckCheck size={12} className={msg.is_read ? 'text-ocean' : 'text-slate-600'} />
@@ -200,11 +190,12 @@ export const ChatPage = () => {
             </div>
           );
         })}
-        <div className="h-4" /> {/* Spacer extra no final */}
+        {/* Espaçador invisível para garantir que a última mensagem não fique escondida pelo input */}
+        <div className="h-2" />
       </div>
 
-      {/* Input Area - Fixed Bottom with Safe Area */}
-      <div className="flex-none bg-midnight-950 border-t border-white/5 pb-safe">
+      {/* Input Area (Flex-none, fixado no fundo do container flex) */}
+      <div className="flex-none bg-midnight-950 border-t border-white/5 pb-safe z-20">
         <form onSubmit={handleSend} className="flex gap-2 items-end p-3">
           <textarea 
             rows={1}
@@ -222,7 +213,7 @@ export const ChatPage = () => {
           />
           <button 
             type="submit"
-            disabled={!newMessage.trim() || sending}
+            disabled={!newMessage.trim()}
             className="w-[52px] h-[52px] bg-ocean text-white rounded-full disabled:opacity-50 disabled:bg-slate-800 disabled:text-slate-500 flex items-center justify-center hover:bg-ocean-600 transition-all shadow-lg shadow-ocean/10 active:scale-95 shrink-0"
           >
             {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={22} className="ml-0.5" />}

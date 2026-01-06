@@ -19,23 +19,21 @@ export const BottomNav = () => {
     if (!user) return;
     
     try {
-      // 1. Mensagens Não Lidas (Count Real)
-      const { count: msgCount, error: msgError } = await supabase
+      const { count: msgCount } = await supabase
         .from('messages')
         .select('*', { count: 'exact', head: true })
         .eq('receiver_id', user.id)
         .eq('is_read', false);
       
-      if (!msgError) setUnreadMessagesCount(msgCount || 0);
+      if (msgCount !== null) setUnreadMessagesCount(msgCount);
 
-      // 2. Notificações Não Lidas (Boleano basta para o ponto vermelho)
-      const { count: notifCount, error: notifError } = await supabase
+      const { count: notifCount } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('is_read', false);
         
-      if (!notifError) setHasUnreadNotifs((notifCount || 0) > 0);
+      if (notifCount !== null) setHasUnreadNotifs(notifCount > 0);
 
     } catch (e) {
       console.error("Erro fetching badges:", e);
@@ -46,42 +44,18 @@ export const BottomNav = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Busca inicial
     fetchBadges();
 
-    // Listener para Atualização Manual (Vindo do ChatPage)
     const handleManualRefresh = () => fetchBadges();
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
 
-    // Listener Realtime Supabase (Mensagens e Notificações)
     const channel = supabase.channel('badges_realtime')
-      // Nova mensagem recebida -> Atualiza count
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'messages', 
-        filter: `receiver_id=eq.${user.id}` 
-      }, () => {
-        setUnreadMessagesCount(prev => prev + 1);
-      })
-      // Mensagem lida (UPDATE) -> Refaz o count pra garantir precisão
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'messages', 
-        filter: `receiver_id=eq.${user.id}` 
-      }, () => {
-        fetchBadges();
-      })
-      // Nova notificação -> Mostra badge
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications', 
-        filter: `user_id=eq.${user.id}` 
-      }, () => {
-        setHasUnreadNotifs(true);
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
+        () => setUnreadMessagesCount(p => p + 1))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, 
+        () => fetchBadges()) // Recalcular se msg for lida
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
+        () => setHasUnreadNotifs(true))
       .subscribe();
 
     return () => {
@@ -90,12 +64,8 @@ export const BottomNav = () => {
     };
   }, [user, fetchBadges]);
 
-  // Limpa badge de notificação ao entrar na página de notificações
   useEffect(() => {
-    if (location.pathname === '/notifications') {
-      setHasUnreadNotifs(false);
-      // Opcional: Marcar como lido no banco aqui, ou deixar a página fazer isso
-    }
+    if (location.pathname === '/notifications') setHasUnreadNotifs(false);
   }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
@@ -128,12 +98,10 @@ export const BottomNav = () => {
           <Icon size={26} strokeWidth={active ? 2.5 : 2} fill={active ? "currentColor" : "none"} fillOpacity={0.2} />
         </div>
         
-        {/* Ponto Vermelho (Notificações) */}
         {hasDot && !active && (
           <span className="absolute top-3 right-[28%] w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-midnight-950 animate-pulse"></span>
         )}
         
-        {/* Contador Numérico (Chat) */}
         {badgeCount > 0 && (
            <span className="absolute top-2 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] flex items-center justify-center rounded-full border border-midnight-950 transition-all transform scale-100 animate-in zoom-in">
              {badgeCount > 9 ? '9+' : badgeCount}
@@ -144,7 +112,7 @@ export const BottomNav = () => {
   };
 
   return (
-    <nav className="flex-none z-50 w-full pb-safe bg-midnight-950/90 backdrop-blur-xl border-t border-white/5">
+    <nav className="fixed bottom-0 w-full z-[100] pb-safe bg-midnight-950/90 backdrop-blur-xl border-t border-white/5">
       <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
         <NavItem path="/feed" icon={Home} label="Início" />
         <NavItem path="/discover" icon={Search} label="Buscar" />

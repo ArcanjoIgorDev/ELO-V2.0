@@ -149,7 +149,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   };
 
   return (
-    <article className="mb-4 bg-gradient-to-br from-midnight-900/40 to-midnight-950/60 border-b border-white/5 sm:border sm:rounded-3xl sm:shadow-lg backdrop-blur-md overflow-hidden animate-fade-in relative z-10">
+    <article className="mb-4 bg-gradient-to-b from-midnight-900/50 to-midnight-950/80 border-b border-white/5 sm:border sm:rounded-3xl sm:shadow-lg backdrop-blur-md overflow-hidden animate-fade-in relative z-10">
       <div className="p-5">
         
         {/* Header */}
