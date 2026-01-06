@@ -107,7 +107,6 @@
       .page-enter { animation: fadeIn 0.3s ease-out; }
 
       /* CORREÇÃO CRÍTICA DE ANIMAÇÃO */
-      /* Usamos animation-fill-mode: both para garantir o estado inicial sem forçar opacity:0 na classe */
       .reveal-hidden {
         opacity: 0;
         transform: translateY(30px);
@@ -122,7 +121,6 @@
         animation: slideUp 0.8s cubic-bezier(0.5, 0, 0, 1) both;
       }
       
-      /* Fallback para preferência de movimento reduzido */
       @media (prefers-reduced-motion: reduce) {
         .reveal-hidden, .lp-slide-up {
           opacity: 1 !important;
@@ -136,13 +134,15 @@
 {
   "imports": {
     "react": "https://esm.sh/react@18.2.0",
-    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom": "https://esm.sh/react-dom@18.2.0?external=react",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?external=react",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.1?external=react,react-dom",
     "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
-    "lucide-react": "https://esm.sh/lucide-react@0.344.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@6.22.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
     "date-fns": "https://esm.sh/date-fns@3.3.1",
-    "date-fns/": "https://esm.sh/date-fns@3.3.1/"
+    "date-fns/": "https://esm.sh/date-fns@3.3.1/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
 </script>
