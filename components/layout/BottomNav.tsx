@@ -22,7 +22,6 @@ export const BottomNav = () => {
         .eq('receiver_id', user.id)
         .eq('is_read', false);
       
-      // Sempre atualiza, não depende de visibilidade, para garantir consistência
       if (msgCount !== null) setUnreadMessagesCount(msgCount);
 
       const { count: notifCount } = await supabase
@@ -43,10 +42,14 @@ export const BottomNav = () => {
 
     fetchBadges();
 
-    // Evento manual disparado pelo ChatPage para limpar badges imediatamente
+    // HANDLER REFORÇADO: Recebe evento de limpeza
     const handleManualRefresh = () => {
-        fetchBadges();
+        // 1. Busca com delay para dar tempo do UPDATE do banco ocorrer
+        setTimeout(() => {
+            fetchBadges();
+        }, 500); // Meio segundo de delay é o "pulo do gato" para evitar race condition
     };
+    
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
 
     const handleVisibilityChange = () => {

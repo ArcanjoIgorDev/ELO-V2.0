@@ -24,42 +24,45 @@ export const ChatPage = () => {
     }
   }, [messages, loadingInitial]);
 
-  // Função centralizada e robusta para marcar como lido
+  // Função robusta para limpar badge
   const markAsRead = useCallback(async () => {
     if (!user || !userId) return;
     
+    // 1. DISPARA O EVENTO VISUAL IMEDIATAMENTE (Otimista)
+    // Isso faz o badge sumir na hora, sem esperar o banco.
+    window.dispatchEvent(new Event('elo:refresh-badges'));
+    
     try {
-      // 1. Atualiza no banco
-      const { error } = await supabase
+      // 2. Atualiza no banco silenciosamente
+      await supabase
         .from('messages')
         .update({ is_read: true })
         .match({ sender_id: userId, receiver_id: user.id, is_read: false });
+        
+      // 3. Dispara de novo para garantir consistência após DB
+      setTimeout(() => {
+          window.dispatchEvent(new Event('elo:refresh-badges'));
+      }, 500);
       
-      if (!error) {
-        // 2. Dispara evento global para o BottomNav limpar o badge IMEDIATAMENTE
-        window.dispatchEvent(new Event('elo:refresh-badges'));
-      }
     } catch (err) {
-      console.error("Erro ao marcar lido:", err);
+      console.error("Erro background read:", err);
     }
   }, [user, userId]);
 
   useEffect(() => {
     if (!userId || !user) return;
 
-    // Listener para quando o usuário volta para a aba do navegador
+    // Marca lido ao focar na janela
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         markAsRead();
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const loadChatData = async () => {
       try {
-        // Marca como lido imediatamente ao carregar
-        await markAsRead();
+        await markAsRead(); // Marca lido ao montar
 
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single();
         setFriend(profile);
@@ -97,7 +100,7 @@ export const ChatPage = () => {
              return [...prev, msg];
           });
           
-          // Se receber mensagem com chat aberto, marca lido na hora e força refresh
+          // Recebeu msg com chat aberto? Marca lido e limpa badge na hora
           await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
           window.dispatchEvent(new Event('elo:refresh-badges'));
         }

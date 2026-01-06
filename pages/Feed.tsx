@@ -39,7 +39,11 @@ export const Feed = () => {
   }, []);
 
   const fetchPosts = useCallback(async (isRefresh = false) => {
-    if (!user) return;
+    // CORREÇÃO CRÍTICA: Se não tiver usuário, para o loading imediatamente.
+    if (!user) {
+      if (isMounted.current) setLoading(false);
+      return;
+    }
     
     try {
       if (!isRefresh && posts.length === 0 && isMounted.current) {
@@ -48,7 +52,6 @@ export const Feed = () => {
       
       if (isMounted.current) setError(false);
       
-      // Simplificado: Remove post_views(count) que pode causar erro 400 se a tabela não existir ou tiver RLS
       const { data, error: dbError } = await supabase
         .from('posts')
         .select(`
@@ -67,7 +70,7 @@ export const Feed = () => {
           ...post,
           likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
           comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
-          views_count: 0, // Fallback safe
+          views_count: 0,
           user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);
@@ -76,13 +79,24 @@ export const Feed = () => {
       console.error("Feed error:", err);
       if (isMounted.current) setError(true);
     } finally {
+      // GARANTIA ABSOLUTA: O loading VAI parar.
       if (isMounted.current) setLoading(false);
     }
-  }, [user]);
+  }, [user, posts.length]);
 
   useEffect(() => {
     fetchPosts();
-  }, [fetchPosts]);
+    
+    // Safety Valve: Se por algum milagre o loading travar por 8 segundos, força parada.
+    const safetyTimer = setTimeout(() => {
+      if (loading && isMounted.current) {
+        console.warn("Forçando parada do loading do Feed por timeout.");
+        setLoading(false);
+      }
+    }, 8000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [fetchPosts]); // Removemos 'loading' da dependência para evitar loop, mantemos fetchPosts
 
   const handlePostDeleted = (postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
@@ -104,7 +118,7 @@ export const Feed = () => {
            </button>
         </div>
 
-        {loading && posts.length === 0 ? (
+        {loading ? (
           <div className="pt-2 px-1">
              {[1, 2, 3].map((i) => <FeedSkeleton key={i} />)}
           </div>
