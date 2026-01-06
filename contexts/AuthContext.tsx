@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -21,10 +20,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   
-  // O loading começa true, mas temos garantia matemática que virará false.
+  // O loading começa true e só vira false UMA VEZ.
   const [loading, setLoading] = useState(true);
   
-  // Refs para evitar updates em componente desmontado
+  // Refs para garantir integridade em componentes desmontados
   const mounted = useRef(true);
 
   // Função auxiliar segura para buscar perfil
@@ -33,6 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
       return data;
     } catch (e) {
+      console.error("Auth: Erro ao buscar perfil", e);
       return null;
     }
   };
@@ -41,63 +41,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     mounted.current = true;
     let authListener: any = null;
 
-    const bootstrap = async () => {
-      // 1. Inicia um Timer de Segurança (2 segundos MAX)
-      // Esse timer corre em paralelo com a requisição do Supabase.
-      const safetyTimer = setTimeout(() => {
-        if (mounted.current && loading) {
-          console.warn("Auth: Timeout de segurança atingido. Forçando renderização.");
-          setLoading(false); 
-        }
-      }, 2000);
-
+    const initAuth = async () => {
       try {
-        // Checagem de Versão (Limpa cache se versão mudar)
+        // 0. Verifica versão para limpar cache se necessário
         const storedVersion = localStorage.getItem('elo_app_version');
         if (storedVersion !== APP_VERSION) {
+          console.log("Auth: Nova versão detectada, limpando sessão.");
           await supabase.auth.signOut();
           localStorage.clear();
           localStorage.setItem('elo_app_version', APP_VERSION);
         }
 
-        // 2. Busca a Sessão
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) throw error;
+        // 1. Obtem sessão inicial com Timeout de Segurança (Race Condition proposital)
+        // Isso garante que se a rede cair ou o Supabase demorar > 4s, o app carrega (como deslogado ou erro)
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000));
 
-        // Se o componente ainda estiver montado, atualiza o estado
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+
         if (mounted.current) {
-          if (data.session) {
+          if (data?.session) {
             setSession(data.session);
             setUser(data.session.user);
-            
-            // Busca perfil em background (sem await para não travar loading)
-            fetchProfile(data.session.user.id).then(p => {
-              if (mounted.current && p) setProfile(p);
-            });
+            // Busca perfil antes de liberar o loading para evitar flash de conteúdo
+            const userProfile = await fetchProfile(data.session.user.id);
+            if (mounted.current && userProfile) {
+              setProfile(userProfile);
+            }
           }
         }
       } catch (err) {
-        console.error("Auth: Erro na inicialização ou sem sessão", err);
-        // Não fazemos nada crítico aqui, o finally cuidará do loading
+        console.warn("Auth: Inicialização falhou ou timeout (o usuário será tratado como deslogado).", err);
       } finally {
-        // 3. Libera o App
-        // Cancela o timer de segurança pois já terminamos
-        clearTimeout(safetyTimer);
+        // 2. PONTO CRÍTICO: Loading vira false AQUI, independente de erro ou sucesso.
         if (mounted.current) {
           setLoading(false);
         }
       }
-    };
-
-    bootstrap();
-
-    // 4. Configura Listener de Eventos
-    const setupListener = async () => {
-      const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      
+      // 3. Configura listener para eventos FUTUROS
+      const { data: listener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
         if (!mounted.current) return;
         
-        // Atualiza sessão e usuário
+        // Atualiza estados
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
@@ -112,18 +98,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
            setUser(null);
         }
         
-        // Listener nunca reativa o loading.
+        // NOTA: Nunca voltamos loading para true aqui para evitar loops na UI.
+        // O app deve lidar com re-renders reativos.
       });
-      authListener = data.subscription;
+      authListener = listener.subscription;
     };
 
-    setupListener();
+    initAuth();
 
     return () => {
       mounted.current = false;
       if (authListener) authListener.unsubscribe();
     };
-  }, []); // Array vazio: Executa apenas uma vez na montagem
+  }, []);
 
   const signOut = async () => {
     try {
@@ -135,6 +122,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(null);
         setUser(null);
         setProfile(null);
+        // Opcional: Redirecionar via router se necessário, mas o ProtectedLayout cuida disso
       }
     }
   };

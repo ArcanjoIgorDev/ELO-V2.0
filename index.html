@@ -4,40 +4,48 @@
     <meta charset="UTF-8" />
     
     <!-- Favicon Profissional (SVG Base64) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect width='100' height='100' rx='24' fill='%230ea5e9'/%3E%3Cpath d='M30 50C30 38.9543 38.9543 30 50 30C61.0457 30 70 38.9543 70 50' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M70 50C70 61.0457 61.0457 70 50 70C38.9543 70 30 61.0457 30 50' stroke='white' stroke-width='8' stroke-linecap='round' stroke-opacity='0.4'/%3E%3Ccircle cx='50' cy='50' r='12' fill='white'/%3E%3C/svg%3E" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect width='100' height='100' rx='24' fill='%230088CC'/%3E%3Cpath d='M30 50C30 38.9543 38.9543 30 50 30C61.0457 30 70 38.9543 70 50' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M70 50C70 61.0457 61.0457 70 50 70' stroke='white' stroke-width='8' stroke-linecap='round' stroke-dasharray='30 100'/%3E%3C/svg%3E" />
     
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Meta tags -->
+    <!-- Meta Tags para Mobile First e PWA -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#020617" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#020617" />
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="description" content="Rede social, não mídia social. Conexões reais em ordem cronológica.">
-    
-    <title>ELO | Rede Social</title>
+
+    <title>ELO | Conexões Reais</title>
+
+    <!-- Fonte Inter (Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (CDN para prototipagem rápida, idealmente build step em prod) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
             colors: {
+              // Paleta Oceanica Premium v2
               midnight: {
-                50: '#f0f9ff',
-                100: '#e0f2fe',
-                200: '#bae6fd',
-                300: '#7dd3fc',
-                400: '#38bdf8',
-                500: '#0ea5e9',
-                600: '#0284c7',
-                700: '#0369a1',
-                800: '#075985',
-                900: '#0f172a', 
-                950: '#020617', // Deepest Ocean
+                50: '#f0f4ff',
+                100: '#e0eaff',
+                200: '#c7d9ff',
+                300: '#9ecaff',
+                400: '#5fa5ff',
+                500: '#2b7fff',
+                600: '#0055ff', // Azul elétrico
+                700: '#0044cc',
+                800: '#020617', // Base profunda
+                900: '#050a1f', // Surface
+                950: '#02040a', // Deepest
               },
               ocean: {
+                DEFAULT: '#0ea5e9', // Sky 500 base
                 50: '#f0f9ff',
                 100: '#e0f2fe',
                 200: '#bae6fd',
@@ -48,47 +56,49 @@
                 700: '#0369a1',
                 800: '#075985',
                 900: '#0c4a6e',
-                950: '#082f49',
-                DEFAULT: '#0ea5e9', 
-                hover: '#0284c7',
-                surface: '#1e293b',
               }
             },
-            fontFamily: {
-              sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-            },
             animation: {
+              'fade-in': 'fadeIn 0.4s ease-out forwards',
+              'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'pulse-slow': 'pulse 3s infinite',
               'float': 'float 6s ease-in-out infinite',
             },
             keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { opacity: '0', transform: 'translateY(20px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
               float: {
                 '0%, 100%': { transform: 'translateY(0)' },
                 '50%': { transform: 'translateY(-10px)' },
               }
+            },
+            spacing: {
+              'safe': 'env(safe-area-inset-bottom)',
+              'top-safe': 'env(safe-area-inset-top)',
             }
-          }
-        }
+          },
+        },
       }
     </script>
     <style>
-      /* Reset Crítico */
-      :root {
-        color-scheme: dark;
-      }
-      * {
-        -webkit-tap-highlight-color: transparent;
-        box-sizing: border-box;
-      }
-
+      /* Reset e Utilities Globais */
       html, body {
-        background-color: #020617;
-        color: #e2e8f0;
+        height: 100%;
         width: 100%;
-        min-height: 100%;
-        overscroll-behavior-y: none;
         overflow-x: hidden;
+        background-color: #02040a; /* Midnight-950 */
+        color: #e2e8f0;
+        -webkit-tap-highlight-color: transparent;
+        scroll-behavior: smooth;
       }
 
+      /* Scrollbar Oculta mas funcional */
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
@@ -97,89 +107,38 @@
         scrollbar-width: none;
       }
 
-      /* Vidro Profissional */
-      .glass-panel {
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+      /* Mascara para fade em listas */
+      .mask-image-b {
+        mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
       }
 
-      .pb-safe { padding-bottom: env(safe-area-inset-bottom, 24px); }
-      .pt-safe { padding-top: env(safe-area-inset-top, 24px); }
-
-      /* --- PAGE TRANSITIONS (APP-LIKE) --- */
-      .page-transition-wrapper {
-        position: relative;
-        width: 100%;
-        height: 100%;
-      }
-      
+      /* Animações de Entrada de Página */
       .page-enter {
-        animation: pageSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        will-change: transform, opacity;
+        animation: fadeIn 0.3s ease-out;
       }
 
-      @keyframes pageSlideUp {
-        from { opacity: 0; transform: translateY(10px) scale(0.99); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+      /* Utilitários de Texto */
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
       }
-
-      /* --- LANDING PAGE ANIMATIONS (ROBUST) --- */
-      
-      /* Classes utilitárias para controle via JS (Intersection Observer) */
-      .reveal-hidden {
-        opacity: 0;
-        transform: translateY(30px);
-        transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        will-change: opacity, transform;
-      }
-
-      .reveal-visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      /* Animações de Entrada Imediata (Hero) - FORCED VISIBILITY FALLBACK */
-      .lp-fade-in {
-        opacity: 0;
-        animation: lpFadeIn 1s ease-out 0.1s forwards;
-      }
-
-      .lp-slide-up {
-        opacity: 0;
-        animation: lpSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-
-      @keyframes lpFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-
-      @keyframes lpSlideUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
     </style>
   <script type="importmap">
 {
   "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "date-fns": "https://esm.sh/date-fns@^4.1.0",
-    "date-fns/locale": "https://esm.sh/date-fns@^4.1.0/locale",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
     "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "date-fns/": "https://esm.sh/date-fns@^4.1.0/"
+    "date-fns/": "https://esm.sh/date-fns@^4.1.0/",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0"
   }
 }
 </script>
 </head>
-  <body class="bg-midnight-950 text-slate-200 antialiased selection:bg-ocean selection:text-white">
-    <div id="root" class="min-h-full w-full"></div>
-    <script type="module" src="/index.tsx"></script>
+  <body>
+    <div id="root"></div>
   </body>
 </html>

@@ -1,12 +1,12 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban, X, UserMinus } from 'lucide-react';
+import { Grid, Trash2, Activity, Camera, Loader2, UserPlus, MessageCircle, Clock, Check, ArrowLeft, MoreHorizontal, Ban, X, UserMinus, Edit3, LogOut } from 'lucide-react';
 import { PostCard } from '../components/PostCard';
 import { PostWithAuthor } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
+import { EditProfileModal } from '../components/profile/EditProfileModal';
 
 type ConnectionState = 'none' | 'sent_pending' | 'received_pending' | 'accepted' | 'blocked';
 
@@ -29,6 +29,7 @@ export const ProfilePage = () => {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [processingConnect, setProcessingConnect] = useState(false);
   const [showUnfriendMenu, setShowUnfriendMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Upload/Deleção
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -45,6 +46,7 @@ export const ProfilePage = () => {
       setLoadingProfile(true);
       try {
         let profileData = null;
+        // Se for o próprio perfil, usa o do contexto para garantir dados frescos
         if (isOwnProfile && myProfile) {
            profileData = myProfile;
         } else {
@@ -53,9 +55,16 @@ export const ProfilePage = () => {
         }
 
         if (!profileData) {
-           alert("Perfil não encontrado.");
-           navigate('/feed');
-           return;
+           // Se for próprio perfil e falhou, pode ser delay de criação, tenta buscar de novo
+           if (isOwnProfile && user) {
+              const { data: retryData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+              profileData = retryData;
+           }
+           
+           if (!profileData) {
+             console.error("Perfil não encontrado");
+             return; // Não redireciona abruptamente, mostra loading ou vazio
+           }
         }
 
         setDisplayProfile(profileData);
@@ -136,7 +145,6 @@ export const ProfilePage = () => {
     setProcessingConnect(true);
 
     try {
-      // Deleta anterior se existir (limpeza)
       if (connectionId) await supabase.from('connections').delete().eq('id', connectionId);
 
       const { data, error } = await supabase
@@ -150,7 +158,6 @@ export const ProfilePage = () => {
       setConnectionState('sent_pending');
       setConnectionId(data.id);
       
-      // Notificação
       supabase.from('notifications').insert({
           user_id: targetId,
           actor_id: user.id,
@@ -177,7 +184,6 @@ export const ProfilePage = () => {
       if (error) throw error;
 
       setConnectionState('accepted');
-      // Notifica
       supabase.from('notifications').insert({
          user_id: targetId!,
          actor_id: user!.id,
@@ -197,11 +203,9 @@ export const ProfilePage = () => {
     
     setProcessingConnect(true);
     try {
-      // Tenta deletar pelo ID
       if (connectionId) {
         await supabase.from('connections').delete().eq('id', connectionId);
       } else {
-        // Fallback: match IDs
         await supabase.from('connections').delete().match({ requester_id: user?.id, receiver_id: targetId });
         await supabase.from('connections').delete().match({ requester_id: targetId, receiver_id: user?.id });
       }
@@ -231,11 +235,14 @@ export const ProfilePage = () => {
     try {
       await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
       await refreshProfile();
+      
+      // Update local state immediately
       setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
     } catch (error) {
-      alert('Erro no upload.');
+      alert('Erro no upload da imagem.');
     } finally {
       setUploadingAvatar(false);
     }
@@ -255,24 +262,36 @@ export const ProfilePage = () => {
 
   return (
     <div className="min-h-full pb-24 bg-midnight-950 animate-fade-in" onClick={() => setShowUnfriendMenu(false)}>
+      
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditProfileModal 
+          onClose={() => setShowEditModal(false)}
+          currentName={displayProfile.full_name}
+          currentBio={displayProfile.bio}
+        />
+      )}
+
       {/* Header Visual */}
-      <div className="h-40 bg-gradient-to-b from-ocean-900 to-midnight-950 relative overflow-hidden">
+      <div className="h-44 bg-gradient-to-b from-ocean-900 to-midnight-950 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-midnight-950 via-transparent to-transparent"></div>
+        
         {!isOwnProfile && (
             <button 
               onClick={() => navigate(-1)} 
-              className="absolute top-safe left-4 mt-4 p-2.5 bg-black/20 rounded-full text-white backdrop-blur border border-white/5 active:scale-95 transition-transform"
+              className="absolute top-safe left-4 mt-4 p-2.5 bg-black/20 rounded-full text-white backdrop-blur border border-white/5 active:scale-95 transition-transform z-20"
             >
                 <ArrowLeft size={20} />
             </button>
         )}
       </div>
 
-      <div className="px-5 -mt-16 relative z-10">
+      <div className="px-5 -mt-20 relative z-10">
         <div className="flex justify-between items-end mb-4">
            {/* Avatar */}
            <div className="relative group">
-             <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10">
+             <div className="p-1.5 bg-midnight-950 rounded-full shadow-2xl shadow-black/50 border border-white/10 relative z-10">
                 <Avatar url={displayProfile.avatar_url} alt={displayProfile.username} size="xl" />
              </div>
              
@@ -281,7 +300,7 @@ export const ProfilePage = () => {
                  <button 
                     onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                     disabled={uploadingAvatar}
-                    className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95 disabled:opacity-50"
+                    className="absolute bottom-2 right-2 p-2 bg-ocean text-white rounded-full shadow-lg border-2 border-midnight-950 hover:bg-ocean-600 transition-colors active:scale-95 disabled:opacity-50 z-20"
                  >
                     {uploadingAvatar ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
                  </button>
@@ -291,11 +310,22 @@ export const ProfilePage = () => {
            </div>
 
            {/* Action Buttons */}
-           <div className="mb-2">
+           <div className="mb-2 flex items-center gap-2">
              {isOwnProfile ? (
-               <button onClick={() => signOut()} className="bg-white/5 hover:bg-white/10 text-white px-5 py-2 rounded-full text-xs font-bold border border-white/5 transition-colors">
-                  Sair
-               </button>
+               <>
+                 <button 
+                    onClick={() => setShowEditModal(true)} 
+                    className="bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-xs font-bold border border-white/5 transition-colors flex items-center gap-2"
+                 >
+                    <Edit3 size={14} /> Editar
+                 </button>
+                 <button 
+                    onClick={() => signOut()} 
+                    className="bg-white/5 hover:bg-red-500/10 hover:text-red-400 text-slate-300 p-2 rounded-xl border border-white/5 transition-colors"
+                 >
+                    <LogOut size={18} />
+                 </button>
+               </>
              ) : (
                 <div className="flex gap-2 relative">
                   {connectionState === 'accepted' ? (
@@ -362,10 +392,10 @@ export const ProfilePage = () => {
         
         {/* Info */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white tracking-tight">{displayProfile.full_name}</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight leading-tight">{displayProfile.full_name || displayProfile.username}</h1>
           <p className="text-slate-500 font-medium text-sm">@{displayProfile.username}</p>
-          <p className="text-slate-300 text-sm mt-3 leading-relaxed max-w-sm whitespace-pre-line">
-            {displayProfile.bio || (isOwnProfile ? "Edite seu perfil para adicionar uma bio." : "Membro do ELO.")}
+          <p className="text-slate-300 text-[15px] mt-3 leading-relaxed max-w-md whitespace-pre-line">
+            {displayProfile.bio || (isOwnProfile ? "Toque em 'Editar' para adicionar uma bio." : "Membro do ELO.")}
           </p>
         </div>
 
