@@ -19,6 +19,7 @@ export const ChatList = () => {
     if (!user) return;
     
     // 1. Busca conexões aceitas (Amigos)
+    // Cast to any to avoid TS error on 'requester' and 'receiver' which are joined props
     const { data: connections } = await supabase
       .from('connections')
       .select(`
@@ -26,7 +27,7 @@ export const ChatList = () => {
         receiver:profiles!receiver_id(*)
       `)
       .or(`requester_id.eq.${user.id},receiver_id.eq.${user.id}`)
-      .eq('status', 'accepted');
+      .eq('status', 'accepted') as { data: any[] | null, error: any };
 
     if (!connections) {
       setLoading(false);

@@ -123,7 +123,7 @@ export const ProfilePage = () => {
     setLoadingPosts(true);
     const { data } = await supabase
       .from('posts')
-      .select(`*, author:profiles(*), likes(user_id), comments(count)`)
+      .select(`*, author:profiles(*), likes(user_id), comments(count), post_views(count)`)
       .eq('user_id', id)
       .order('created_at', { ascending: false });
 
@@ -132,6 +132,7 @@ export const ProfilePage = () => {
         ...post,
         likes_count: post.likes ? post.likes.length : 0,
         comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
+        views_count: post.post_views && post.post_views[0] ? post.post_views[0].count : 0,
         user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
       }));
       setPosts(formatted);

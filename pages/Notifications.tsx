@@ -18,20 +18,20 @@ export const NotificationsPage = () => {
     if (!user) return;
     
     try {
-      // 1. Notificações
+      // 1. Notificações - Tipado como any para evitar erro de TS na propriedade 'actor' que vem do join
       const { data: notifsData } = await supabase
         .from('notifications')
         .select(`*, actor:profiles!notifications_actor_id_fkey(id, username, avatar_url, full_name)`)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(50) as { data: any[], error: any };
 
       // 2. Solicitações Pendentes Reais
       const { data: pendingRequests } = await supabase
         .from('connections')
         .select(`id, created_at, requester:profiles!requester_id(id, username, avatar_url, full_name)`)
         .eq('receiver_id', user.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending') as { data: any[], error: any };
 
       let combined = [...(notifsData || [])];
       
