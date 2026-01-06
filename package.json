@@ -9,12 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "@supabase/supabase-js": "^2.89.0",
-    "lucide-react": "^0.562.0",
-    "react-router-dom": "^7.11.0",
-    "date-fns": "^4.1.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "@supabase/supabase-js": "2.39.7",
+    "lucide-react": "0.344.0",
+    "react-router-dom": "6.22.1",
+    "date-fns": "3.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

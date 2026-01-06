@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     
-    <!-- Favicon Profissional (SVG Base64) -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Crect width='100' height='100' rx='24' fill='%230088CC'/%3E%3Cpath d='M30 50C30 38.9543 38.9543 30 50 30C61.0457 30 70 38.9543 70 50' stroke='white' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M70 50C70 61.0457 61.0457 70 50 70' stroke='white' stroke-width='8' stroke-linecap='round' stroke-dasharray='30 100'/%3E%3C/svg%3E" />
+    <!-- Favicon Minimalista & Elegante (Oceano Profundo) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='oceanGrad' x1='0' y1='0' x2='100' y2='100'%3E%3Cstop offset='0%25' stop-color='%230EA5E9'/%3E%3Cstop offset='100%25' stop-color='%230284C7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='50' fill='url(%23oceanGrad)'/%3E%3Cpath d='M25 55C30 45 40 45 45 55C50 65 60 65 65 55C70 45 80 45 85 55' stroke='white' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M25 40C30 30 40 30 45 40C50 50 60 50 65 40C70 30 80 30 85 40' stroke='white' stroke-width='6' stroke-opacity='0.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     
-    <!-- Meta Tags para Mobile First e PWA -->
+    <!-- Meta Tags -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#020617" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -14,12 +14,12 @@
 
     <title>ELO | Conexões Reais</title>
 
-    <!-- Fonte Inter (Google Fonts) -->
+    <!-- Fontes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS (CDN para prototipagem rápida, idealmente build step em prod) -->
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -30,7 +30,6 @@
               sans: ['Inter', 'sans-serif'],
             },
             colors: {
-              // Paleta Oceanica Premium v2
               midnight: {
                 50: '#f0f4ff',
                 100: '#e0eaff',
@@ -38,14 +37,14 @@
                 300: '#9ecaff',
                 400: '#5fa5ff',
                 500: '#2b7fff',
-                600: '#0055ff', // Azul elétrico
+                600: '#0055ff',
                 700: '#0044cc',
-                800: '#020617', // Base profunda
-                900: '#050a1f', // Surface
-                950: '#02040a', // Deepest
+                800: '#020617',
+                900: '#050a1f',
+                950: '#02040a',
               },
               ocean: {
-                DEFAULT: '#0ea5e9', // Sky 500 base
+                DEFAULT: '#0ea5e9',
                 50: '#f0f9ff',
                 100: '#e0f2fe',
                 200: '#bae6fd',
@@ -60,7 +59,7 @@
             },
             animation: {
               'fade-in': 'fadeIn 0.4s ease-out forwards',
-              'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               'pulse-slow': 'pulse 3s infinite',
               'float': 'float 6s ease-in-out infinite',
             },
@@ -87,38 +86,28 @@
       }
     </script>
     <style>
-      /* Reset e Utilities Globais */
       html, body {
         height: 100%;
         width: 100%;
         overflow-x: hidden;
-        background-color: #02040a; /* Midnight-950 */
+        background-color: #02040a;
         color: #e2e8f0;
         -webkit-tap-highlight-color: transparent;
         scroll-behavior: smooth;
       }
 
-      /* Scrollbar Oculta mas funcional */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Mascara para fade em listas */
       .mask-image-b {
         mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
         -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
       }
 
-      /* Animações de Entrada de Página */
-      .page-enter {
-        animation: fadeIn 0.3s ease-out;
-      }
+      .page-enter { animation: fadeIn 0.3s ease-out; }
 
-      /* Animações Específicas da Landing Page */
+      /* CORREÇÃO CRÍTICA DE ANIMAÇÃO */
+      /* Usamos animation-fill-mode: both para garantir o estado inicial sem forçar opacity:0 na classe */
       .reveal-hidden {
         opacity: 0;
         transform: translateY(30px);
@@ -128,27 +117,32 @@
         opacity: 1;
         transform: translateY(0);
       }
+      
       .lp-slide-up {
-        opacity: 0;
-        animation: slideUp 0.8s cubic-bezier(0.5, 0, 0, 1) forwards;
+        animation: slideUp 0.8s cubic-bezier(0.5, 0, 0, 1) both;
       }
-
-      /* Utilitários de Texto */
-      .text-shadow {
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      
+      /* Fallback para preferência de movimento reduzido */
+      @media (prefers-reduced-motion: reduce) {
+        .reveal-hidden, .lp-slide-up {
+          opacity: 1 !important;
+          transform: none !important;
+          animation: none !important;
+          transition: none !important;
+        }
       }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "date-fns": "https://esm.sh/date-fns@^4.1.0",
-    "date-fns/": "https://esm.sh/date-fns@^4.1.0/"
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@18.2.0/",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.1",
+    "date-fns": "https://esm.sh/date-fns@3.3.1",
+    "date-fns/": "https://esm.sh/date-fns@3.3.1/"
   }
 }
 </script>
