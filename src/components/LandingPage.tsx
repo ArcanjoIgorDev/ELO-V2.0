@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles, Users, MessageCircle, TrendingUp, Shield } from 'lucide-react';
 import { ELOLogo } from './ui/Logo';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
 
   const appFeatures = [
     {
