@@ -30,15 +30,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Perfis são públicos" ON public.profiles;
 CREATE POLICY "Perfis são públicos" ON public.profiles
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Usuários editam o próprio perfil" ON public.profiles;
 CREATE POLICY "Usuários editam o próprio perfil" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Inserção automática via trigger ou auth" ON public.profiles;
 CREATE POLICY "Inserção automática via trigger ou auth" ON public.profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP TRIGGER IF EXISTS set_profiles_updated_at ON public.profiles;
 CREATE TRIGGER set_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -57,15 +61,19 @@ CREATE TABLE IF NOT EXISTS public.posts (
 
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Posts são públicos" ON public.posts;
 CREATE POLICY "Posts são públicos" ON public.posts
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Autenticados criam posts" ON public.posts;
 CREATE POLICY "Autenticados criam posts" ON public.posts
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Dono deleta post" ON public.posts;
 CREATE POLICY "Dono deleta post" ON public.posts
     FOR DELETE USING (auth.uid() = user_id);
 
+DROP TRIGGER IF EXISTS set_posts_updated_at ON public.posts;
 CREATE TRIGGER set_posts_updated_at
     BEFORE UPDATE ON public.posts
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
@@ -81,8 +89,13 @@ CREATE TABLE IF NOT EXISTS public.likes (
 
 ALTER TABLE public.likes ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Likes públicos" ON public.likes;
 CREATE POLICY "Likes públicos" ON public.likes FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Autenticados curtem" ON public.likes;
 CREATE POLICY "Autenticados curtem" ON public.likes FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Dono remove curtida" ON public.likes;
 CREATE POLICY "Dono remove curtida" ON public.likes FOR DELETE USING (auth.uid() = user_id);
 
 -- 5. TABELA DE COMENTÁRIOS (COMMENTS)
@@ -96,8 +109,13 @@ CREATE TABLE IF NOT EXISTS public.comments (
 
 ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Comentários públicos" ON public.comments;
 CREATE POLICY "Comentários públicos" ON public.comments FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Autenticados comentam" ON public.comments;
 CREATE POLICY "Autenticados comentam" ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Dono deleta comentário" ON public.comments;
 CREATE POLICY "Dono deleta comentário" ON public.comments FOR DELETE USING (auth.uid() = user_id);
 
 -- 6. TABELA DE CONEXÕES (CONNECTIONS)
@@ -113,15 +131,19 @@ CREATE TABLE IF NOT EXISTS public.connections (
 
 ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Ver próprias conexões" ON public.connections;
 CREATE POLICY "Ver próprias conexões" ON public.connections
     FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
 
+DROP POLICY IF EXISTS "Criar pedido de conexão" ON public.connections;
 CREATE POLICY "Criar pedido de conexão" ON public.connections
     FOR INSERT WITH CHECK (auth.uid() = requester_id);
 
+DROP POLICY IF EXISTS "Atualizar status de conexão" ON public.connections;
 CREATE POLICY "Atualizar status de conexão" ON public.connections
     FOR UPDATE USING (auth.uid() = receiver_id OR auth.uid() = requester_id);
 
+DROP POLICY IF EXISTS "Deletar conexão" ON public.connections;
 CREATE POLICY "Deletar conexão" ON public.connections
     FOR DELETE USING (auth.uid() = requester_id OR auth.uid() = receiver_id);
 
@@ -137,12 +159,15 @@ CREATE TABLE IF NOT EXISTS public.messages (
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Ver mensagens próprias" ON public.messages;
 CREATE POLICY "Ver mensagens próprias" ON public.messages
     FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
 
+DROP POLICY IF EXISTS "Enviar mensagens" ON public.messages;
 CREATE POLICY "Enviar mensagens" ON public.messages
     FOR INSERT WITH CHECK (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Marcar como lida" ON public.messages;
 CREATE POLICY "Marcar como lida" ON public.messages
     FOR UPDATE USING (auth.uid() = receiver_id);
 
@@ -159,9 +184,11 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Ver próprias notificações" ON public.notifications;
 CREATE POLICY "Ver próprias notificações" ON public.notifications
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Atualizar própria notificação" ON public.notifications;
 CREATE POLICY "Atualizar própria notificação" ON public.notifications
     FOR UPDATE USING (auth.uid() = user_id);
 
@@ -177,8 +204,13 @@ CREATE TABLE IF NOT EXISTS public.echos (
 
 ALTER TABLE public.echos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Echos públicos" ON public.echos;
 CREATE POLICY "Echos públicos" ON public.echos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Dono cria echo" ON public.echos;
 CREATE POLICY "Dono cria echo" ON public.echos FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Dono deleta echo" ON public.echos;
 CREATE POLICY "Dono deleta echo" ON public.echos FOR DELETE USING (auth.uid() = user_id);
 
 -- 10. STORAGE POLICIES (Balde 'avatars')
@@ -190,11 +222,14 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 END $$;
 
+DROP POLICY IF EXISTS "Imagens públicas" ON storage.objects;
 CREATE POLICY "Imagens públicas" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Upload permitido para autenticados" ON storage.objects;
 CREATE POLICY "Upload permitido para autenticados" ON storage.objects
     FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Gestão de arquivos próprios" ON storage.objects;
 CREATE POLICY "Gestão de arquivos próprios" ON storage.objects
     FOR ALL USING (bucket_id = 'avatars' AND (auth.uid())::text = (storage.foldername(name))[1]);
 
