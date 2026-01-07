@@ -1,312 +1,167 @@
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ELOLogo } from './ui/Logo';
-import { Waves, ArrowRight, Heart, MessageCircle, Send, Plus, Search, Bell, User, LogIn } from 'lucide-react';
-
-// --- UTILITÁRIOS DE ANIMAÇÃO ---
-const useOnScreen = (options: IntersectionObserverInit) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.unobserve(element);
-      }
-    }, options);
-
-    observer.observe(element);
-
-    return () => {
-      if (element) observer.unobserve(element);
-    };
-  }, [options]);
-
-  return [ref, isVisible] as const;
-};
-
-const RevealOnScroll: React.FC<{ children?: React.ReactNode; delay?: number; className?: string }> = ({ children, delay = 0, className = "" }) => {
-  const options = useMemo(() => ({ threshold: 0.1 }), []);
-  const [ref, isVisible] = useOnScreen(options);
-
-  return (
-    <div
-      ref={ref}
-      className={`reveal-hidden ${isVisible ? 'reveal-visible' : ''} ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  );
-};
-
-// --- MOCK COMPONENTS (UI VISUALMENTE IDÊNTICA AO APP) ---
-
-const MockPostCard = () => (
-  <div className="bg-midnight-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-5 w-full max-w-sm shadow-[0_0_40px_rgba(14,165,233,0.05)]">
-    <div className="flex space-x-3.5">
-      <div className="w-10 h-10 rounded-full bg-slate-800 shrink-0 overflow-hidden border border-slate-700">
-        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Sarah" alt="Sarah" className="w-full h-full object-cover" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-col leading-tight">
-          <span className="font-bold text-slate-100 text-[15px]">Sarah Miller</span>
-          <div className="flex items-center text-slate-500 text-xs mt-0.5 gap-1 font-medium">
-            <span>@sarah_m</span>
-            <span className="text-slate-700">•</span>
-            <span>há 2 min</span>
-          </div>
-        </div>
-        <div className="mt-3 text-[15px] leading-relaxed text-slate-200 font-normal">
-          Finalmente encontrei um lugar onde o feed é real. Sem algoritmos decidindo meu dia. 🌊 #ELO
-        </div>
-        <div className="mt-4 flex items-center gap-6 text-slate-500">
-          <div className="flex items-center gap-2 text-rose-500">
-            <Heart size={20} className="fill-current" />
-            <span className="text-sm font-medium">24</span>
-          </div>
-          <div className="flex items-center gap-2 hover:text-ocean transition-colors">
-            <MessageCircle size={20} />
-            <span className="text-sm font-medium">5</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const MockChat = () => (
-  <div className="bg-midnight-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-4 w-full max-w-sm shadow-[0_0_40px_rgba(14,165,233,0.05)] flex flex-col gap-3">
-    {/* Header Fake */}
-    <div className="flex items-center gap-3 border-b border-white/5 pb-3">
-      <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden">
-        <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Dav" alt="David" />
-      </div>
-      <span className="text-sm font-bold text-white">David</span>
-    </div>
-
-    {/* Mensagens */}
-    <div className="space-y-3 py-2">
-      <div className="flex justify-start">
-        <div className="bg-white/10 text-slate-200 px-4 py-2 rounded-2xl rounded-tl-none text-xs max-w-[80%]">
-          Viu a nova feature de Ecos?
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <div className="bg-ocean text-white px-4 py-2 rounded-2xl rounded-tr-none text-xs max-w-[80%]">
-          Sim! Muito fluido, adorei.
-        </div>
-      </div>
-    </div>
-
-    {/* Input Fake */}
-    <div className="flex gap-2 mt-1">
-      <div className="flex-1 bg-midnight-950 border border-white/10 rounded-full h-8"></div>
-      <div className="w-8 h-8 bg-ocean rounded-full flex items-center justify-center">
-        <Send size={14} className="text-white" />
-      </div>
-    </div>
-  </div>
-);
-
-const MockNotification = () => (
-  <div className="bg-midnight-900/40 backdrop-blur-md border border-white/5 rounded-3xl p-5 w-full max-w-sm shadow-[0_0_40px_rgba(14,165,233,0.05)] flex flex-col gap-4">
-    <div className="flex items-center gap-3">
-      <Bell size={16} className="text-white" />
-      <span className="text-xs font-bold text-white uppercase tracking-wider">Atividade Recente</span>
-    </div>
-    <div className="space-y-4">
-      <div className="flex gap-3 items-center">
-        <div className="relative">
-          <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-white/10">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Julia" alt="" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-0.5 border border-white/10">
-            <Heart size={10} className="text-rose-500 fill-current" />
-          </div>
-        </div>
-        <div className="text-xs text-slate-300">
-          <span className="font-bold text-white">Julia</span> curtiu sua publicação.
-        </div>
-      </div>
-
-      <div className="flex gap-3 items-center">
-        <div className="relative">
-          <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden border border-white/10">
-            <img src="https://api.dicebear.com/7.x/identicon/svg?seed=Marc" alt="" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 bg-midnight-950 rounded-full p-0.5 border border-white/10">
-            <MessageCircle size={10} className="text-ocean fill-current" />
-          </div>
-        </div>
-        <div className="text-xs text-slate-300">
-          <span className="font-bold text-white">Marcos</span> comentou: "Exatamente isso!"
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-// --- MAIN LANDING PAGE ---
+import { ArrowRight, Globe, Mail, Radio } from 'lucide-react';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-midnight-950 text-slate-200 font-sans selection:bg-ocean selection:text-white relative overflow-x-hidden">
+    <div className="relative min-h-screen w-full flex flex-col ocean-bg overflow-x-hidden">
+      {/* Animated Background Blobs */}
+      <div className="fixed top-[-10%] left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-primary/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen animate-pulse-slow" />
+      <div className="fixed bottom-0 right-[-10%] w-[60vw] h-[50vh] bg-violet-600/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen" />
 
-      {/* Ambience Global */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-midnight-900 to-midnight-950" />
-        <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-ocean-600/5 rounded-full blur-[120px] animate-float opacity-50" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-900/5 rounded-full blur-[100px] opacity-40" />
-      </div>
-
-      {/* Navbar Fixa e Consolidada */}
-      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-midnight-950/80 backdrop-blur-xl transition-all supports-[backdrop-filter]:bg-midnight-950/60">
-        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 select-none cursor-pointer group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 shadow-[0_0_15px_rgba(14,165,233,0.1)] group-hover:shadow-[0_0_25px_rgba(14,165,233,0.2)] transition-all">
-              <ELOLogo size={24} />
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 glass-panel border-b-0">
+        <div className="flex items-center justify-between p-4 px-5 max-w-lg mx-auto w-full">
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-primary to-blue-600 shadow-lg shadow-primary/20">
+              <span className="material-symbols-outlined text-white text-[20px]">all_inclusive</span>
             </div>
-            <span className="text-xl font-bold tracking-tight text-white group-hover:text-ocean-300 transition-colors">ELO</span>
+            <span className="text-xl font-bold tracking-tight text-white">ELO</span>
+          </div>
+          <button
+            onClick={() => navigate('/auth')}
+            className="flex items-center justify-center h-10 px-4 rounded-xl hover:bg-white/5 transition-colors text-white font-bold text-sm"
+          >
+            Entrar
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-grow flex flex-col items-center px-5 pt-8 pb-10 gap-10 w-full max-w-md mx-auto relative z-10">
+
+        {/* Hero Section */}
+        <section className="flex flex-col items-center text-center gap-6 w-full py-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm shadow-[0_0_15px_rgba(13,162,231,0.15)]">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Acesso Antecipado</span>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex flex-col gap-3">
+            <h1 className="text-5xl font-black leading-[0.95] tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 text-glow">
+              Conecte-se<br />com propósito
+            </h1>
+            <p className="text-slate-400 text-base font-medium leading-relaxed max-w-[280px] mx-auto">
+              A rede exclusiva para líderes que moldam o futuro dos negócios.
+            </p>
+          </div>
+
+          <div className="flex flex-col w-full gap-3 mt-4">
             <button
               onClick={() => navigate('/auth')}
-              className="text-sm font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-2 py-2"
+              className="relative w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:to-blue-400 text-white font-bold text-lg shadow-[0_4px_20px_rgba(13,162,231,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98] overflow-hidden group"
             >
-              <LogIn size={16} className="hidden sm:block" />
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out skew-y-12"></div>
+              <span className="relative flex items-center justify-center gap-2">
+                Criar conta
+                <ArrowRight size={20} />
+              </span>
+            </button>
+            <button
+              onClick={() => navigate('/auth')}
+              className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-bold text-lg backdrop-blur-md transition-all"
+            >
               Entrar
             </button>
-            <button
-              onClick={() => navigate('/auth')}
-              className="bg-ocean hover:bg-ocean-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 shadow-lg shadow-ocean/20 hover:shadow-ocean/30 flex items-center gap-2"
-            >
-              Começar
-              <ArrowRight size={16} className="hidden sm:block" />
+          </div>
+        </section>
+
+        {/* Visual Anchor: Floating 3D Mockup */}
+        <section className="w-full animate-float mt-4">
+          <div className="glass-card rounded-2xl p-2.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
+            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-900 group">
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90" />
+
+              <div className="absolute top-4 right-4 glass-panel rounded-full px-3 py-1 flex items-center gap-1.5 border-white/10">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-[10px] font-bold text-white/80">AO VIVO</span>
+              </div>
+
+              <div className="absolute bottom-5 left-5 right-5">
+                <div className="glass-panel p-3 rounded-xl border-white/10 flex items-center gap-3">
+                  <div className="size-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">auto_graph</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-white text-sm font-bold leading-tight">Tendências Globais</p>
+                    <p className="text-white/60 text-[11px] leading-tight text-left">Atualizado agora</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Feature Grid */}
+        <section className="w-full flex flex-col gap-4 mt-6 text-left">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xl font-bold text-white tracking-tight">Recursos Exclusivos</h2>
+            <button className="text-slate-500 hover:text-white transition-colors">
+              <span className="material-symbols-outlined text-[20px]">more_horiz</span>
             </button>
           </div>
-        </div>
-      </nav>
 
-      {/* Hero Section */}
-      <main className="pt-32 pb-20 px-6 max-w-6xl mx-auto relative z-10">
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-20">
-
-          <div className="lp-slide-up w-full flex justify-center mb-8" style={{ animationDelay: '0ms' }}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-ocean-300 hover:bg-white/10 transition-colors cursor-default backdrop-blur-md">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ocean-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-ocean-500"></span>
-              </span>
-              Acesso liberado
-            </div>
-          </div>
-
-          <div className="lp-slide-up w-full mb-6" style={{ animationDelay: '100ms' }}>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white leading-[1.1]">
-              Conexões reais, <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-ocean-300 to-ocean-500 inline-block pb-1">
-                ordem natural.
-              </span>
-            </h1>
-          </div>
-
-          <div className="lp-slide-up w-full mb-10" style={{ animationDelay: '200ms' }}>
-            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Uma rede social desenhada para a clareza. Sem algoritmos viciantes, apenas o que você escolhe ver, quando acontece.
-            </p>
-          </div>
-
-          <div className="lp-slide-up w-full flex justify-center" style={{ animationDelay: '300ms' }}>
-            <button
-              onClick={() => navigate('/auth')}
-              className="px-8 py-4 bg-ocean hover:bg-ocean-600 text-white font-bold rounded-2xl transition-all shadow-[0_0_25px_rgba(14,165,233,0.3)] hover:shadow-[0_0_35px_rgba(14,165,233,0.4)] active:scale-95 flex items-center gap-3 group"
-            >
-              Criar minha conta
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </div>
-
-        {/* SHOWCASE SECTION - MOCKUPS REAIS */}
-        <div className="space-y-24 mt-20">
-
-          {/* Feature 1: The Feed */}
-          <RevealOnScroll className="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-            <div className="flex-1 text-center md:text-left order-2 md:order-1">
-              <h3 className="text-3xl font-bold text-white mb-4">Feed Cronológico Puro</h3>
-              <p className="text-slate-400 text-lg leading-relaxed mb-6">
-                Veja as publicações na ordem exata em que aconteceram. Sem manipulação, sem "sugeridos para você". O controle do seu tempo volta para suas mãos.
-              </p>
-              <div className="flex items-center gap-4 justify-center md:justify-start text-ocean-300 text-sm font-medium">
-                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-ocean"></div>Tempo real</div>
-                <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-ocean"></div>Sem anúncios</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="glass-card p-4 rounded-2xl flex flex-col gap-3 group hover:bg-white/10 transition-colors">
+              <div className="size-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined">group_add</span>
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-sm">Conexão</h3>
+                <p className="text-slate-400 text-xs mt-0.5 leading-snug">Networking de alto nível</p>
               </div>
             </div>
-            <div className="flex-1 order-1 md:order-2 flex justify-center relative">
-              <div className="absolute inset-0 bg-ocean-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-              <div className="relative z-10 transform rotate-2 hover:rotate-0 transition-transform duration-500">
-                <MockPostCard />
+
+            <div className="glass-card p-4 rounded-2xl flex flex-col gap-3 group hover:bg-white/10 transition-colors">
+              <div className="size-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined">forum</span>
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-sm">Feed</h3>
+                <p className="text-slate-400 text-xs mt-0.5 leading-snug">Conteúdo curado</p>
               </div>
             </div>
-          </RevealOnScroll>
 
-          {/* Feature 2: Realtime Chat */}
-          <RevealOnScroll className="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-            <div className="flex-1 flex justify-center relative">
-              <div className="absolute inset-0 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-              <div className="relative z-10 transform -rotate-2 hover:rotate-0 transition-transform duration-500">
-                <MockChat />
+            <div className="glass-card p-4 rounded-2xl col-span-2 flex items-center gap-4 group hover:bg-white/10 transition-colors">
+              <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined">verified_user</span>
+              </div>
+              <div className="flex flex-col">
+                <h3 className="text-white font-bold text-sm">Chat Seguro</h3>
+                <p className="text-slate-400 text-xs mt-0.5">Criptografia de ponta a ponta</p>
               </div>
             </div>
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="text-3xl font-bold text-white mb-4">Conversas Instantâneas</h3>
-              <p className="text-slate-400 text-lg leading-relaxed mb-6">
-                Mensagens diretas criptografadas e instantâneas. A interface é limpa, focada apenas na conversa, sem distrações visuais desnecessárias.
-              </p>
-            </div>
-          </RevealOnScroll>
-
-          {/* Feature 3: Activity & Identity */}
-          <RevealOnScroll className="flex flex-col md:flex-row items-center gap-12 md:gap-20">
-            <div className="flex-1 text-center md:text-left order-2 md:order-1">
-              <h3 className="text-3xl font-bold text-white mb-4">Você no Controle</h3>
-              <p className="text-slate-400 text-lg leading-relaxed mb-6">
-                Personalize seu perfil, gerencie suas conexões e acompanhe suas notificações de forma intuitiva. Tudo desenhado para ser fluido e responsivo.
-              </p>
-            </div>
-            <div className="flex-1 order-1 md:order-2 flex justify-center relative">
-              <div className="absolute inset-0 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-              <div className="relative z-10 transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                <MockNotification />
-              </div>
-            </div>
-          </RevealOnScroll>
-
-        </div>
+          </div>
+        </section>
       </main>
 
-      {/* Footer Minimalista */}
-      <footer className="border-t border-white/5 py-12 px-6 mt-12 bg-midnight-950 relative z-10">
-        <RevealOnScroll delay={100}>
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 opacity-60 hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-2">
-              <Waves size={16} />
-              <span className="font-bold text-sm tracking-wide">ELO NETWORK</span>
-            </div>
-            <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} Elo. Construído para humanos.
-            </p>
+      {/* Footer */}
+      <footer className="mt-auto py-8 text-center glass-panel border-t border-white/5 backdrop-blur-xl rounded-t-3xl">
+        <div className="max-w-md mx-auto px-5">
+          <div className="flex justify-center gap-6 mb-6">
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Sobre</a>
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Carreira</a>
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Legal</a>
           </div>
-        </RevealOnScroll>
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-center gap-4 text-white/40">
+              <Globe className="hover:text-white cursor-pointer transition-colors" size={20} />
+              <Mail className="hover:text-white cursor-pointer transition-colors" size={20} />
+              <Radio className="hover:text-white cursor-pointer transition-colors" size={20} />
+            </div>
+            <p className="text-slate-600 text-[10px] mt-4 tracking-widest uppercase">© 2024 ELO NETWORK INC.</p>
+          </div>
+        </div>
       </footer>
     </div>
   );

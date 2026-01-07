@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/ui/Avatar';
-import { Search as SearchIcon, UserPlus, Ban, Clock, Loader2, MessageCircle } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Ban, Clock, Loader2, MessageCircle, Navigation, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -71,7 +71,6 @@ export const Discover = () => {
     setProcessingId(receiverId);
 
     try {
-      // Cleanup para garantir insert limpo
       const { data: existing } = await supabase
         .from('connections')
         .select('id, status')
@@ -81,7 +80,7 @@ export const Discover = () => {
       if (existing) {
         if (existing.status === 'blocked') {
           alert("Não permitido.");
-          setProcessingId(null);
+            setProcessingId(null);
           return;
         }
         await supabase.from('connections').delete().eq('id', existing.id);
@@ -100,19 +99,11 @@ export const Discover = () => {
       if (error) throw error;
 
       if (newConn) {
-        // Fire & forget notification
-        supabase.from('notifications').insert({
-          user_id: receiverId,
-          actor_id: user.id,
-          type: 'request_received',
-          reference_id: newConn.id
-        }).then(() => { });
-
         setResults((prev: Profile[]) => prev.map((r: Profile) => r.id === receiverId ? { ...r, connection: newConn as Connection } : r));
       }
 
     } catch (err) {
-      alert("Erro ao conectar. Tente novamente.");
+      alert("Erro ao conectar.");
     } finally {
       setProcessingId(null);
     }
@@ -120,112 +111,142 @@ export const Discover = () => {
 
   return (
     <div className="min-h-full pb-32">
-      {/* Sticky Top Header */}
-      <div className="px-5 py-6 sticky top-0 z-30 transition-all">
-        <div className="absolute inset-0 bg-background-dark/20 backdrop-blur-xl border-b border-white/5" />
-        <div className="relative z-10 max-w-lg mx-auto">
-          <h1 className="text-2xl font-bold text-white mb-5 tracking-tight">Descobrir</h1>
+      <div className="px-5 pt-8 pb-6 sticky top-0 z-30">
+        <div className="absolute inset-0 bg-background-dark/40 backdrop-blur-2xl border-b border-white/5" />
+        <div className="relative z-10 max-w-lg mx-auto flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-black text-white tracking-tighter">Descobrir</h1>
+            <div className="p-2 glass-button rounded-xl text-primary">
+              <Users size={20} />
+            </div>
+          </div>
+
           <form onSubmit={handleSearch} className="relative group">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar mentes brilhantes..."
-              className="w-full bg-black/20 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium placeholder:text-slate-500 backdrop-blur-sm"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-all duration-500" />
+            <div className="relative flex items-center">
+              <span className="material-symbols-outlined absolute left-4 text-slate-500 group-focus-within:text-primary transition-colors">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Buscar novas conexões..."
+                className="w-full input-glass rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-white focus:outline-none"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
           </form>
         </div>
       </div>
 
-      <div className="px-4 space-y-4 mt-6 max-w-lg mx-auto">
+      <div className="px-4 space-y-4 pt-6 max-w-lg mx-auto">
         {searching ? (
-          <div className="text-slate-500 text-center py-20 flex flex-col items-center justify-center gap-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-              <Loader2 className="animate-spin text-primary relative z-10" size={40} />
+          <div className="py-20 flex flex-col items-center justify-center gap-6 animate-pulse">
+            <div className="size-20 glass-card rounded-[2.5rem] flex items-center justify-center border-primary/20">
+              <Loader2 className="animate-spin text-primary" size={32} />
             </div>
-            <span className="text-sm font-bold tracking-widest uppercase text-slate-400 animate-pulse">Sondando o Oceano...</span>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">Sincronizando</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Aguarde um momento</span>
+            </div>
           </div>
         ) : results.length > 0 ? (
-          results.map(profile => {
-            const status = profile.connection?.status;
-            const isMyRequest = profile.connection?.requester_id === user?.id;
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 px-1 mb-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">person_search</span>
+              <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">Resultados da Busca</h2>
+            </div>
+            {results.map(profile => {
+              const status = profile.connection?.status;
+              const isMyRequest = profile.connection?.requester_id === user?.id;
 
-            return (
-              <div
-                key={profile.id}
-                className="flex items-center justify-between p-4 glass-panel rounded-3xl shadow-lg hover:bg-white/5 transition-all group active:scale-[0.99]"
-              >
+              return (
                 <div
-                  className="flex items-center space-x-4 cursor-pointer flex-1 min-w-0"
-                  onClick={() => navigate(`/profile/${profile.id}`)}
+                  key={profile.id}
+                  className="flex items-center justify-between p-4 glass-card rounded-[2rem] hover:bg-white/5 transition-all group relative overflow-hidden"
                 >
-                  <div className="relative">
-                    <Avatar url={profile.avatar_url} alt={profile.username} size="md" />
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-background-dark rounded-full" />
-                  </div>
-                  <div className="truncate">
-                    <div className="font-bold text-white text-[16px] truncate group-hover:text-primary transition-colors">
-                      {profile.username}
+                  <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                  
+                  <div
+                    className="flex items-center gap-4 cursor-pointer flex-1 min-w-0"
+                    onClick={() => navigate(`/profile/${profile.id}`)}
+                  >
+                    <div className="relative shrink-0">
+                      <Avatar url={profile.avatar_url} alt={profile.username} size="md" className="border-white/5" />
+                      <div className="absolute -bottom-0.5 -right-0.5 size-4 bg-green-500 border-2 border-background-dark rounded-full shadow-lg" />
                     </div>
-                    <div className="text-xs text-slate-500 font-medium truncate">
-                      {profile.full_name || `@${profile.username}`}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="ml-3 shrink-0">
-                  {status === 'accepted' ? (
-                    <button
-                      onClick={() => navigate(`/chat/${profile.id}`)}
-                      className="w-12 h-12 flex items-center justify-center glass-button text-primary rounded-2xl active:scale-90 transition-all hover:bg-primary/10"
-                    >
-                      <MessageCircle size={22} className="fill-current" />
-                    </button>
-                  ) : status === 'blocked' ? (
-                    <div className="bg-red-500/10 p-3 rounded-2xl border border-red-500/20 text-red-400">
-                      <Ban size={18} />
-                    </div>
-                  ) : status === 'pending' ? (
-                    <div className="flex flex-col items-center gap-1 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/5">
-                      <Clock size={16} className="text-slate-500" />
-                      <span className="text-[10px] text-slate-500 font-bold uppercase">
-                        {isMyRequest ? 'Enviado' : 'Pendente'}
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h3 className="font-black text-white text-[15px] truncate group-hover:text-primary transition-colors">
+                          {profile.username}
+                        </h3>
+                        <span className="material-symbols-outlined text-primary text-[14px] font-black shrink-0">verified</span>
+                      </div>
+                      <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider truncate">
+                        {profile.full_name || `@${profile.username}`}
                       </span>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => sendRequest(profile.id)}
-                      disabled={!!processingId}
-                      className="w-12 h-12 flex items-center justify-center bg-primary text-white rounded-2xl hover:bg-sky-400 shadow-[0_0_20px_rgba(13,162,231,0.3)] transition-all active:scale-90 disabled:opacity-50"
-                    >
-                      {processingId === profile.id ? <Loader2 size={20} className="animate-spin" /> : <UserPlus size={20} strokeWidth={2.5} />}
-                    </button>
-                  )}
+                  </div>
+
+                  <div className="ml-4 shrink-0">
+                    {status === 'accepted' ? (
+                      <button
+                        onClick={() => navigate(`/chat/${profile.id}`)}
+                        className="size-12 rounded-2xl glass-button flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-lg shadow-primary/10"
+                      >
+                        <MessageCircle size={20} />
+                      </button>
+                    ) : status === 'blocked' ? (
+                      <div className="size-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20">
+                        <Ban size={20} />
+                      </div>
+                    ) : status === 'pending' ? (
+                      <div className="h-12 px-4 rounded-2xl glass-panel border-white/5 flex flex-col items-center justify-center gap-0.5">
+                        <Clock size={16} className="text-slate-500" />
+                        <span className="text-[8px] font-black uppercase text-slate-500 tracking-tighter">
+                          {isMyRequest ? 'Enviado' : 'Recebido'}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => sendRequest(profile.id)}
+                        disabled={!!processingId}
+                        className="size-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-sky-400 shadow-xl shadow-primary/20 transition-all active:scale-95 group-hover:scale-110"
+                      >
+                        {processingId === profile.id ? <Loader2 size={20} className="animate-spin" /> : <UserPlus size={20} strokeWidth={3} />}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         ) : query && !searching ? (
-          <div className="text-center py-20 glass-panel rounded-[2rem] mx-2 border-dashed">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 text-slate-600 mb-6 border border-white/5">
-              <SearchIcon size={36} />
+          <div className="py-20 text-center flex flex-col items-center gap-6 animate-fade-in px-8">
+            <div className="size-24 rounded-[3rem] bg-midnight-900 border border-white/5 flex items-center justify-center rotate-12 shadow-2xl">
+              <span className="material-symbols-outlined text-slate-700 text-[48px]">search_off</span>
             </div>
-            <h3 className="text-white font-bold mb-2">Sem sinais detectados</h3>
-            <p className="text-slate-500 text-sm max-w-[200px] mx-auto leading-relaxed">
-              Não encontramos ninguém com o nome <span className="text-primary">"{query}"</span>.
-            </p>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-2xl font-black text-white">Nenhum sinal</h3>
+              <p className="text-slate-500 text-sm font-bold leading-relaxed max-w-[240px]">
+                O usuário <span className="text-primary">"{query}"</span> não foi detectado no radar do ELO.
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="py-20 text-center animate-fade-in px-8">
-            <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-primary/20 rotate-6 shadow-xl shadow-primary/5">
-              <SearchIcon size={32} className="text-primary" />
+          <div className="py-24 text-center animate-fade-in px-10 flex flex-col items-center gap-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/10 blur-[60px] rounded-full animate-pulse-slow" />
+              <div className="size-28 bg-gradient-to-br from-primary/20 to-blue-600/20 rounded-[3rem] flex items-center justify-center border border-primary/20 rotate-6 shadow-2xl relative">
+                <Navigation size={40} className="text-primary animate-float" />
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Explore o ELO</h2>
-            <p className="text-slate-500 text-sm leading-relaxed">
-              Busque por amigos, criadores ou pessoas inspiradoras para conectar ao seu oceano.
-            </p>
+            <div className="flex flex-col gap-3">
+              <h2 className="text-2xl font-black text-white tracking-tight">Expandir Rede</h2>
+              <p className="text-slate-500 text-sm font-bold leading-relaxed max-w-[280px]">
+                Busque por mentes inovadoras para conectar ao seu oceano exclusivo.
+              </p>
+            </div>
           </div>
         )}
       </div>

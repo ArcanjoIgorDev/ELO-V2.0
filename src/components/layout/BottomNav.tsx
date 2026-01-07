@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Home, Search, PlusSquare, Bell, MessageCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,12 +41,10 @@ export const BottomNav = () => {
 
     fetchBadges();
 
-    // HANDLER REFORÇADO: Recebe evento de limpeza
     const handleManualRefresh = () => {
-      // 1. Busca com delay para dar tempo do UPDATE do banco ocorrer
       setTimeout(() => {
         fetchBadges();
-      }, 500); // Meio segundo de delay é o "pulo do gato" para evitar race condition
+      }, 500);
     };
 
     window.addEventListener('elo:refresh-badges', handleManualRefresh);
@@ -62,7 +59,7 @@ export const BottomNav = () => {
     const channel = supabase.channel('badges_realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
         () => {
-          setUnreadMessagesCount(p => p + 1); // Feedback otimista
+          setUnreadMessagesCount(p => p + 1);
           fetchBadges();
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
@@ -86,66 +83,54 @@ export const BottomNav = () => {
 
   if (location.pathname.startsWith('/chat/')) return null;
 
-  const NavItem = ({ path, icon: Icon, label, isPrimary = false, badgeCount = 0, hasDot = false }: { path: string, icon: any, label: string, isPrimary?: boolean, badgeCount?: number, hasDot?: boolean }) => {
+  const NavItem = ({ path, icon, badgeCount = 0, hasDot = false }: { path: string, icon: string, badgeCount?: number, hasDot?: boolean }) => {
     const active = isActive(path);
-
-    if (isPrimary) {
-      return (
-        <button
-          onClick={() => navigate(path)}
-          className="group active:scale-95 transition-transform"
-        >
-          <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl border-2 border-white/10 px-0.5
-            ${active ? 'bg-primary text-white shadow-primary/40 scale-105' : 'bg-primary text-white shadow-primary/20'}`}>
-            <Icon size={26} strokeWidth={2.5} />
-          </div>
-        </button>
-      )
-    }
 
     return (
       <button
         onClick={() => navigate(path)}
-        className="flex-1 flex flex-col items-center justify-center h-full relative group"
+        className="relative flex flex-col items-center justify-center p-2.5 group transition-all"
       >
-        <div className={`p-2 rounded-xl transition-all duration-300 relative ${active ? 'text-primary scale-110' : 'text-slate-400 hover:text-white'}`}>
-          <Icon size={24} strokeWidth={active ? 2.5 : 2} fill={active ? "currentColor" : "none"} fillOpacity={0.2} />
+        <div className={`relative flex items-center justify-center transition-all duration-300 ${active ? 'text-primary scale-110 mb-1' : 'text-slate-500 hover:text-slate-300'}`}>
+          <span className={`material-symbols-outlined text-[28px] ${active ? 'fill-1' : ''}`}>
+            {icon}
+          </span>
 
-          {/* Active Indicator Dot under icon */}
-          {active && (
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_currentColor]"></span>
+          {hasDot && !active && (
+            <span className="absolute top-0 right-0 size-2 bg-primary rounded-full border-2 border-[#020617] animate-pulse"></span>
+          )}
+
+          {badgeCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-primary text-white text-[9px] font-black px-1 min-w-[16px] h-4 flex items-center justify-center rounded-full border border-[#020617] shadow-lg shadow-primary/20">
+              {badgeCount > 9 ? '9+' : badgeCount}
+            </span>
           )}
         </div>
-
-
-        {hasDot && !active && (
-          <span className="absolute top-4 right-[28%] w-2 h-2 bg-rose-500 rounded-full border-2 border-midnight-950/80 animate-pulse"></span>
-        )}
-
-        {badgeCount > 0 && (
-          <span className="absolute top-2.5 right-[20%] bg-rose-500 text-white text-[9px] font-bold px-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full border border-midnight-950 transition-all font-mono pointer-events-none">
-            {badgeCount > 9 ? '9+' : badgeCount}
-          </span>
+        {active && (
+          <div className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(13,162,231,0.5)]"></div>
         )}
       </button>
     );
   };
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-[360px] pb-0">
-      <div className="glass-panel backdrop-blur-2xl rounded-[2rem] shadow-2xl flex justify-between items-center h-[72px] px-2 relative overflow-hidden bg-black/20 border-white/10">
-        {/* Ambient Glow */}
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-50" />
+    <nav className="fixed bottom-0 w-full z-50 glass-nav p-safe pb-4 transition-all duration-300 translate-y-0 group-data-[keyboard=open]:translate-y-full">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto w-full px-2">
+        <NavItem path="/feed" icon="home" />
+        <NavItem path="/discover" icon="explore" />
 
-        <NavItem path="/feed" icon={Home} label="Início" />
-        <NavItem path="/discover" icon={Search} label="Buscar" />
+        {/* Create Post Button - Highlighted */}
+        <button
+          onClick={() => navigate('/create')}
+          className="relative -top-3 transform transition-all active:scale-90"
+        >
+          <div className="size-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white shadow-xl shadow-primary/30 border border-white/10">
+            <span className="material-symbols-outlined text-[32px] font-bold">add</span>
+          </div>
+        </button>
 
-        <div className="relative -top-6">
-          <NavItem path="/create" icon={PlusSquare} label="Novo" isPrimary />
-        </div>
-
-        <NavItem path="/messages" icon={MessageCircle} label="Chat" badgeCount={unreadMessagesCount} />
-        <NavItem path="/notifications" icon={Bell} label="Alertas" hasDot={hasUnreadNotifs} />
+        <NavItem path="/messages" icon="mail" badgeCount={unreadMessagesCount} />
+        <NavItem path="/notifications" icon="notifications" hasDot={hasUnreadNotifs} />
       </div>
     </nav>
   );

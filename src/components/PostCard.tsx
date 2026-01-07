@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PostWithAuthor, CommentWithAuthor } from '../types';
 import { Avatar } from './ui/Avatar';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, X, Command, Bookmark } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,13 +20,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  // FALLBACK: Se post vier nulo, não renderiza. 
-  // Se author vier nulo (RLS error), usa fallback.
   if (!post) return null;
 
   const author = post.author || {
     id: 'unknown',
-    username: 'Usuário Desconhecido',
+    username: 'Usuário',
     avatar_url: null,
     full_name: 'Desconhecido'
   };
@@ -35,7 +33,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const [likesCount, setLikesCount] = useState(post.likes_count);
   const [isLiking, setIsLiking] = useState(false);
 
-  // Comments
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<CommentWithAuthor[]>([]);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
@@ -43,7 +40,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const [isCommenting, setIsCommenting] = useState(false);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
 
-  // UI States
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -71,7 +67,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   const handleLike = async () => {
     if (!user || isLiking) return;
     setIsLiking(true);
-    // Optimistic UI
     const originalLikedState = hasLiked;
     const originalCount = likesCount;
 
@@ -83,9 +78,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         await supabase.from('likes').delete().match({ user_id: user.id, post_id: post.id });
       } else {
         await supabase.from('likes').insert({ user_id: user.id, post_id: post.id });
-        if (post.user_id !== user.id) {
-          await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: user.id, type: 'like_post', reference_id: post.id });
-        }
       }
     } catch (error) {
       setHasLiked(originalLikedState);
@@ -143,10 +135,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         setComments([...comments, newCommentObj]);
         setCommentsCount(prev => prev + 1);
         setNewComment('');
-
-        if (post.user_id !== user.id) {
-          await supabase.from('notifications').insert({ user_id: post.user_id, actor_id: user.id, type: 'comment', reference_id: post.id });
-        }
       }
     } catch (err) {
       console.error(err);
@@ -156,54 +144,78 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   };
 
   const handleDeletePost = async () => {
-    if (!isAuthor || !window.confirm('Excluir esta publicação permanentemente?')) return;
+    if (!isAuthor) return;
     setIsDeleting(true);
     try {
       await supabase.from('posts').delete().eq('id', post.id);
       if (onDelete) onDelete(post.id);
+      showToast('Onda removida com sucesso', 'success');
     } catch (err) {
       setIsDeleting(false);
+      showToast('Erro ao remover onda', 'error');
     }
   };
 
   return (
-    <article className="glass-panel rounded-[2rem] overflow-hidden animate-fade-in relative z-10 transition-all hover:bg-white/5 border border-white/5 shadow-lg">
-      <div className="p-6">
+    <article className="glass-card rounded-[2.5rem] overflow-hidden transition-all duration-500 hover:translate-y-[-6px] animate-fade-in relative group border-white/5">
+      {/* Dynamic Glow */}
+      <div className="absolute -top-24 -left-24 size-48 bg-primary/10 blur-[80px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
 
+      <div className="p-7 flex flex-col gap-5 relative z-10">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3.5 cursor-pointer group" onClick={(e) => goToProfile(e, post.user_id)}>
-            <div className="ring-2 ring-transparent group-hover:ring-ocean/50 rounded-full transition-all">
-              <Avatar url={author.avatar_url} alt={author.username} size="md" />
+        <div className="flex items-start justify-between">
+          <div
+            className="flex items-center gap-4 cursor-pointer group/author"
+            onClick={(e) => goToProfile(e, post.user_id)}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-md rounded-2xl opacity-0 group-hover/author:opacity-100 transition-all duration-500" />
+              <div className="p-[2px] glass-panel rounded-2xl border-white/10 group-hover/author:border-primary/40 transition-colors">
+                <Avatar url={author.avatar_url} alt={author.username} size="md" className="relative rounded-[0.9rem]" />
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-slate-100 text-[15px] leading-tight group-hover:text-ocean transition-colors">
-                {author.username}
-              </h3>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : 'agora'}
-              </p>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-white text-[15px] tracking-tight leading-none group-hover/author:text-primary transition-colors">
+                  {author.full_name || author.username}
+                </h3>
+                <span className="material-symbols-outlined text-primary text-[14px] font-black">verified</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[9px] font-black text-primary uppercase tracking-[0.1em]">@{author.username}</span>
+                <span className="text-white/10">•</span>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                  {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : 'agora'}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 -mr-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-full transition-colors"
+              className="size-10 rounded-2xl glass-button flex items-center justify-center text-slate-500 hover:text-white transition-all active:scale-90"
             >
               <MoreHorizontal size={20} />
             </button>
             {showMenu && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)}></div>
-                <div className="absolute right-0 top-8 bg-midnight-950 border border-white/10 rounded-xl shadow-2xl z-20 w-40 overflow-hidden py-1">
+                <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)}></div>
+                <div className="absolute right-0 top-12 glass-panel p-2 rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 w-52 animate-fade-in border-white/10 backdrop-blur-3xl">
                   {isAuthor && (
-                    <button onClick={handleDeletePost} className="w-full text-left px-4 py-3 text-red-400 hover:bg-white/5 text-sm flex items-center gap-2 font-medium">
-                      {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Excluir
+                    <button
+                      onClick={handleDeletePost}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={16} />}
+                      Apagar Onda
                     </button>
                   )}
-                  <button className="w-full text-left px-4 py-3 text-slate-300 hover:bg-white/5 text-sm flex items-center gap-2 font-medium">
-                    <Share2 size={14} /> Compartilhar
+                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">
+                    <Share2 size={16} /> Compartilhar
+                  </button>
+                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">
+                    <Bookmark size={16} /> Salvar Radar
                   </button>
                 </div>
               </>
@@ -212,80 +224,103 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         </div>
 
         {/* Content */}
-        <div className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap break-words mb-5 font-normal">
+        <div className="text-[16px] text-slate-100 leading-relaxed font-bold tracking-tight whitespace-pre-wrap">
           {post.content}
         </div>
 
-        {/* Actions Bar */}
-        <div className="flex items-center gap-6 pt-2 border-t border-white/5">
+        {/* Action Bar */}
+        <div className="flex items-center gap-2 pt-2">
           <button
             onClick={handleLike}
-            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-95 py-2 px-1 rounded-lg
-                ${hasLiked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400 hover:bg-rose-500/10'}`}
+            disabled={isLiking}
+            className={`flex items-center gap-2.5 h-12 px-5 rounded-2xl transition-all active:scale-95 border ${hasLiked ? 'bg-primary/10 text-primary border-primary/20 shadow-lg shadow-primary/5' : 'text-slate-500 hover:bg-white/5 border-transparent'}`}
           >
-            <Heart size={20} className={hasLiked ? 'fill-current' : ''} strokeWidth={2.5} />
-            <span>{likesCount || ''}</span>
+            <span className={`material-symbols-outlined text-[22px] transition-transform ${hasLiked ? 'fill-1 scale-110' : ''}`}>
+              favorite
+            </span>
+            <span className="text-xs font-black tracking-widest">{likesCount}</span>
           </button>
 
           <button
             onClick={toggleComments}
-            className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-95 py-2 px-1 rounded-lg
-                ${showComments ? 'text-ocean' : 'text-slate-500 hover:text-ocean hover:bg-ocean/10'}`}
+            className={`flex items-center gap-2.5 h-12 px-5 rounded-2xl transition-all active:scale-95 border ${showComments ? 'bg-primary/10 text-primary border-primary/20 shadow-lg shadow-primary/5' : 'text-slate-500 hover:bg-white/5 border-transparent'}`}
           >
-            <MessageCircle size={20} strokeWidth={2.5} />
-            <span>{commentsCount || ''}</span>
+            <span className={`material-symbols-outlined text-[22px] transition-transform ${showComments ? 'fill-1' : ''}`}>
+              forum
+            </span>
+            <span className="text-xs font-black tracking-widest">{commentsCount}</span>
+          </button>
+
+          <button className="ml-auto size-12 rounded-2xl glass-button flex items-center justify-center text-slate-500 hover:text-white transition-all">
+            <Share2 size={20} />
           </button>
         </div>
       </div>
 
-      {/* Comments Section */}
+      {/* Comments Drawer */}
       {showComments && (
-        <div className="bg-black/20 p-4 border-t border-white/5 animate-slide-up">
-          <div className="space-y-4 mb-5">
-            {comments.map(c => (
-              <div key={c.id} className="flex gap-3 group">
-                <div onClick={(e) => goToProfile(e, c.user_id)} className="cursor-pointer shrink-0 mt-0.5">
-                  <Avatar url={c.author?.avatar_url} alt="" size="sm" />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-white/5 rounded-2xl p-3 relative hover:bg-white/10 transition-colors border border-white/5">
-                    <div className="flex justify-between items-baseline mb-1">
-                      <span className="font-bold text-xs text-slate-200 cursor-pointer" onClick={(e) => goToProfile(e, c.user_id)}>{c.author?.username || 'Usuário'}</span>
-                      <span className="text-[10px] text-slate-500">{formatDistanceToNow(new Date(c.created_at), { locale: ptBR })}</span>
-                    </div>
-                    <p className="text-sm text-slate-300 leading-snug">{c.content}</p>
-                    {(user?.id === c.user_id || isAuthor) && (
-                      <button
-                        onClick={() => {/* handleDelete */ }}
-                        className="absolute right-2 top-2 text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+        <div className="border-t border-white/5 bg-midnight-950/40 backdrop-blur-2xl p-7 animate-slide-up flex flex-col gap-8">
+          <div className="flex items-center justify-between">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Respostas da Rede</h4>
+            <div className="h-px flex-1 mx-4 bg-white/5" />
           </div>
 
-          <form onSubmit={handleSendComment} className="flex gap-2 relative items-end">
-            <div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 border border-white/10 overflow-hidden">
-              <img src={user?.user_metadata?.avatar_url || 'https://api.dicebear.com/7.x/identicon/svg?seed=user'} className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 relative">
+          <div className="flex flex-col gap-6 max-h-[450px] overflow-y-auto pr-2 scrollbar-hide">
+            {comments.length === 0 && !isCommenting ? (
+              <div className="py-12 text-center flex flex-col items-center gap-4 opacity-30">
+                <div className="size-16 rounded-full bg-white/5 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">stream</span>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[150px] leading-relaxed">Nenhuma frequência detectada ainda</p>
+              </div>
+            ) : (
+              comments.map((c, idx) => (
+                <div key={c.id} className={`flex gap-4 group/comment animate-fade-in`} style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div
+                    onClick={(e) => goToProfile(e, c.user_id)}
+                    className="cursor-pointer shrink-0"
+                  >
+                    <div className="p-[1.5px] glass-panel rounded-xl group-hover/comment:border-primary/40 transition-colors">
+                      <Avatar url={c.author?.avatar_url} alt="" size="sm" className="rounded-[0.6rem]" />
+                    </div>
+                  </div>
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-xs font-black text-white hover:text-primary cursor-pointer transition-colors"
+                        onClick={(e) => goToProfile(e, c.user_id)}
+                      >
+                        {c.author?.username}
+                      </span>
+                      <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">
+                        {formatDistanceToNow(new Date(c.created_at), { locale: ptBR })}
+                      </span>
+                    </div>
+                    <div className="glass-panel p-4 rounded-2xl rounded-tl-none border-white/5 text-sm text-slate-300 leading-relaxed font-medium">
+                      {c.content}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form onSubmit={handleSendComment} className="flex items-end gap-3 relative z-10">
+            <div className="flex-1 relative group">
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-[2rem] opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
               <input
                 type="text"
-                placeholder="Escreva um comentário..."
+                placeholder="Adicionar sua frequência..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-4 pr-10 py-3 text-sm text-white focus:outline-none focus:bg-white/10 focus:border-primary/50 transition-all placeholder:text-slate-500"
+                className="w-full input-glass rounded-[1.8rem] pl-6 pr-14 py-5 text-sm font-bold text-white focus:outline-none relative z-10"
               />
               <button
                 type="submit"
                 disabled={!newComment.trim() || isCommenting}
-                className="absolute right-1 top-1 p-1.5 bg-ocean text-white rounded-xl disabled:opacity-0 transition-all hover:bg-ocean-600 shadow-lg shadow-ocean/20"
+                className="absolute right-2.5 top-2.5 size-11 flex items-center justify-center rounded-[1.2rem] bg-primary text-white disabled:opacity-0 transition-all hover:bg-sky-400 active:scale-90 shadow-xl shadow-primary/20 z-20"
               >
-                {isCommenting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                {isCommenting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
               </button>
             </div>
           </form>
@@ -294,3 +329,4 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     </article>
   );
 };
+

@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ArrowRight, Loader2, CheckCircle2, XCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, CheckCircle2, XCircle, AlertCircle, ShieldCheck, UserCircle, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ELOLogo } from '../components/ui/Logo';
 
 export const Auth = () => {
   const navigate = useNavigate();
@@ -122,125 +122,157 @@ export const Auth = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="relative min-h-screen w-full flex flex-col ocean-bg overflow-x-hidden selection:bg-primary selection:text-white">
+      {/* Animated Background Blobs */}
+      <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[80px] pointer-events-none z-0" />
 
       {/* Back Button */}
-      <div className="absolute top-0 left-0 p-6 z-20 w-full">
-        <button onClick={() => navigate('/')} className="text-slate-300 hover:text-white flex items-center gap-2 transition-colors group">
+      <div className="absolute top-0 left-0 p-6 z-20">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group"
+        >
           <div className="p-2 rounded-full glass-button group-hover:bg-white/10 transition-all">
             <ArrowLeft size={18} />
           </div>
-          <span className="text-sm font-bold">Voltar</span>
+          <span className="text-sm font-bold">Início</span>
         </button>
       </div>
 
-      <div className="w-full max-w-sm z-10 animate-slide-up flex flex-col gap-8">
+      <main className="flex-grow flex flex-col items-center justify-center p-6 relative z-10 w-full max-w-lg mx-auto">
+        <div className="w-full flex flex-col gap-8 animate-slide-up">
 
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-6 relative">
-            <div className="absolute inset-0 bg-ocean-500/30 blur-xl rounded-full"></div>
-            <ELOLogo size={72} className="relative drop-shadow-2xl" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
-            {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta'}
-          </h1>
-          <p className="text-slate-400 text-sm">
-            {isLogin ? 'Entre para continuar conectado.' : 'Comece a compartilhar suas ideias.'}
-          </p>
-        </div>
-
-        {/* Card */}
-        <div className="glass-panel p-8 rounded-[2rem] shadow-2xl relative overflow-hidden backdrop-blur-2xl">
-
-          {/* Toggle */}
-          <div className="flex p-1 bg-black/20 rounded-xl mb-8 border border-white/5 relative isolate">
-            <div
-              className={`absolute inset-y-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/20 transition-all duration-300 ease-spring ${isLogin ? 'left-1' : 'left-[calc(50%+0px)]'}`}
-            />
-            <button
-              onClick={() => { setIsLogin(true); setError(null); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Entrar
-            </button>
-            <button
-              onClick={() => { setIsLogin(false); setError(null); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              Cadastro
-            </button>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-fade-in">
-              <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-200 font-medium leading-tight">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-widest">Usuário</label>
+          {/* Header Section */}
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="inline-flex flex-col items-center gap-3">
               <div className="relative group">
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
-                  className={`w-full bg-black/20 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-primary/50 focus:bg-white/5 hover:border-white/20'}`}
-                  placeholder="Seu nome de usuário"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck="false"
-                />
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full group-hover:bg-primary/30 transition-all"></div>
+                <div className="relative flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-primary to-blue-600 shadow-xl shadow-primary/20 border border-white/10">
+                  <ShieldCheck size={36} className="text-white" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <h2 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Acesso Corporativo</h2>
+                <h1 className="text-3xl font-black text-white tracking-tight">Verificação de Identidade</h1>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
+              {isLogin
+                ? "Insira suas credenciais para acessar o terminal de rede segura."
+                : "Configure seu identificador único para ingressar na rede."}
+            </p>
+          </div>
 
-                {!isLogin && username.length >= 3 && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300">
-                    {isCheckingUser ? (
-                      <Loader2 size={18} className="animate-spin text-slate-500" />
-                    ) : isUserAvailable ? (
-                      <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-lg" />
-                    ) : (
-                      <XCircle size={20} className="text-red-500 drop-shadow-lg" />
-                    )}
+          {/* Glass Card Form */}
+          <div className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
+            {/* Toggle Mechanism */}
+            <div className="flex p-1.5 bg-background-dark/50 rounded-2xl mb-8 border border-white/5 relative isolate">
+              <div
+                className={`absolute inset-y-1.5 w-[calc(50%-6px)] bg-primary rounded-xl shadow-lg shadow-primary/20 transition-all duration-500 ease-out ${isLogin ? 'left-1.5' : 'left-[calc(50%-0px)]'}`}
+              />
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Login
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+              >
+                Ingresso
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 animate-fade-in shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-100 font-semibold leading-tight">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleAuth} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Identificador Único</label>
+                <div className="relative group overflow-hidden rounded-2xl">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+                    <UserCircle size={20} />
                   </div>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
+                    className="w-full input-glass pl-12 pr-12 py-4 text-white font-bold placeholder:text-slate-700 outline-none"
+                    placeholder="ex: smith_dev"
+                  />
+                  {!isLogin && username.length >= 3 && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300">
+                      {isCheckingUser ? (
+                        <Loader2 size={18} className="animate-spin text-slate-500" />
+                      ) : isUserAvailable ? (
+                        <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-lg" />
+                      ) : (
+                        <XCircle size={20} className="text-red-500 drop-shadow-lg" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Chave de Acesso</label>
+                <div className="relative group overflow-hidden rounded-2xl">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+                    <KeyRound size={20} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full input-glass pl-12 pr-4 py-4 text-white font-bold placeholder:text-slate-700 outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4 mt-4">
+                <button
+                  type="submit"
+                  disabled={loading || (!isLogin && isUserAvailable === false)}
+                  className="relative w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:to-blue-400 text-white font-bold text-lg shadow-[0_4px_20px_rgba(13,162,231,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out skew-y-12"></div>
+                  <span className="relative flex items-center gap-3">
+                    {loading ? (
+                      <Loader2 className="animate-spin" size={20} />
+                    ) : (
+                      <>
+                        {isLogin ? 'Autorizar Acesso' : 'Efetuar Registro'}
+                        <ArrowRight size={20} />
+                      </>
+                    )}
+                  </span>
+                </button>
+
+                {isLogin && (
+                  <button type="button" className="text-[10px] font-black text-slate-500 hover:text-primary transition-colors uppercase tracking-[0.2em] py-2">
+                    Recuperar credenciais de acesso
+                  </button>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-widest">Senha</label>
-              <div className="relative group">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full bg-black/20 border rounded-xl px-4 py-3.5 text-white outline-none transition-all font-medium placeholder:text-slate-600 ${error ? 'border-red-500/30 focus:border-red-500/50 focus:bg-red-500/5' : 'border-white/10 focus:border-primary/50 focus:bg-white/5 hover:border-white/20'}`}
-                  placeholder="••••••"
-                  autoComplete={isLogin ? "current-password" : "new-password"}
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || (!isLogin && !isUserAvailable)}
-              className="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-sky-400 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(13,162,231,0.3)] hover:shadow-[0_0_30px_rgba(13,162,231,0.5)] flex items-center justify-center gap-2 mt-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  <span>{isLogin ? 'Entrar no ELO' : 'Criar Conta'}</span>
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
+            </form>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <footer className="p-8 text-center">
+        <p className="text-slate-600 text-[10px] font-black tracking-[0.3em] uppercase opacity-40">
+          ELO SECURE NETWORK PROTOCOL © 2024
+        </p>
+      </footer>
     </div>
   );
 };

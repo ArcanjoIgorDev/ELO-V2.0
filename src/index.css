@@ -64,11 +64,15 @@
 
   /* Glassmorphism Utilities (Updated) */
   .glass-panel {
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    /* glass-border */
+    @apply bg-midnight-800/40 backdrop-blur-2xl border border-white/5;
+  }
+
+  .glass-card {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.4) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
   .glass-button {
@@ -76,11 +80,62 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
+    @apply transition-all duration-300;
   }
 
   .glass-button:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .input-glass {
+    background: rgba(2, 6, 23, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    @apply transition-all duration-300;
+  }
+
+  .input-glass:focus-within {
+    background: rgba(2, 6, 23, 0.8);
+    @apply border-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(13, 162, 231, 0.2)];
+  }
+
+  .glass-nav {
+    background-color: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    @apply transition-all;
+  }
+
+  .glass-chip-active {
+    background: rgba(13, 162, 231, 0.15);
+    border: 1px solid rgba(13, 162, 231, 0.3);
+    color: #38bdf8;
+    @apply shadow-[0_0_15px_rgba(13, 162, 231, 0.15)];
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(13, 162, 231, 0.3);
+  }
+
+  .gradient-bubble-me {
+    background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+  }
+
+  .glass-bubble-them {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .ocean-bg {
+    background: radial-gradient(circle at 50% 0%, #1e293b 0%, #020617 80%);
   }
 }
