@@ -72,7 +72,18 @@ export const Feed = () => {
         .order('created_at', { ascending: false })
         .limit(20);
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Erro ao buscar posts:', dbError);
+        // Só marca como erro se não for um erro de "tabela não existe" ou similar
+        if (dbError.code !== 'PGRST116' && isMounted.current) {
+          setError(true);
+        }
+        if (isMounted.current) {
+          setPosts([]);
+          setLoading(false);
+        }
+        return;
+      }
 
       if (data && isMounted.current) {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
