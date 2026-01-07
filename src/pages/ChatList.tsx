@@ -209,6 +209,3 @@ export const ChatList = () => {
     </PullToRefresh>
   );
 };
-
-  );
-};

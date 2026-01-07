@@ -49,6 +49,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       username: u.user_metadata?.username || u.email?.split('@')[0] || `user_${Date.now().toString().slice(-4)}`,
       full_name: u.user_metadata?.full_name || '',
       avatar_url: u.user_metadata?.avatar_url || null,
+      cover_url: null,
       has_seen_tutorial: false
     };
 

@@ -17,6 +17,7 @@ export interface Database {
           full_name: string | null
           bio: string | null
           avatar_url: string | null
+          cover_url: string | null
           has_seen_tutorial: boolean
           created_at: string
           updated_at: string
@@ -27,6 +28,7 @@ export interface Database {
           full_name?: string | null
           bio?: string | null
           avatar_url?: string | null
+          cover_url?: string | null
           has_seen_tutorial?: boolean
           created_at?: string
           updated_at?: string
@@ -37,6 +39,7 @@ export interface Database {
           full_name?: string | null
           bio?: string | null
           avatar_url?: string | null
+          cover_url?: string | null
           has_seen_tutorial?: boolean
           created_at?: string
           updated_at?: string
@@ -259,9 +262,9 @@ export interface CommentWithAuthor extends Comment {
 }
 
 export interface EchoWithAuthor extends Echo {
-    author_avatar?: string;
-    author_username?: string;
-    likes_count: number;
-    comments_count: number;
-    user_has_liked: boolean;
+  author_avatar?: string;
+  author_username?: string;
+  likes_count: number;
+  comments_count: number;
+  user_has_liked: boolean;
 }

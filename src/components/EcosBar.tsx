@@ -292,5 +292,3 @@ export const EcosBar = () => {
     </div>
   );
 };
-  );
-};

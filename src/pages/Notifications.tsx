@@ -297,6 +297,3 @@ export const NotificationsPage = () => {
     </PullToRefresh>
   );
 };
-
-  );
-};
