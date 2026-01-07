@@ -15,14 +15,21 @@ import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
+import { ELOLogo } from './components/ui/Logo';
 import { Loader2 } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
 
 // Componente de Loading Centralizado
 const FullScreenLoader = () => (
   <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-midnight-950">
-    <Loader2 className="animate-spin text-ocean mb-4" size={48} />
-    <p className="text-slate-500 text-sm font-medium animate-pulse">Conectando...</p>
+    <div className="relative mb-6">
+      <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse"></div>
+      <ELOLogo size={80} className="relative animate-float" />
+    </div>
+    <div className="flex items-center gap-3">
+      <Loader2 className="animate-spin text-primary/50" size={16} />
+      <p className="text-slate-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Conectando ao Oceano</p>
+    </div>
   </div>
 );
 

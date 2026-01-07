@@ -9,13 +9,40 @@ export const ELOLogo = ({ size = 32, className = "" }: { size?: number, classNam
         xmlns="http://www.w3.org/2000/svg"
         className={className}
     >
-        <rect width="512" height="512" rx="128" fill="url(#paint0_linear)" />
-        <path fillRule="evenodd" clipRule="evenodd" d="M256 96C202.981 96 160 138.981 160 192C160 228.6 180.9 260.6 211.5 276.9L160 368H208L232 304H280L304 368H352L300.5 276.9C331.1 260.6 352 228.6 352 192C352 138.981 309.019 96 256 96ZM256 240C229.49 240 208 218.51 208 192C208 165.49 229.49 144 256 144C282.51 144 304 165.49 304 192C304 218.51 282.51 240 256 240Z" fill="white" />
         <defs>
-            <linearGradient id="paint0_linear" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#0EA5E9" />
-                <stop offset="1" stopColor="#3B82F6" />
+            <linearGradient id="elo_grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0EA5E9" />
+                <stop offset="100%" stopColor="#2563EB" />
             </linearGradient>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="15" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
         </defs>
+
+        {/* Fundo de brilho suave */}
+        <circle cx="256" cy="256" r="200" fill="url(#elo_grad)" fillOpacity="0.1" />
+
+        {/* O Símbolo ELO - Fluidez Oceânica */}
+        <path
+            d="M384 256C384 326.69 326.69 384 256 384C185.31 384 128 326.69 128 256C128 185.31 185.31 128 256 128C326.69 128 384 185.31 384 256Z"
+            stroke="url(#elo_grad)"
+            strokeWidth="40"
+            strokeLinecap="round"
+            filter="url(#glow)"
+        />
+
+        <path
+            d="M256 128C185.31 128 128 185.31 128 256"
+            stroke="white"
+            strokeWidth="40"
+            strokeLinecap="round"
+            strokeDasharray="20 40"
+            opacity="0.8"
+        />
+
+        {/* Círculo Interno que sugere conexão */}
+        <circle cx="256" cy="256" r="60" fill="white" fillOpacity="0.9" />
+        <circle cx="256" cy="256" r="30" fill="url(#elo_grad)" />
     </svg>
 );

@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../ui/Avatar';
+import { ELOLogo } from '../ui/Logo';
 
 export const Header = () => {
   const { signOut, profile } = useAuth();
@@ -28,9 +29,7 @@ export const Header = () => {
           onClick={() => navigate('/feed')}
           className="flex items-center gap-2 group transform transition-all active:scale-95"
         >
-          <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 border border-white/10">
-            <span className="material-symbols-outlined text-white text-[18px]">all_inclusive</span>
-          </div>
+          <ELOLogo size={32} className="drop-shadow-[0_0_8px_rgba(14,165,233,0.3)] group-hover:scale-110 transition-transform" />
           <span className="text-xl font-black text-white tracking-tighter hidden sm:block">ELO</span>
         </button>
 

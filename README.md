@@ -1,47 +1,68 @@
-# ELO V2 - Setup & Deploy
+# 🌊 ELO - Conexões Profundas no Oceano Digital
 
-Este projeto está configurado para ser implantado facilmente na Vercel e otimizado para dispositivos móveis.
+![ELO Logo](https://api.dicebear.com/7.x/identicon/svg?seed=ELO)
 
-## 🚀 Como fazer Deploy ("Zero Config")
+O **ELO** é uma rede social mobile-first projetada para promover interações fluidas e conexões significativas. Com uma estética baseada em "Ocean Glass" (vidro oceânico), o app oferece uma experiência visual premium, focada em tranquilidade e profundidade.
 
-Como você quer facilidade, aqui está o fluxo mais simples possível:
+---
 
-1. **Crie um Repositório no GitHub** e envie este código para lá.
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
-   git push -u origin main
-   ```
+## 🚀 Funcionalidades Principais
 
-2. **Conecte na Vercel**:
-   - Acesse [vercel.com](https://vercel.com) e faça login.
-   - Clique em "Add New..." -> "Project".
-   - Importe o repositório do GitHub que você acabou de criar.
+- **Feed Dinâmico**: Acompanhe as postagens mais recentes da rede em tempo real.
+- **Ecos (Vibes 24h)**: Compartilhe momentos efêmeros que duram apenas um dia.
+- **Conexões Inteligentes**: Solicite conexões e construa sua rede de contatos.
+- **Chat em Tempo Real**: Mensagens diretas com criptografia e atualizações instantâneas via Supabase Realtime.
+- **Perfil Personalizável**: Altere fotos de avatar, capa e biografia com facilidade.
+- **Notificações Inteligentes**: Fique por dentro de curtidas, comentários e novas solicitações.
+- **PWA Ready**: Instale no seu Android ou iPhone para uma experiência de aplicativo nativo.
 
-3. **Configure as Variáveis de Ambiente**:
-   - Na tela de configuração do projeto na Vercel (antes de clicar em Deploy), procure a seção **Environment Variables**.
-   - Adicione as seguintes chaves (copie os valores do arquivo `.env` que gerei para você):
-     - `VITE_SUPABASE_URL`
-     - `VITE_SUPABASE_ANON_KEY`
+---
 
-4. **Clique em Deploy**:
-   - A Vercel vai instalar as dependências, construir o projeto e publicar automaticamente.
-   - Sempre que você fizer um `git push` no GitHub, a Vercel vai atualizar o site sozinha!
+## 🛠️ Tecnologias Utilizadas
 
-## 📱 Mobile First
+- **Frontend**: [React.js](https://reactjs.org/) com [Vite](https://vitejs.dev/)
+- **Linguagem**: [TypeScript](https://www.typescriptlang.org/)
+- **Estilização**: [Tailwind CSS](https://tailwindcss.com/) com design system customizado.
+- **Backend & Database**: [Supabase](https://supabase.com/) (PostgreSQL + Realtime + Storage + Auth).
+- **Ícones**: [Lucide React](https://lucide.dev/) & Google Material Symbols.
+- **Deploy**: [Vercel](https://vercel.com/).
 
-O projeto foi otimizado para mobile com:
-- **Safe Area Support**: Prevê o "notch" e a barra inferior do iPhone (`pt-safe`, `pb-safe`).
-- **Touch Targets**: Botões com tamanho adequado para o toque.
-- **Pull to Refresh**: Funcionalidade nativa de arrastar para atualizar no Feed.
-- **PWA Ready**: Meta tags configuradas para funcionar como app se adicionado à tela inicial.
+---
 
-## 🛠 Comandos Locais (Opcional)
+## 🎨 Design System
 
-Se você instalar o Node.js no futuro:
-- `npm install` (Instalar dependências)
-- `npm run dev` (Rodar localmente)
-- `npm run build` (Gerar versão de produção)
+O ELO utiliza o sistema **Ocean Glass**, caracterizado por:
+- **Glassmorphism**: Efeitos de transparência e desfoque de fundo (Backdrop Blur).
+- **Paleta Oceânica**: Tons de azul profundo (`#020617`), ciano brilhante (`#0EA5E9`) e transições fluidas.
+- **Micro-animações**: Transições suaves de página e feedbacks táteis.
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+Este projeto foi idealizado e desenvolvido por **Igor Arcanjo**.  
+Com o objetivo de criar uma plataforma robusta, segura e visualmente impactante para o mundo real.
+
+---
+
+## 🔧 Configuração Local
+
+1.  Clone o repositório.
+2.  Instale as dependências: `npm install`.
+3.  Configure as variáveis de ambiente em um arquivo `.env`:
+    ```env
+    VITE_SUPABASE_URL=seu_url_do_supabase
+    VITE_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+    ```
+4.  Execute o script SQL fornecido em `supabase_setup.sql` no painel do Supabase.
+5.  Inicie o servidor de desenvolvimento: `npm run dev`.
+
+---
+
+## 📜 Licença
+
+Este projeto é privado e destinado ao uso de Igor Arcanjo.
+
+---
+
+*Transformando ondas em conexões duradouras.* 🌊
