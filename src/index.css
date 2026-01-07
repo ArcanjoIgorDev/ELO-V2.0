@@ -30,6 +30,10 @@
     vertical-align: middle;
   }
 
+  .fill-1 {
+    font-variation-settings: 'FILL' 1 !important;
+  }
+
   :root {
     --sat: env(safe-area-inset-top);
     --sab: env(safe-area-inset-bottom);

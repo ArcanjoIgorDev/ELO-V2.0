@@ -4,9 +4,10 @@ interface AvatarProps {
   url?: string | null;
   alt: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ url, alt, size = 'md' }) => {
+export const Avatar: React.FC<AvatarProps> = ({ url, alt, size = 'md', className = '' }) => {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -17,7 +18,7 @@ export const Avatar: React.FC<AvatarProps> = ({ url, alt, size = 'md' }) => {
   const fallbackUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${alt}`;
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full overflow-hidden border border-white/10 bg-midnight-950 flex-shrink-0 shadow-lg`}>
+    <div className={`${sizeClasses[size]} rounded-full overflow-hidden border border-white/10 bg-midnight-950 flex-shrink-0 shadow-lg ${className}`}>
       <img
         src={url || fallbackUrl}
         alt={alt}
