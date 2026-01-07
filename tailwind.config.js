@@ -50,11 +50,11 @@ export default {
         'ocean-gradient': 'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.15) 0%, rgba(15, 23, 42, 0) 50%), radial-gradient(circle at 85% 30%, rgba(14, 165, 233, 0.1) 0%, rgba(15, 23, 42, 0) 50%)',
       },
       animation: {
-        'glow': 'glow 3s infinite ease-in-out',
-        'float': 'float 6s ease-in-out infinite',
-        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out'
+        'glow': 'glow 2s infinite ease-in-out',
+        'float': 'float 4s ease-in-out infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fadeIn 0.3s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out'
       },
       keyframes: {
         glow: {

@@ -1,100 +1,179 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Globe, Mail, Radio } from 'lucide-react';
+import { ArrowRight, Sparkles, Users, MessageCircle, TrendingUp, Shield } from 'lucide-react';
+import { ELOLogo } from './ui/Logo';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(0);
+
+  const appFeatures = [
+    {
+      title: "Feed Inteligente",
+      description: "Conteúdo relevante e personalizado",
+      icon: <TrendingUp size={20} className="text-primary" />
+    },
+    {
+      title: "Conexões Reais",
+      description: "Networking de alto valor",
+      icon: <Users size={20} className="text-violet-400" />
+    },
+    {
+      title: "Chat Seguro",
+      description: "Conversas privadas e protegidas",
+      icon: <MessageCircle size={20} className="text-emerald-400" />
+    }
+  ];
 
   return (
     <div className="relative min-h-screen w-full flex flex-col ocean-bg overflow-x-hidden">
-      {/* Animated Background Blobs */}
-      <div className="fixed top-[-10%] left-1/2 -translate-x-1/2 w-[80vw] h-[60vh] bg-primary/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen animate-pulse-slow" />
-      <div className="fixed bottom-0 right-[-10%] w-[60vw] h-[50vh] bg-violet-600/10 rounded-full blur-[100px] pointer-events-none mix-blend-screen" />
+      {/* Blobs de fundo mais sutis */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* Top Navigation */}
+      {/* Header */}
       <header className="sticky top-0 z-50 glass-panel border-b-0">
-        <div className="flex items-center justify-between p-4 px-5 max-w-lg mx-auto w-full">
+        <div className="flex items-center justify-between p-4 px-5 max-w-6xl mx-auto w-full">
           <div className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center size-8 rounded-lg bg-gradient-to-br from-primary to-blue-600 shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined text-white text-[20px]">all_inclusive</span>
-            </div>
+            <ELOLogo size={32} />
             <span className="text-xl font-bold tracking-tight text-white">ELO</span>
           </div>
           <button
             onClick={() => navigate('/auth')}
-            className="flex items-center justify-center h-10 px-4 rounded-xl hover:bg-white/5 transition-colors text-white font-bold text-sm"
+            className="h-10 px-5 rounded-xl glass-button hover:bg-white/10 transition-all text-white font-bold text-sm"
           >
             Entrar
           </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-grow flex flex-col items-center px-5 pt-8 pb-10 gap-10 w-full max-w-md mx-auto relative z-10">
+      {/* Main Content */}
+      <main className="flex-grow flex flex-col items-center px-5 pt-12 pb-10 w-full max-w-6xl mx-auto relative z-10">
 
         {/* Hero Section */}
-        <section className="flex flex-col items-center text-center gap-6 w-full py-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm shadow-[0_0_15px_rgba(13,162,231,0.15)]">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            <span className="text-xs font-semibold text-primary uppercase tracking-wider">Acesso Antecipado</span>
-          </div>
+        <section className="flex flex-col lg:flex-row items-center gap-12 w-full mb-16">
+          {/* Left: Text Content */}
+          <div className="flex-1 flex flex-col gap-6 text-center lg:text-left max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 backdrop-blur-sm w-fit mx-auto lg:mx-0">
+              <Sparkles size={14} className="text-primary" />
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Versão Beta</span>
+            </div>
 
-          <div className="flex flex-col gap-3">
-            <h1 className="text-5xl font-black leading-[0.95] tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/50 text-glow">
-              Conecte-se<br />com propósito
+            <h1 className="text-5xl lg:text-6xl font-black leading-tight tracking-tight text-white">
+              Conexões que <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">importam</span>
             </h1>
-            <p className="text-slate-400 text-base font-medium leading-relaxed max-w-[280px] mx-auto">
-              A rede exclusiva para líderes que moldam o futuro dos negócios.
+
+            <p className="text-slate-400 text-lg leading-relaxed max-w-md mx-auto lg:mx-0">
+              Uma rede social focada em qualidade, não quantidade. Conecte-se com pessoas que compartilham seus valores e objetivos.
             </p>
-          </div>
 
-          <div className="flex flex-col w-full gap-3 mt-4">
-            <button
-              onClick={() => navigate('/auth')}
-              className="relative w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:to-blue-400 text-white font-bold text-lg shadow-[0_4px_20px_rgba(13,162,231,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98] overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out skew-y-12"></div>
-              <span className="relative flex items-center justify-center gap-2">
-                Criar conta
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full sm:w-auto">
+              <button
+                onClick={() => navigate('/auth')}
+                className="h-14 px-8 rounded-xl bg-primary hover:bg-sky-400 text-white font-bold text-base shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                Começar Agora
                 <ArrowRight size={20} />
-              </span>
-            </button>
-            <button
-              onClick={() => navigate('/auth')}
-              className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-bold text-lg backdrop-blur-md transition-all"
-            >
-              Entrar
-            </button>
-          </div>
-        </section>
+              </button>
+              <button
+                onClick={() => navigate('/auth')}
+                className="h-14 px-8 rounded-xl glass-button hover:bg-white/10 text-white font-bold text-base transition-all"
+              >
+                Saber Mais
+              </button>
+            </div>
 
-        {/* Visual Anchor: Floating 3D Mockup */}
-        <section className="w-full animate-float mt-4">
-          <div className="glass-card rounded-2xl p-2.5 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)]">
-            <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-900 group">
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                style={{ backgroundImage: "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')" }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-transparent to-transparent opacity-90" />
-
-              <div className="absolute top-4 right-4 glass-panel rounded-full px-3 py-1 flex items-center gap-1.5 border-white/10">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-[10px] font-bold text-white/80">AO VIVO</span>
+            {/* Stats */}
+            <div className="flex items-center gap-8 mt-6 justify-center lg:justify-start">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white">1K+</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider">Usuários Ativos</span>
               </div>
+              <div className="w-px h-10 bg-white/10" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white">5K+</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider">Conexões Feitas</span>
+              </div>
+            </div>
+          </div>
 
-              <div className="absolute bottom-5 left-5 right-5">
-                <div className="glass-panel p-3 rounded-xl border-white/10 flex items-center gap-3">
-                  <div className="size-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shrink-0">
-                    <span className="material-symbols-outlined text-[20px]">auto_graph</span>
+          {/* Right: App Preview */}
+          <div className="flex-1 relative max-w-md w-full">
+            <div className="relative">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+
+              {/* Phone mockup */}
+              <div className="relative glass-card rounded-[3rem] p-4 shadow-2xl border-white/10">
+                <div className="bg-midnight-950 rounded-[2.5rem] overflow-hidden">
+                  {/* Status bar */}
+                  <div className="h-12 bg-midnight-900/50 backdrop-blur-xl flex items-center justify-between px-6">
+                    <span className="text-xs text-white/60">9:41</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded-full bg-primary/20" />
+                      <div className="w-4 h-4 rounded-full bg-primary/40" />
+                      <div className="w-4 h-4 rounded-full bg-primary" />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <p className="text-white text-sm font-bold leading-tight">Tendências Globais</p>
-                    <p className="text-white/60 text-[11px] leading-tight text-left">Atualizado agora</p>
+
+                  {/* App content preview */}
+                  <div className="p-4 space-y-4">
+                    {/* Post card 1 */}
+                    <div className="glass-card rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-white text-sm font-bold">Ana Silva</p>
+                          <p className="text-slate-500 text-xs">há 2 horas</p>
+                        </div>
+                      </div>
+                      <p className="text-slate-300 text-sm leading-relaxed">
+                        Acabei de lançar meu novo projeto! Muito feliz com o resultado 🚀
+                      </p>
+                      <div className="flex items-center gap-4 pt-2 border-t border-white/5">
+                        <button className="flex items-center gap-1.5 text-slate-400 hover:text-primary transition-colors">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs">❤️</span>
+                          </div>
+                          <span className="text-xs font-bold">24</span>
+                        </button>
+                        <button className="flex items-center gap-1.5 text-slate-400 hover:text-primary transition-colors">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs">💬</span>
+                          </div>
+                          <span className="text-xs font-bold">8</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Post card 2 */}
+                    <div className="glass-card rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-600" />
+                        <div className="flex-1">
+                          <p className="text-white text-sm font-bold">Carlos Tech</p>
+                          <p className="text-slate-500 text-xs">há 5 horas</p>
+                        </div>
+                      </div>
+                      <p className="text-slate-300 text-sm leading-relaxed">
+                        Dica do dia: sempre valide suas ideias com usuários reais!
+                      </p>
+                      <div className="flex items-center gap-4 pt-2 border-t border-white/5">
+                        <button className="flex items-center gap-1.5 text-slate-400 hover:text-primary transition-colors">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs">❤️</span>
+                          </div>
+                          <span className="text-xs font-bold">42</span>
+                        </button>
+                        <button className="flex items-center gap-1.5 text-slate-400 hover:text-primary transition-colors">
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs">💬</span>
+                          </div>
+                          <span className="text-xs font-bold">15</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -102,65 +181,52 @@ export const LandingPage = () => {
           </div>
         </section>
 
-        {/* Feature Grid */}
-        <section className="w-full flex flex-col gap-4 mt-6 text-left">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-xl font-bold text-white tracking-tight">Recursos Exclusivos</h2>
-            <button className="text-slate-500 hover:text-white transition-colors">
-              <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-            </button>
+        {/* Features Grid */}
+        <section className="w-full max-w-4xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-white mb-3">Por que escolher o ELO?</h2>
+            <p className="text-slate-400 text-lg">Recursos pensados para sua experiência</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="glass-card p-4 rounded-2xl flex flex-col gap-3 group hover:bg-white/10 transition-colors">
-              <div className="size-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined">group_add</span>
+          <div className="grid md:grid-cols-3 gap-6">
+            {appFeatures.map((feature, idx) => (
+              <div key={idx} className="glass-card p-6 rounded-2xl hover:bg-white/5 transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  {feature.icon}
+                </div>
+                <h3 className="text-white font-bold text-lg mb-2">{feature.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{feature.description}</p>
               </div>
-              <div>
-                <h3 className="text-white font-bold text-sm">Conexão</h3>
-                <p className="text-slate-400 text-xs mt-0.5 leading-snug">Networking de alto nível</p>
-              </div>
-            </div>
-
-            <div className="glass-card p-4 rounded-2xl flex flex-col gap-3 group hover:bg-white/10 transition-colors">
-              <div className="size-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined">forum</span>
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-sm">Feed</h3>
-                <p className="text-slate-400 text-xs mt-0.5 leading-snug">Conteúdo curado</p>
-              </div>
-            </div>
-
-            <div className="glass-card p-4 rounded-2xl col-span-2 flex items-center gap-4 group hover:bg-white/10 transition-colors">
-              <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined">verified_user</span>
-              </div>
-              <div className="flex flex-col">
-                <h3 className="text-white font-bold text-sm">Chat Seguro</h3>
-                <p className="text-slate-400 text-xs mt-0.5">Criptografia de ponta a ponta</p>
-              </div>
-            </div>
+            ))}
           </div>
+        </section>
+
+        {/* CTA Final */}
+        <section className="w-full max-w-2xl mt-20 glass-card rounded-3xl p-10 text-center">
+          <Shield size={48} className="text-primary mx-auto mb-6" />
+          <h2 className="text-3xl font-black text-white mb-4">Pronto para começar?</h2>
+          <p className="text-slate-400 text-lg mb-8 max-w-md mx-auto">
+            Junte-se a milhares de profissionais que já fazem parte da nossa comunidade.
+          </p>
+          <button
+            onClick={() => navigate('/auth')}
+            className="h-14 px-10 rounded-xl bg-primary hover:bg-sky-400 text-white font-bold text-base shadow-lg shadow-primary/20 transition-all active:scale-95"
+          >
+            Criar Conta Grátis
+          </button>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-8 text-center glass-panel border-t border-white/5 backdrop-blur-xl rounded-t-3xl">
-        <div className="max-w-md mx-auto px-5">
-          <div className="flex justify-center gap-6 mb-6">
+      <footer className="mt-auto py-8 text-center glass-panel border-t border-white/5">
+        <div className="max-w-4xl mx-auto px-5">
+          <div className="flex justify-center gap-8 mb-4">
             <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Sobre</a>
-            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Carreira</a>
-            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Legal</a>
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Privacidade</a>
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Termos</a>
+            <a href="#" className="text-slate-400 hover:text-white text-sm transition-colors">Contato</a>
           </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-center gap-4 text-white/40">
-              <Globe className="hover:text-white cursor-pointer transition-colors" size={20} />
-              <Mail className="hover:text-white cursor-pointer transition-colors" size={20} />
-              <Radio className="hover:text-white cursor-pointer transition-colors" size={20} />
-            </div>
-            <p className="text-slate-600 text-[10px] mt-4 tracking-widest uppercase">© 2024 ELO NETWORK INC.</p>
-          </div>
+          <p className="text-slate-600 text-xs tracking-wider">© 2024 ELO Network • Desenvolvido por Igor Arcanjo</p>
         </div>
       </footer>
     </div>

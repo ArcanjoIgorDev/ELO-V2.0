@@ -63,7 +63,7 @@
   }
 
   .page-enter {
-    animation: fadeIn 0.4s ease-out;
+    animation: fadeIn 0.2s ease-out;
   }
 
   /* Glassmorphism Utilities (Updated) */
@@ -100,7 +100,7 @@
 
   .input-glass:focus-within {
     background: rgba(2, 6, 23, 0.8);
-    @apply border-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(13,162,231,0.2)];
+    @apply border-primary ring-1 ring-primary/20 shadow-[0_0_15px_rgba(13, 162, 231, 0.2)];
   }
 
   .glass-nav {
@@ -117,10 +117,10 @@
   }
 
   .glass-chip-active {
-    background: rgba(13,162,231,0.15);
+    background: rgba(13, 162, 231, 0.15);
     border: 1px solid rgba(13, 162, 231, 0.3);
     color: #38bdf8;
-    @apply shadow-[0_0_15px_rgba(13,162,231,0.15)];
+    @apply shadow-[0_0_15px_rgba(13, 162, 231, 0.15)];
   }
 
   .text-glow {
