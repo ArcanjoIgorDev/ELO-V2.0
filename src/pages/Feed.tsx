@@ -118,7 +118,7 @@ export const Feed = () => {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
                 <TrendingUp size={10} className="text-primary" />
-                <span className="text-[9px] font-black text-primary uppercase tracking-[0.1em]">Explorer</span>
+                <span className="text-[9px] font-black text-primary uppercase tracking-[0.1em]">Explorar</span>
               </div>
               <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Ondas de hoje</span>
             </div>

@@ -153,7 +153,7 @@ export const Auth = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <h2 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Acesso Corporativo</h2>
+                <h2 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Acesso à Rede</h2>
                 <h1 className="text-3xl font-black text-white tracking-tight">Verificação de Identidade</h1>
               </div>
             </div>

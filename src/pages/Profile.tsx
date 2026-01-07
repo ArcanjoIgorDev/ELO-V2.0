@@ -423,7 +423,7 @@ export const ProfilePage = () => {
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
               <Zap size={12} className="text-amber-500 fill-amber-500" />
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.1em]">Elite Member</span>
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.1em]">Membro Elite</span>
             </div>
           </div>
         </div>
