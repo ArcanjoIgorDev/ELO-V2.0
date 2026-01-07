@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Window Focus Handler (Correção para Mobile Resume)
     const handleFocus = () => {
-      const { data: { session: currentSession } } = supabase.auth.getSession().then(({ data }) => {
+      supabase.auth.getSession().then(({ data }) => {
         if (data.session && !session) setSession(data.session);
       });
       // Se voltarmos para o app e ele estiver preso carregando, soltamos.
