@@ -16,6 +16,7 @@ import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
 import { Loader2 } from 'lucide-react';
+import { ToastProvider } from './contexts/ToastContext';
 
 // Componente de Loading Centralizado
 const FullScreenLoader = () => (
@@ -71,9 +72,7 @@ const AuthRoute = () => {
   if (loading) return <FullScreenLoader />;
   if (session) return <Navigate to="/feed" replace />;
   return <Auth />;
-}
-
-import { ToastProvider } from './contexts/ToastContext';
+};
 
 export default function App() {
   return (
