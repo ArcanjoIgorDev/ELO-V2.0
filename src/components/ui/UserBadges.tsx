@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { UserBadge } from '../../types';
-import { Award, Star, TrendingUp, Users, Fire, Sparkles, Trophy } from 'lucide-react';
+import { Award, Star, TrendingUp, Users, Flame, Sparkles, Trophy } from 'lucide-react';
 
 interface UserBadgesProps {
   userId: string;
@@ -25,7 +25,7 @@ const BADGE_CONFIG: { [key: string]: { label: string; Icon: React.ComponentType<
   },
   popular_post: {
     label: 'Onda Popular',
-    Icon: Fire,
+    Icon: Flame,
     gradient: 'from-orange-500 to-red-500',
     emoji: '🔥',
     description: 'Post com 100+ curtidas'
