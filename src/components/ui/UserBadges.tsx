@@ -8,52 +8,52 @@ interface UserBadgesProps {
   compact?: boolean;
 }
 
-const BADGE_CONFIG: { [key: string]: { label: string; icon: React.ReactNode; gradient: string; emoji: string; description: string } } = {
+const BADGE_CONFIG: { [key: string]: { label: string; Icon: React.ComponentType<{ size?: number }>; gradient: string; emoji: string; description: string } } = {
   first_post: {
     label: 'Primeira Onda',
-    icon: <Star size={16} />,
+    Icon: Star,
     gradient: 'from-yellow-500 to-amber-500',
     emoji: '🌟',
     description: 'Primeira publicação'
   },
   first_connection: {
     label: 'Primeira Conexão',
-    icon: <Users size={16} />,
+    Icon: Users,
     gradient: 'from-blue-500 to-cyan-500',
     emoji: '🤝',
     description: 'Primeira conexão estabelecida'
   },
   popular_post: {
     label: 'Onda Popular',
-    icon: <Fire size={16} />,
+    Icon: Fire,
     gradient: 'from-orange-500 to-red-500',
     emoji: '🔥',
     description: 'Post com 100+ curtidas'
   },
   active_user: {
     label: 'Usuário Ativo',
-    icon: <TrendingUp size={16} />,
+    Icon: TrendingUp,
     gradient: 'from-emerald-500 to-teal-500',
     emoji: '⚡',
     description: '10+ publicações'
   },
   early_adopter: {
     label: 'Early Adopter',
-    icon: <Sparkles size={16} />,
+    Icon: Sparkles,
     gradient: 'from-purple-500 to-pink-500',
     emoji: '✨',
     description: 'Entre os primeiros usuários'
   },
   community_builder: {
     label: 'Construtor da Comunidade',
-    icon: <Trophy size={16} />,
+    Icon: Trophy,
     gradient: 'from-amber-500 to-yellow-500',
     emoji: '🏆',
     description: '20+ conexões'
   },
   thought_leader: {
     label: 'Líder de Pensamento',
-    icon: <Award size={16} />,
+    Icon: Award,
     gradient: 'from-violet-500 to-indigo-500',
     emoji: '💡',
     description: 'Influenciador da comunidade'

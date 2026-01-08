@@ -1,58 +1,58 @@
 import React from 'react';
 import { PostVibe as PostVibeType } from '../../types';
-import { Sparkles, Heart, Zap, Lightbulb, TrendingUp, Waves, Brain, HelpCircle } from 'lucide-react';
+import { Sparkles, Heart, Zap, TrendingUp, Waves, Brain, HelpCircle } from 'lucide-react';
 
 interface PostVibeProps {
   vibe: PostVibeType;
   compact?: boolean;
 }
 
-const VIBE_CONFIG: { [key: string]: { label: string; icon: React.ReactNode; gradient: string; emoji: string } } = {
+const VIBE_CONFIG: { [key: string]: { label: string; Icon: React.ComponentType<{ size?: number }>; gradient: string; emoji: string } } = {
   positive: {
     label: 'Positivo',
-    icon: <Heart size={16} />,
+    Icon: Heart,
     gradient: 'from-emerald-500 to-teal-500',
     emoji: '✨'
   },
   neutral: {
     label: 'Neutro',
-    icon: <Waves size={16} />,
+    Icon: Waves,
     gradient: 'from-slate-500 to-slate-600',
     emoji: '💭'
   },
   contemplative: {
     label: 'Contemplativo',
-    icon: <Brain size={16} />,
+    Icon: Brain,
     gradient: 'from-indigo-500 to-purple-500',
     emoji: '🤔'
   },
   energetic: {
     label: 'Energético',
-    icon: <Zap size={16} />,
+    Icon: Zap,
     gradient: 'from-orange-500 to-red-500',
     emoji: '⚡'
   },
   calm: {
     label: 'Calmo',
-    icon: <Waves size={16} />,
+    Icon: Waves,
     gradient: 'from-blue-500 to-cyan-500',
     emoji: '🌊'
   },
   excited: {
     label: 'Empolgado',
-    icon: <TrendingUp size={16} />,
+    Icon: TrendingUp,
     gradient: 'from-yellow-500 to-orange-500',
     emoji: '🎉'
   },
   motivational: {
     label: 'Motivacional',
-    icon: <Sparkles size={16} />,
+    Icon: Sparkles,
     gradient: 'from-amber-500 to-yellow-500',
     emoji: '💪'
   },
   curious: {
     label: 'Curioso',
-    icon: <HelpCircle size={16} />,
+    Icon: HelpCircle,
     gradient: 'from-violet-500 to-purple-500',
     emoji: '🔍'
   }
