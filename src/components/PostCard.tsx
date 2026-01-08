@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { PostWithAuthor, CommentWithAuthor } from '../types';
 import { Avatar } from './ui/Avatar';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, X, Command, Bookmark } from 'lucide-react';
+import { MessageCircle, Share2, MoreHorizontal, Send, Loader2, Trash2, X, Bookmark } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '../contexts/AuthContext';
@@ -406,7 +405,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
             {comments.length === 0 && !isCommenting ? (
               <div className="py-12 text-center flex flex-col items-center gap-4 opacity-30">
                 <div className="size-16 rounded-full bg-white/5 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[24px]">stream</span>
+                  <span className="material-symbols-outlined text-[24px]">chat_bubble_outline</span>
                 </div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[150px] leading-relaxed">Ainda não há comentários</p>
               </div>
@@ -471,5 +470,3 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     </article>
   );
 };
-
-      
