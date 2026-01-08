@@ -50,7 +50,10 @@ export const Feed = () => {
 
   const fetchPosts = useCallback(async (isRefresh = false) => {
     if (!user) {
-      if (isMounted.current) setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setError(false);
+      }
       return;
     }
 
@@ -61,7 +64,11 @@ export const Feed = () => {
 
       if (isMounted.current) setError(false);
 
-      const { data, error: dbError } = await supabase
+      // Tenta buscar posts com relacionamentos
+      let data, dbError;
+      
+      // Primeira tentativa: query completa com relacionamentos
+      const queryResult = await supabase
         .from('posts')
         .select(`
           *,
@@ -71,21 +78,74 @@ export const Feed = () => {
         `)
         .order('created_at', { ascending: false })
         .limit(20);
+      
+      data = queryResult.data;
+      dbError = queryResult.error;
+
+      // Se falhar, tenta uma query mais simples sem relacionamentos
+      if (dbError && (dbError.code === 'PGRST301' || dbError.message?.includes('relation') || dbError.message?.includes('column'))) {
+        console.warn('Query com relacionamentos falhou, tentando query simples...', dbError);
+        const simpleQuery = await supabase
+          .from('posts')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        
+        if (!simpleQuery.error && simpleQuery.data) {
+          // Busca os dados relacionados manualmente
+          const postsWithRelations = await Promise.all(
+            simpleQuery.data.map(async (post: any) => {
+              const [authorResult, likesResult, commentsResult] = await Promise.all([
+                supabase.from('profiles').select('*').eq('id', post.user_id).single(),
+                supabase.from('likes').select('user_id').eq('post_id', post.id),
+                supabase.from('comments').select('id').eq('post_id', post.id)
+              ]);
+
+              return {
+                ...post,
+                author: authorResult.data || null,
+                likes: likesResult.data || [],
+                comments: commentsResult.data || []
+              };
+            })
+          );
+
+          data = postsWithRelations;
+          dbError = null;
+        } else {
+          data = simpleQuery.data;
+          dbError = simpleQuery.error;
+        }
+      }
 
       if (dbError) {
-        console.error('Erro ao buscar posts:', dbError);
-        // Só marca como erro se não for um erro de "tabela não existe" ou similar
-        // Também ignora erros de timeout ou conexão temporária
-        const ignorableErrors = ['PGRST116', 'PGRST301', 'PGRST302'];
-        const isNetworkError = dbError.message?.includes('fetch') || 
-                              dbError.message?.includes('network') ||
-                              dbError.message?.includes('timeout') ||
-                              dbError.message?.includes('Failed to fetch');
-        
-        if (!ignorableErrors.includes(dbError.code || '') && !isNetworkError && isMounted.current) {
-          setError(true);
-        } else if (isNetworkError && isMounted.current) {
-          // Para erros de rede, tenta novamente após um delay
+        console.error('Erro detalhado ao buscar posts:', {
+          message: dbError.message,
+          code: dbError.code,
+          details: dbError.details,
+          hint: dbError.hint,
+          error: dbError
+        });
+
+        // Lista expandida de erros que podem ser ignorados ou tratados
+        const ignorableErrors = [
+          'PGRST116', // No rows returned
+          'PGRST301', // Timeout
+          'PGRST302', // Connection timeout
+          '42P01', // relation does not exist
+        ];
+
+        const isNetworkError = 
+          dbError.message?.toLowerCase().includes('fetch') || 
+          dbError.message?.toLowerCase().includes('network') ||
+          dbError.message?.toLowerCase().includes('timeout') ||
+          dbError.message?.toLowerCase().includes('failed to fetch') ||
+          dbError.message?.toLowerCase().includes('connection') ||
+          !dbError.code; // Erros sem código geralmente são de rede
+
+        // Se for erro de rede, tenta novamente
+        if (isNetworkError && isMounted.current) {
+          console.log('Erro de rede detectado, tentando novamente em 2 segundos...');
           setTimeout(() => {
             if (isMounted.current) {
               fetchPosts(true);
@@ -93,35 +153,90 @@ export const Feed = () => {
           }, 2000);
           return;
         }
+
+        // Se for um erro ignorável, apenas limpa e continua
+        if (ignorableErrors.includes(dbError.code || '')) {
+          console.log('Erro ignorável detectado, continuando...');
+          if (isMounted.current) {
+            setPosts([]);
+            setLoading(false);
+            setError(false);
+          }
+          return;
+        }
+
+        // Para outros erros, mostra a mensagem de erro
+        console.error('Erro não tratado:', dbError);
         if (isMounted.current) {
+          setError(true);
           setPosts([]);
           setLoading(false);
         }
         return;
       }
 
+      // Se não há dados mas também não há erro, apenas não há posts
+      if (!data) {
+        if (isMounted.current) {
+          setPosts([]);
+          setLoading(false);
+          setError(false);
+        }
+        return;
+      }
+
+      // Processa os dados
       if (data && isMounted.current) {
-        const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
-          ...post,
-          likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
-          comments_count: Array.isArray(post.comments) ? post.comments.length : 0,
-          views_count: 0,
-          user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
-        }));
-        setPosts(formattedPosts);
+        try {
+          const formattedPosts: PostWithAuthor[] = data.map((post: any) => {
+            // Garante que temos os dados necessários
+            if (!post || !post.id) {
+              console.warn('Post inválido encontrado:', post);
+              return null;
+            }
+
+            return {
+              ...post,
+              author: post.author || null,
+              likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
+              comments_count: Array.isArray(post.comments) ? post.comments.length : 0,
+              views_count: 0,
+              user_has_liked: Array.isArray(post.likes) 
+                ? post.likes.some((like: any) => like.user_id === user?.id) 
+                : false,
+            };
+          }).filter((post): post is PostWithAuthor => post !== null);
+
+          setPosts(formattedPosts);
+          setError(false);
+        } catch (formatError) {
+          console.error('Erro ao formatar posts:', formatError);
+          if (isMounted.current) {
+            setPosts([]);
+            setError(true);
+          }
+        }
       }
     } catch (err: any) {
-      console.error("Feed error:", err);
+      console.error("Erro inesperado no Feed:", {
+        error: err,
+        message: err?.message,
+        name: err?.name,
+        stack: err?.stack
+      });
+
       // Verifica se é um erro de rede/conexão
-      const isNetworkError = err?.message?.includes('fetch') || 
-                            err?.message?.includes('network') ||
-                            err?.message?.includes('timeout') ||
-                            err?.message?.includes('Failed to fetch') ||
-                            err?.name === 'NetworkError' ||
-                            err?.name === 'TypeError';
+      const isNetworkError = 
+        err?.message?.toLowerCase().includes('fetch') || 
+        err?.message?.toLowerCase().includes('network') ||
+        err?.message?.toLowerCase().includes('timeout') ||
+        err?.message?.toLowerCase().includes('failed to fetch') ||
+        err?.message?.toLowerCase().includes('connection') ||
+        err?.name === 'NetworkError' ||
+        err?.name === 'TypeError';
       
       if (isNetworkError && isMounted.current) {
-        // Para erros de rede, tenta novamente após um delay
+        console.log('Erro de rede no catch, tentando novamente em 2 segundos...');
         setTimeout(() => {
           if (isMounted.current) {
             fetchPosts(true);
@@ -130,21 +245,37 @@ export const Feed = () => {
         return;
       }
       
-      if (isMounted.current) setError(true);
+      if (isMounted.current) {
+        setError(true);
+        setPosts([]);
+      }
     } finally {
-      if (isMounted.current) setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   }, [user]);
 
   useEffect(() => {
-    fetchPosts();
+    // Só busca posts se o usuário estiver autenticado
+    if (user) {
+      fetchPosts();
+    } else {
+      if (isMounted.current) {
+        setLoading(false);
+        setError(false);
+        setPosts([]);
+      }
+    }
+    
     const safetyTimer = setTimeout(() => {
       if (loading && isMounted.current) {
+        console.warn('Timeout de segurança: parando loading após 8 segundos');
         setLoading(false);
       }
     }, 8000);
     return () => clearTimeout(safetyTimer);
-  }, [fetchPosts]);
+  }, [fetchPosts, user]);
 
   // Subscription em tempo real para novos posts
   useEffect(() => {
@@ -265,9 +396,17 @@ export const Feed = () => {
               <AlertCircle size={48} className="text-red-400" />
             </div>
             <h3 className="text-2xl font-black text-white tracking-tight mb-2">Sinal Interrompido</h3>
-            <p className="text-slate-500 mb-10 text-sm font-bold leading-relaxed max-w-[240px]">O oceano está muito agitado no momento. Tente novamente.</p>
+            <p className="text-slate-500 mb-4 text-sm font-bold leading-relaxed max-w-[240px]">O oceano está muito agitado no momento. Tente novamente.</p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-slate-600 mb-6 text-xs font-medium max-w-[240px]">
+                Verifique o console do navegador para mais detalhes.
+              </p>
+            )}
             <button
-              onClick={() => fetchPosts(true)}
+              onClick={() => {
+                console.log('Tentando reconectar...', { user: user?.id, hasProfile: !!profile });
+                fetchPosts(true);
+              }}
               className="h-16 px-10 rounded-[2rem] bg-white text-midnight-950 font-black text-xs uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center gap-3"
             >
               <RefreshCw size={18} /> Reconectar
