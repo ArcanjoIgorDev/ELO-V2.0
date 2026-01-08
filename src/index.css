@@ -37,6 +37,30 @@
   :root {
     --sat: env(safe-area-inset-top);
     --sab: env(safe-area-inset-bottom);
+    --sal: env(safe-area-inset-left);
+    --sar: env(safe-area-inset-right);
+  }
+
+  /* Safe area support */
+  .safe-area-inset {
+    padding-top: var(--sat);
+    padding-bottom: var(--sab);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
+
+  /* Mobile viewport fixes */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS specific fixes */
+    .h-screen {
+      height: 100vh;
+      height: -webkit-fill-available;
+    }
+    
+    .min-h-screen {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+    }
   }
 }
 

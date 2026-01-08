@@ -190,7 +190,7 @@ export const ChatPage = () => {
   );
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden bg-midnight-950 relative">
+    <div className="flex flex-col h-[100dvh] overflow-hidden bg-midnight-950 relative safe-area-inset">
 
       {/* Background Decor */}
       <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
@@ -299,8 +299,8 @@ export const ChatPage = () => {
         <div className="h-6" />
       </div>
 
-      {/* Input Area Glass */}
-      <div className="flex-none bg-transparent pb-10 z-40 px-5">
+      {/* Input Area Glass - Mobile Optimized */}
+      <div className="flex-none bg-transparent pb-safe z-40 px-5 pt-4">
         <div className="max-w-lg mx-auto relative group">
           <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-[2.5rem] opacity-0 group-focus-within:opacity-100 transition-all duration-700" />
 
@@ -310,25 +310,42 @@ export const ChatPage = () => {
             <textarea
               rows={1}
               value={newMessage}
-              onChange={e => setNewMessage(e.target.value)}
+              onChange={e => {
+                setNewMessage(e.target.value);
+                // Auto-resize textarea
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
+              }}
               placeholder="Escreva algo brilhante..."
-              className="flex-1 bg-white/5 border border-transparent rounded-[2rem] px-6 py-4 text-white focus:outline-none focus:bg-white/10 transition-all resize-none max-h-32 min-h-[56px] placeholder:text-slate-600 text-[14px] font-bold leading-relaxed overflow-y-auto scrollbar-hide"
-              style={{ height: '56px' }}
+              className="flex-1 bg-white/5 border border-transparent rounded-[2rem] px-4 sm:px-6 py-3.5 sm:py-4 text-white focus:outline-none focus:bg-white/10 focus:border-primary/30 transition-all resize-none max-h-32 min-h-[52px] placeholder:text-slate-600 text-[14px] font-bold leading-relaxed overflow-y-auto scrollbar-hide"
+              style={{ 
+                height: '52px',
+                WebkitAppearance: 'none',
+                appearance: 'none'
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSend(e);
                 }
               }}
+              onFocus={() => {
+                // Scroll to bottom when input is focused on mobile
+                setTimeout(() => {
+                  if (scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                  }
+                }, 300);
+              }}
             />
 
             <button
               type="submit"
               disabled={!newMessage.trim() || sending}
-              className="size-14 bg-primary text-white rounded-[1.7rem] disabled:opacity-20 disabled:grayscale flex items-center justify-center hover:bg-sky-400 transition-all shadow-xl shadow-primary/20 active:scale-90 shrink-0 group/btn relative overflow-hidden"
+              className="size-12 sm:size-14 bg-primary text-white rounded-[1.5rem] sm:rounded-[1.7rem] disabled:opacity-20 disabled:grayscale flex items-center justify-center hover:bg-sky-400 transition-all shadow-xl shadow-primary/20 active:scale-90 shrink-0 group/btn relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-              {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} className="relative z-10" />}
+              {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} className="relative z-10" />}
             </button>
           </form>
         </div>

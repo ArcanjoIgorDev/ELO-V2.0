@@ -137,6 +137,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         await supabase.from('likes').delete().match({ user_id: user.id, post_id: post.id });
       } else {
         await supabase.from('likes').insert({ user_id: user.id, post_id: post.id });
+        
+        // Criar notificação de curtida (apenas se não for o próprio post)
+        if (post.user_id !== user.id) {
+          await supabase.from('notifications').insert({
+            user_id: post.user_id,
+            actor_id: user.id,
+            type: 'like_post',
+            reference_id: post.id
+          }).catch(err => console.error('Erro ao criar notificação:', err));
+        }
       }
     } catch (error) {
       setHasLiked(originalLikedState);
@@ -215,6 +225,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         setComments([...comments, newCommentObj]);
         setCommentsCount(prev => prev + 1);
         setNewComment('');
+        
+        // Criar notificação de comentário (apenas se não for o próprio post)
+        if (post.user_id !== user.id) {
+          await supabase.from('notifications').insert({
+            user_id: post.user_id,
+            actor_id: user.id,
+            type: 'comment',
+            reference_id: post.id
+          }).catch(err => console.error('Erro ao criar notificação:', err));
+        }
       }
     } catch (err: any) {
       console.error(err);

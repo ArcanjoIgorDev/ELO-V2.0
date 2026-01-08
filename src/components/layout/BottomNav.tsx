@@ -114,8 +114,8 @@ export const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 w-full z-50 glass-nav p-safe pb-4 transition-all duration-300 translate-y-0 group-data-[keyboard=open]:translate-y-full">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto w-full px-2">
+    <nav className="fixed bottom-0 left-0 right-0 w-full z-50 glass-nav pb-safe transition-all duration-300 translate-y-0 group-data-[keyboard=open]:translate-y-full">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto w-full px-2 pt-2">
         <NavItem path="/feed" icon="home" />
         <NavItem path="/discover" icon="explore" />
 

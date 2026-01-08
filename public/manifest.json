@@ -1,20 +1,27 @@
 {
-  "name": "ELO",
+  "name": "ELO - Rede Social",
   "short_name": "ELO",
-  "description": "Rede social oceânica para conexões profundas.",
+  "description": "Rede social oceânica para conexões profundas. Conecte-se com pessoas que importam.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",
-  "theme_color": "#020617",
+  "theme_color": "#0EA5E9",
   "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
-      "src": "https://api.dicebear.com/7.x/identicon/svg?seed=ELO",
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml"
     },
     {
-      "src": "https://api.dicebear.com/7.x/identicon/svg?seed=ELO",
+      "src": "/favicon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml"
     }

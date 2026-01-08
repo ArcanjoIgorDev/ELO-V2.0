@@ -15,6 +15,7 @@ import { ChatPage } from './pages/Chat';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingTutorial } from './components/OnboardingTutorial';
 import { CookieConsent } from './components/ui/CookieConsent';
+import { PWAInstallPrompt } from './components/ui/PWAInstallPrompt';
 import { ELOLogo } from './components/ui/Logo';
 import { Loader2 } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
@@ -118,6 +119,7 @@ export default function App() {
           </div>
 
           <CookieConsent />
+          <PWAInstallPrompt />
         </HashRouter>
       </AuthProvider>
     </ToastProvider>

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![ELO Logo](https://api.dicebear.com/7.x/identicon/svg?seed=ELO)
+**🌊 ELO Logo - Design Oceânico Premium**
 
 **Uma rede social mobile-first focada em conexões autênticas e interações significativas**
 
