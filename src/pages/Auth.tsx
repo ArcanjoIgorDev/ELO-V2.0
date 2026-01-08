@@ -140,48 +140,50 @@ export const Auth = () => {
         </button>
       </div>
 
-      <main className="flex-grow flex flex-col items-center justify-center p-6 relative z-10 w-full max-w-lg mx-auto">
-        <div className="w-full flex flex-col gap-8 animate-slide-up">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 sm:p-6 relative z-10 w-full max-w-lg mx-auto">
+        <div className="w-full flex flex-col gap-6 sm:gap-8 animate-slide-up">
 
-          {/* Header Section */}
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className="inline-flex flex-col items-center gap-3">
+          {/* Header Section - Melhorado */}
+          <div className="flex flex-col items-center text-center gap-5 sm:gap-6">
+            <div className="inline-flex flex-col items-center gap-4">
               <div className="relative group">
-                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full group-hover:bg-primary/30 transition-all"></div>
-                <div className="relative flex items-center justify-center size-16 rounded-2xl bg-gradient-to-br from-primary to-blue-600 shadow-xl shadow-primary/20 border border-white/10">
-                  <ShieldCheck size={36} className="text-white" />
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full group-hover:bg-primary/30 transition-all animate-pulse-slow"></div>
+                <div className="relative flex items-center justify-center size-20 sm:size-24 rounded-3xl bg-gradient-to-br from-primary via-blue-500 to-cyan-400 shadow-2xl shadow-primary/30 border-2 border-white/20">
+                  <ShieldCheck size={44} className="text-white drop-shadow-lg" strokeWidth={2.5} />
                 </div>
               </div>
-              <div className="flex flex-col gap-1">
-                <h2 className="text-sm font-black text-primary uppercase tracking-[0.2em]">Acesso à Rede</h2>
-                <h1 className="text-3xl font-black text-white tracking-tight">Verificação de Identidade</h1>
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xs sm:text-sm font-black text-primary uppercase tracking-[0.3em]">Acesso Seguro</h2>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
+                  {isLogin ? "Bem-vindo de volta" : "Crie sua conta"}
+                </h1>
               </div>
             </div>
-            <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-[280px]">
+            <p className="text-slate-400 text-sm sm:text-base font-medium leading-relaxed max-w-[320px] px-2">
               {isLogin
-                ? "Insira suas credenciais para acessar o terminal de rede segura."
-                : "Configure seu identificador único para ingressar na rede."}
+                ? "Entre na sua conta e continue conectado com sua rede."
+                : "Junte-se à comunidade e comece a fazer conexões significativas."}
             </p>
           </div>
 
-          {/* Glass Card Form */}
-          <div className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
-            {/* Toggle Mechanism */}
-            <div className="flex p-1.5 bg-background-dark/50 rounded-2xl mb-8 border border-white/5 relative isolate">
+          {/* Glass Card Form - Melhorado */}
+          <div className="glass-card p-6 sm:p-8 rounded-[2.5rem] sm:rounded-[3rem] relative overflow-hidden w-full">
+            {/* Toggle Mechanism - Melhorado */}
+            <div className="flex p-1.5 sm:p-2 bg-background-dark/50 rounded-2xl sm:rounded-3xl mb-6 sm:mb-8 border border-white/5 relative isolate">
               <div
-                className={`absolute inset-y-1.5 w-[calc(50%-6px)] bg-primary rounded-xl shadow-lg shadow-primary/20 transition-all duration-500 ease-out ${isLogin ? 'left-1.5' : 'left-[calc(50%-0px)]'}`}
+                className={`absolute inset-y-1.5 sm:inset-y-2 w-[calc(50%-6px)] bg-gradient-to-r from-primary to-blue-500 rounded-xl sm:rounded-2xl shadow-xl shadow-primary/30 transition-all duration-500 ease-out ${isLogin ? 'left-1.5 sm:left-2' : 'left-[calc(50%-0px)]'}`}
               />
               <button
                 onClick={() => setIsLogin(true)}
-                className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                Login
+                Entrar
               </button>
               <button
                 onClick={() => setIsLogin(false)}
-                className={`flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                className={`flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black uppercase tracking-widest rounded-xl relative z-10 transition-colors duration-300 ${!isLogin ? 'text-white' : 'text-slate-500 hover:text-slate-300'}`}
               >
-                Ingresso
+                Cadastrar
               </button>
             </div>
 
@@ -192,25 +194,26 @@ export const Auth = () => {
               </div>
             )}
 
-            <form onSubmit={handleAuth} className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Identificador Único</label>
-                <div className="relative group overflow-hidden rounded-2xl">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
-                    <UserCircle size={20} />
+            <form onSubmit={handleAuth} className="flex flex-col gap-4 sm:gap-5">
+              <div className="flex flex-col gap-2.5">
+                <label className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-[0.2em] ml-1.5">Nome de Usuário</label>
+                <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl">
+                  <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl sm:rounded-3xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10">
+                    <UserCircle size={20} strokeWidth={2} />
                   </div>
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value.replace(/\s/g, '').toLowerCase())}
-                    className="w-full input-glass pl-12 pr-12 py-4 text-white font-bold placeholder:text-slate-700 outline-none"
-                    placeholder="ex: smith_dev"
+                    className="w-full input-glass pl-12 sm:pl-14 pr-12 sm:pr-14 py-4 sm:py-5 text-white font-bold text-sm sm:text-base placeholder:text-slate-600 outline-none relative z-10"
+                    placeholder={isLogin ? "seu_usuario" : "escolha_um_usuario"}
                   />
                   {!isLogin && username.length >= 3 && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 transition-opacity duration-300">
+                    <div className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 transition-opacity duration-300 z-10">
                       {isCheckingUser ? (
-                        <Loader2 size={18} className="animate-spin text-slate-500" />
+                        <Loader2 size={18} className="animate-spin text-primary" />
                       ) : isUserAvailable ? (
                         <CheckCircle2 size={20} className="text-emerald-500 drop-shadow-lg" />
                       ) : (
@@ -219,47 +222,61 @@ export const Auth = () => {
                     </div>
                   )}
                 </div>
+                {!isLogin && (
+                  <p className="text-[9px] sm:text-[10px] text-slate-600 ml-1.5 mt-1">
+                    Mínimo 3 caracteres, apenas letras, números e _
+                  </p>
+                )}
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Chave de Acesso</label>
-                <div className="relative group overflow-hidden rounded-2xl">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
-                    <KeyRound size={20} />
+              <div className="flex flex-col gap-2.5">
+                <label className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-[0.2em] ml-1.5">Senha</label>
+                <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl">
+                  <div className="absolute inset-0 bg-primary/5 blur-xl rounded-2xl sm:rounded-3xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors z-10">
+                    <KeyRound size={20} strokeWidth={2} />
                   </div>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full input-glass pl-12 pr-4 py-4 text-white font-bold placeholder:text-slate-700 outline-none"
+                    className="w-full input-glass pl-12 sm:pl-14 pr-4 sm:pr-5 py-4 sm:py-5 text-white font-bold text-sm sm:text-base placeholder:text-slate-600 outline-none relative z-10"
                     placeholder="••••••••"
                   />
                 </div>
+                {!isLogin && (
+                  <p className="text-[9px] sm:text-[10px] text-slate-600 ml-1.5 mt-1">
+                    Mínimo 6 caracteres
+                  </p>
+                )}
               </div>
 
-              <div className="flex flex-col gap-4 mt-4">
+              <div className="flex flex-col gap-4 mt-2 sm:mt-4">
                 <button
                   type="submit"
                   disabled={loading || (!isLogin && isUserAvailable === false)}
-                  className="relative w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:to-blue-400 text-white font-bold text-lg shadow-[0_4px_20px_rgba(13,162,231,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="relative w-full h-14 sm:h-16 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-primary via-blue-500 to-cyan-400 hover:from-sky-400 hover:via-blue-400 hover:to-cyan-300 text-white font-black text-sm sm:text-base shadow-2xl shadow-primary/40 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out skew-y-12"></div>
-                  <span className="relative flex items-center gap-3">
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                  <span className="relative flex items-center gap-3 z-10">
                     {loading ? (
-                      <Loader2 className="animate-spin" size={20} />
+                      <Loader2 className="animate-spin" size={22} strokeWidth={3} />
                     ) : (
                       <>
-                        {isLogin ? 'Autorizar Acesso' : 'Efetuar Registro'}
-                        <ArrowRight size={20} />
+                        {isLogin ? 'Entrar' : 'Criar Conta'}
+                        <ArrowRight size={20} strokeWidth={2.5} />
                       </>
                     )}
                   </span>
                 </button>
 
                 {isLogin && (
-                  <button type="button" className="text-[10px] font-black text-slate-500 hover:text-primary transition-colors uppercase tracking-[0.2em] py-2">
-                    Recuperar credenciais de acesso
+                  <button 
+                    type="button" 
+                    className="text-[10px] sm:text-xs font-black text-slate-500 hover:text-primary transition-colors uppercase tracking-[0.2em] py-2"
+                  >
+                    Esqueceu sua senha?
                   </button>
                 )}
               </div>

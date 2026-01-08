@@ -58,17 +58,34 @@ export const EcosBar = () => {
 
   const handleCreateEcho = async () => {
     if (!newEchoContent.trim() || !user) return;
+    
+    // Validação e sanitização
+    const trimmedContent = newEchoContent.trim();
+    if (trimmedContent.length === 0 || trimmedContent.length > 60) {
+      alert('O conteúdo deve ter entre 1 e 60 caracteres.');
+      return;
+    }
+
+    const sanitizedContent = trimmedContent
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+
     const { error } = await supabase.from('echos').insert({
       user_id: user.id,
-      content: newEchoContent,
+      content: sanitizedContent,
       type: 'text',
       expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     });
-    if (!error) {
-      setNewEchoContent('');
-      setIsCreating(false);
-      fetchEchos();
+    
+    if (error) {
+      console.error('Erro ao criar echo:', error);
+      alert('Erro ao criar vibe. Tente novamente.');
+      return;
     }
+    
+    setNewEchoContent('');
+    setIsCreating(false);
+    fetchEchos();
   };
 
   const myEchos = echos.filter(e => e.user_id === user?.id);

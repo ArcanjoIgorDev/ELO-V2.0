@@ -34,6 +34,16 @@ export const Discover = () => {
     e.preventDefault();
     if (!query.trim() || !user) return;
 
+    // Validação e sanitização da query
+    const sanitizedQuery = query.trim()
+      .replace(/[%_]/g, '') // Remove caracteres especiais do SQL LIKE
+      .substring(0, 50); // Limita tamanho da busca
+    
+    if (sanitizedQuery.length < 2) {
+      alert('Digite pelo menos 2 caracteres para buscar.');
+      return;
+    }
+
     setSearching(true);
     setResults([]);
 
@@ -41,11 +51,16 @@ export const Discover = () => {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('username', `%${query}%`)
+        .ilike('username', `%${sanitizedQuery}%`)
         .neq('id', user.id)
         .limit(20);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na busca:', error);
+        alert('Erro ao buscar usuários. Tente novamente.');
+        setSearching(false);
+        return;
+      }
 
       if (profiles) {
         const profilesWithStatus = await Promise.all((profiles as any[]).map(async (p: any) => {

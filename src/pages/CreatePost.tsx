@@ -20,14 +20,29 @@ export const CreatePost = () => {
     try {
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Validação de conteúdo no frontend (também validado no backend via RLS)
+      if (content.trim().length === 0) {
+        showToast('O conteúdo não pode estar vazio.', 'error');
+        return;
+      }
+
+      if (content.trim().length > 500) {
+        showToast('O conteúdo excede o limite de 500 caracteres.', 'error');
+        return;
+      }
+
+      // Sanitização básica - remove tags HTML perigosas
+      const sanitizedContent = content.trim()
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<[^>]+>/g, '');
+
       const { error } = await supabase
         .from('posts')
         .insert([
           {
             user_id: user.id,
-            content: content.trim(),
-            likes_count: 0,
-            comments_count: 0
+            content: sanitizedContent
+            // likes_count e comments_count são calculados automaticamente pelo banco
           }
         ]);
 

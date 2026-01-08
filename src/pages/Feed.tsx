@@ -113,6 +113,64 @@ export const Feed = () => {
     return () => clearTimeout(safetyTimer);
   }, [fetchPosts]);
 
+  // Subscription em tempo real para novos posts
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('feed_realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'posts'
+      }, async (payload) => {
+        // Quando um novo post é criado, busca os dados completos
+        const newPost = payload.new as any;
+        const { data: postData } = await supabase
+          .from('posts')
+          .select(`
+            *,
+            author:profiles(*),
+            likes(user_id),
+            comments(count)
+          `)
+          .eq('id', newPost.id)
+          .single();
+
+        if (postData && isMounted.current) {
+          const formattedPost: PostWithAuthor = {
+            ...postData,
+            likes_count: Array.isArray(postData.likes) ? postData.likes.length : 0,
+            comments_count: postData.comments && postData.comments[0] ? postData.comments[0].count : 0,
+            views_count: 0,
+            user_has_liked: Array.isArray(postData.likes) ? postData.likes.some((like: any) => like.user_id === user?.id) : false,
+          };
+          
+          // Adiciona o novo post no início do feed
+          setPosts(prev => {
+            // Evita duplicatas
+            if (prev.some(p => p.id === formattedPost.id)) return prev;
+            return [formattedPost, ...prev];
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'posts'
+      }, (payload) => {
+        // Remove post deletado do feed
+        if (isMounted.current) {
+          setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const handlePostDeleted = (postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   };

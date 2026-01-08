@@ -110,7 +110,20 @@ export const ChatPage = () => {
     e.preventDefault();
     if (!newMessage.trim() || !user || !userId) return;
 
+    // Validação e sanitização
     const textToSend = newMessage.trim();
+    
+    if (textToSend.length === 0) return;
+    if (textToSend.length > 1000) {
+      alert('Mensagem muito longa. Máximo de 1000 caracteres.');
+      return;
+    }
+
+    // Sanitização básica
+    const sanitizedMessage = textToSend
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+    
     setNewMessage('');
     setSending(true);
 
@@ -128,18 +141,34 @@ export const ChatPage = () => {
     setMessages(prev => [...prev, optimisticMsg]);
 
     try {
+      // Verificar se há conexão aceita antes de enviar mensagem
+      const { data: connection } = await supabase
+        .from('connections')
+        .select('*')
+        .or(`and(requester_id.eq."${user.id}",receiver_id.eq."${userId}"),and(requester_id.eq."${userId}",receiver_id.eq."${user.id}")`)
+        .eq('status', 'accepted')
+        .maybeSingle();
+
+      if (!connection) {
+        alert('Você precisa estar conectado com este usuário para enviar mensagens.');
+        setNewMessage(sanitizedMessage);
+        setSending(false);
+        return;
+      }
+
       const { data, error } = await supabase.from('messages').insert({
         sender_id: user.id,
         receiver_id: userId,
-        content: textToSend
+        content: sanitizedMessage
       }).select().single();
 
       if (error) throw error;
       setMessages(prev => prev.map(m => m.id === tempId ? data : m));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro envio:", err);
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      setNewMessage(textToSend);
+      setNewMessage(sanitizedMessage);
+      alert(err.message || 'Erro ao enviar mensagem. Tente novamente.');
     } finally {
       setSending(false);
     }

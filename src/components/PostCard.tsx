@@ -58,6 +58,65 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     }
   }, [post.id, user]);
 
+  // Subscription em tempo real para curtidas
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`post_likes_${post.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'likes',
+        filter: `post_id=eq.${post.id}`
+      }, async () => {
+        // Atualiza contagem de curtidas em tempo real
+        const { data: likesData } = await supabase
+          .from('likes')
+          .select('user_id')
+          .eq('post_id', post.id);
+
+        if (likesData) {
+          setLikesCount(likesData.length);
+          setHasLiked(likesData.some(l => l.user_id === user.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id, user]);
+
+  // Subscription em tempo real para comentários
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`post_comments_${post.id}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'comments',
+        filter: `post_id=eq.${post.id}`
+      }, async () => {
+        // Atualiza contagem de comentários em tempo real
+        const { count } = await supabase
+          .from('comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_id', post.id);
+
+        if (count !== null) {
+          setCommentsCount(count);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [post.id, user]);
+
   const goToProfile = (e: React.MouseEvent, targetId: string) => {
     e.stopPropagation();
     if (targetId === 'unknown') return;
@@ -116,11 +175,32 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     e.preventDefault();
     if (!newComment.trim() || !user || isCommenting) return;
 
+    // Validação de conteúdo
+    const trimmedComment = newComment.trim();
+    if (trimmedComment.length === 0) {
+      showToast('O comentário não pode estar vazio.', 'error');
+      return;
+    }
+
+    if (trimmedComment.length > 500) {
+      showToast('O comentário excede o limite de 500 caracteres.', 'error');
+      return;
+    }
+
+    // Sanitização básica
+    const sanitizedComment = trimmedComment
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+
     setIsCommenting(true);
     try {
       const { data, error } = await supabase
         .from('comments')
-        .insert({ post_id: post.id, user_id: user.id, content: newComment.trim() })
+        .insert({ 
+          post_id: post.id, 
+          user_id: user.id, 
+          content: sanitizedComment 
+        })
         .select('*, author:profiles(id, username, avatar_url)')
         .single();
 
@@ -136,8 +216,9 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         setCommentsCount(prev => prev + 1);
         setNewComment('');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      showToast(err.message || 'Erro ao enviar comentário.', 'error');
     } finally {
       setIsCommenting(false);
     }

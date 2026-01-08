@@ -7,10 +7,29 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+
+# Environment variables - CRÍTICO: NÃO COMMITAR
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# Arquivos sensíveis do Supabase
+supabase/.env
+supabase/.env.local
+supabase/config.toml
+
+# Arquivos SQL com dados sensíveis (se houver)
+*_secrets.sql
+*_production.sql
+*_credentials.sql
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +41,24 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Build outputs
+build/
+.next/
+out/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~

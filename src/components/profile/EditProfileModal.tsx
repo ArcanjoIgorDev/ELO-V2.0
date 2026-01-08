@@ -23,14 +23,38 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose, cur
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validações
+    const trimmedName = fullName.trim();
+    const trimmedBio = bio.trim();
+
+    if (trimmedName.length > 50) {
+      showToast('O nome deve ter no máximo 50 caracteres.', 'error');
+      return;
+    }
+
+    if (trimmedBio.length > 160) {
+      showToast('A bio deve ter no máximo 160 caracteres.', 'error');
+      return;
+    }
+
+    // Sanitização
+    const sanitizedName = trimmedName
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+    
+    const sanitizedBio = trimmedBio
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+
     setLoading(true);
 
     try {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName.trim(),
-          bio: bio.trim(),
+          full_name: sanitizedName || null,
+          bio: sanitizedBio || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
@@ -41,7 +65,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose, cur
       showToast('Perfil atualizado com sucesso!');
       onClose();
     } catch (err: any) {
-      showToast("Erro ao atualizar perfil", 'error');
+      console.error('Erro ao atualizar perfil:', err);
+      showToast(err.message || "Erro ao atualizar perfil", 'error');
     } finally {
       setLoading(false);
     }

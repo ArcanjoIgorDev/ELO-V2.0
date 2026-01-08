@@ -196,10 +196,10 @@ export const ProfilePage = () => {
     
     const file = event.target.files[0];
     
-    // Validação de tipo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    // Validação de tipo (mais restritiva)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      showToast('Apenas imagens (JPG, PNG, WEBP, GIF) são permitidas.', 'error');
+      showToast('Apenas imagens (JPG, PNG, WEBP) são permitidas.', 'error');
       return;
     }
     
@@ -210,21 +210,68 @@ export const ProfilePage = () => {
       return;
     }
     
-    setUploadingAvatar(true);
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-    try {
-      await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id);
-      await refreshProfile();
-      setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
-      showToast('Avatar atualizado!');
-    } catch (error) {
-      showToast('Erro no upload.', 'error');
-    } finally {
-      setUploadingAvatar(false);
-    }
+    // Validação de dimensões (opcional, mas recomendado)
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = async () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      // Limitar dimensões máximas (opcional)
+      if (img.width > 2000 || img.height > 2000) {
+        showToast('Imagem muito grande. Dimensões máximas: 2000x2000px.', 'error');
+        setUploadingAvatar(false);
+        return;
+      }
+      
+      setUploadingAvatar(true);
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      // Sanitizar nome do arquivo para evitar path traversal
+      const sanitizedFileName = `${user.id}-${Date.now()}.${fileExt}`.replace(/[^a-zA-Z0-9._-]/g, '');
+      
+      try {
+        // Deletar avatar antigo se existir
+        const oldAvatar = displayProfile?.avatar_url;
+        if (oldAvatar && oldAvatar.includes('avatars')) {
+          const oldFileName = oldAvatar.split('/').pop()?.split('?')[0];
+          if (oldFileName) {
+            await supabase.storage.from('avatars').remove([oldFileName]).catch(() => {});
+          }
+        }
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(sanitizedFileName, file, { 
+            upsert: true,
+            contentType: file.type,
+            cacheControl: '3600'
+          });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sanitizedFileName);
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', user.id);
+        
+        if (updateError) throw updateError;
+        
+        await refreshProfile();
+        setDisplayProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+        showToast('Avatar atualizado!');
+      } catch (error: any) {
+        console.error('Erro no upload:', error);
+        showToast(error.message || 'Erro no upload.', 'error');
+      } finally {
+        setUploadingAvatar(false);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      showToast('Arquivo inválido. Selecione uma imagem válida.', 'error');
+    };
+    img.src = objectUrl;
   };
 
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,28 +293,91 @@ export const ProfilePage = () => {
       return;
     }
     
-    setUploadingCover(true);
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const fileName = `${user.id}-cover-${Date.now()}.${fileExt}`;
-    try {
-      await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      await supabase.from('profiles').update({ cover_url: publicUrl }).eq('id', user.id);
-      await refreshProfile();
-      setDisplayProfile((prev: any) => ({ ...prev, cover_url: publicUrl }));
-      showToast('Capa atualizada!');
-    } catch (error) {
-      showToast('Erro no upload da capa.', 'error');
-    } finally {
-      setUploadingCover(false);
-    }
+    // Validação de dimensões
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = async () => {
+      URL.revokeObjectURL(objectUrl);
+      
+      if (img.width > 3000 || img.height > 2000) {
+        showToast('Imagem muito grande. Dimensões máximas: 3000x2000px.', 'error');
+        setUploadingCover(false);
+        return;
+      }
+      
+      setUploadingCover(true);
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      // Sanitizar nome do arquivo
+      const sanitizedFileName = `${user.id}-cover-${Date.now()}.${fileExt}`.replace(/[^a-zA-Z0-9._-]/g, '');
+      
+      try {
+        // Deletar capa antiga se existir
+        const oldCover = displayProfile?.cover_url;
+        if (oldCover && oldCover.includes('avatars')) {
+          const oldFileName = oldCover.split('/').pop()?.split('?')[0];
+          if (oldFileName) {
+            await supabase.storage.from('avatars').remove([oldFileName]).catch(() => {});
+          }
+        }
+        
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(sanitizedFileName, file, { 
+            upsert: true,
+            contentType: file.type,
+            cacheControl: '3600'
+          });
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(sanitizedFileName);
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ cover_url: publicUrl })
+          .eq('id', user.id);
+        
+        if (updateError) throw updateError;
+        
+        await refreshProfile();
+        setDisplayProfile((prev: any) => ({ ...prev, cover_url: publicUrl }));
+        showToast('Capa atualizada!');
+      } catch (error: any) {
+        console.error('Erro no upload da capa:', error);
+        showToast(error.message || 'Erro no upload da capa.', 'error');
+      } finally {
+        setUploadingCover(false);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      showToast('Arquivo inválido. Selecione uma imagem válida.', 'error');
+    };
+    img.src = objectUrl;
   };
 
   const handleDeleteAccount = async () => {
-    if (window.confirm("Isso apagará sua conta para sempre. Continuar?")) {
-      setIsDeleting(true);
-      await supabase.from('profiles').delete().eq('id', user?.id);
+    if (!user) return;
+    
+    const confirmed = window.confirm("Isso apagará sua conta para sempre. Esta ação é irreversível. Continuar?");
+    if (!confirmed) return;
+    
+    setIsDeleting(true);
+    try {
+      // Deletar perfil (cascade vai deletar posts, conexões, etc)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Fazer sign out após deletar
       await signOut();
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+      showToast('Erro ao deletar conta. Tente novamente.', 'error');
+      setIsDeleting(false);
     }
   };
 
