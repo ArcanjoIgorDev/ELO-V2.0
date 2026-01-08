@@ -79,7 +79,7 @@ export const EcosBar = () => {
     
     if (error) {
       console.error('Erro ao criar echo:', error);
-      alert('Erro ao criar vibe. Tente novamente.');
+      alert('Erro ao criar eco. Tente novamente.');
       return;
     }
     
@@ -125,7 +125,7 @@ export const EcosBar = () => {
             </div>
           </div>
           <span className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors ${hasMyVibe ? 'text-primary' : 'text-slate-600 group-hover:text-slate-400'}`}>
-            {hasMyVibe ? 'Sua Vibe' : 'Lançar'}
+            {hasMyVibe ? 'Meu Eco' : 'Criar'}
           </span>
         </div>
 
@@ -157,7 +157,7 @@ export const EcosBar = () => {
         {/* Placeholder for exploration */}
         {otherEchos.length === 0 && (
           <div className="flex items-center gap-3 px-6 py-4 glass-card rounded-[2rem] border-dashed border-white/5 opacity-40 italic text-xs text-slate-500 shrink-0">
-            <Zap size={14} /> Espalhe a primeira Vibe...
+            <Zap size={14} /> Compartilhe seu primeiro Eco...
           </div>
         )}
       </div>
@@ -186,8 +186,8 @@ export const EcosBar = () => {
             </div>
 
             <div className="flex flex-col items-center gap-5 w-full">
-              <h3 className="text-white font-black text-5xl tracking-tighter text-center leading-none">Vibe do Momento</h3>
-              <p className="text-primary font-black text-xs uppercase tracking-[0.4em] text-center opacity-70">Desaparece após 24 ciclos</p>
+              <h3 className="text-white font-black text-5xl tracking-tighter text-center leading-none">Criar Eco</h3>
+              <p className="text-primary font-black text-xs uppercase tracking-[0.4em] text-center opacity-70">Desaparece após 24 horas</p>
             </div>
 
             <div className="w-full relative">
@@ -196,7 +196,7 @@ export const EcosBar = () => {
                 maxLength={60}
                 value={newEchoContent}
                 onChange={e => setNewEchoContent(e.target.value)}
-                placeholder="Declare sua realidade..."
+                placeholder="Compartilhe algo..."
                 className="w-full bg-transparent text-center text-5xl md:text-7xl font-black text-white placeholder:text-white/5 focus:outline-none resize-none leading-[1.1] tracking-tighter selection:bg-primary/50 py-4"
                 rows={2}
               />
@@ -215,7 +215,7 @@ export const EcosBar = () => {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-primary via-blue-500 to-sky-600 transition-transform group-hover:scale-110" />
               <div className="relative flex items-center justify-center gap-3 text-white font-black text-xl uppercase tracking-[0.2em]">
-                SINCRONIZAR VIBE <ArrowUpRight size={24} />
+                COMPARTILHAR ECO <ArrowUpRight size={24} />
               </div>
             </button>
           </div>
@@ -277,10 +277,10 @@ export const EcosBar = () => {
               <div className="flex-1 relative group">
                 <div className="absolute inset-0 bg-primary/10 blur-xl rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity" />
                 <input
-                  placeholder="Enviar frequência de resposta..."
+                  placeholder="Responder..."
                   className="w-full input-glass border-white/10 rounded-[2.2rem] px-8 py-6 text-sm font-bold text-white focus:outline-none placeholder:text-slate-600 transition-all relative z-10"
                   readOnly
-                  onClick={() => alert('Frequências de resposta em fase de testes!')}
+                  onClick={() => alert('Funcionalidade em desenvolvimento!')}
                 />
                 <div className="absolute right-4 top-3.5 size-12 rounded-[1.4rem] bg-white/5 text-white/20 flex items-center justify-center z-20">
                   <Send size={20} />
@@ -300,7 +300,7 @@ export const EcosBar = () => {
                     favorite
                   </span>
                 </button>
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{vibeLikes} Sincronias</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{vibeLikes} Curtidas</span>
               </div>
             </div>
           </div>

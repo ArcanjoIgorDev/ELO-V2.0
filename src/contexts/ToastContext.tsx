@@ -42,13 +42,13 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-md animate-slide-up bg-midnight-900/90
               ${toast.type === 'success' ? 'border-green-500/20 text-green-200' : ''}
               ${toast.type === 'error' ? 'border-red-500/20 text-red-200' : ''}
-              ${toast.type === 'info' ? 'border-ocean-500/20 text-ocean-200' : ''}
+              ${toast.type === 'info' ? 'border-primary/20 text-blue-200' : ''}
               max-w-sm w-full
             `}
                     >
                         {toast.type === 'success' && <CheckCircle className="shrink-0 text-green-500" size={20} />}
                         {toast.type === 'error' && <AlertCircle className="shrink-0 text-red-500" size={20} />}
-                        {toast.type === 'info' && <Info className="shrink-0 text-ocean-500" size={20} />}
+                        {toast.type === 'info' && <Info className="shrink-0 text-primary" size={20} />}
 
                         <p className="flex-1 text-sm font-medium">{toast.message}</p>
 

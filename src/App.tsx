@@ -30,7 +30,7 @@ const FullScreenLoader = () => (
     </div>
     <div className="flex items-center gap-3">
       <Loader2 className="animate-spin text-primary/50" size={16} />
-      <p className="text-slate-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Conectando ao Oceano</p>
+      <p className="text-slate-500 text-xs font-black uppercase tracking-[0.3em] animate-pulse">Carregando</p>
     </div>
   </div>
 );

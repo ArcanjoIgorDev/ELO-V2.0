@@ -391,7 +391,7 @@ export const ProfilePage = () => {
         </div>
         <div className="flex flex-col gap-1">
           <p className="text-white font-black text-lg tracking-tight">Carregando Perfil</p>
-          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest animate-pulse">Sincronizando com o Oceano...</p>
+          <p className="text-slate-500 font-bold text-xs uppercase tracking-widest animate-pulse">Carregando perfil...</p>
         </div>
       </div>
     );
@@ -577,11 +577,11 @@ export const ProfilePage = () => {
         <div className="flex gap-4 mb-10">
           <div className="flex-1 glass-card py-5 px-4 rounded-[2rem] flex flex-col items-center gap-1 border-white/10 shadow-xl">
             <span className="text-2xl font-black text-white tracking-tighter">{stats.posts}</span>
-            <span className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em]">Ondas</span>
+            <span className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em]">Publicações</span>
           </div>
           <div className="flex-1 glass-card py-5 px-4 rounded-[2rem] flex flex-col items-center gap-1 border-white/10 shadow-xl">
             <span className="text-2xl font-black text-white tracking-tighter">{stats.connections}</span>
-            <span className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em]">Elo Connects</span>
+            <span className="text-[9px] text-slate-500 font-black uppercase tracking-[0.2em]">Conexões</span>
           </div>
         </div>
 
@@ -607,7 +607,7 @@ export const ProfilePage = () => {
             loadingPosts ? (
               <div className="py-20 text-center flex flex-col items-center gap-6">
                 <Loader2 className="animate-spin text-primary" size={32} />
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Sintonizando frequências...</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest animate-pulse">Carregando publicações...</p>
               </div>
             ) : posts.length === 0 ? (
               <div className="py-24 text-center glass-card rounded-[3rem] p-10 flex flex-col items-center gap-6 border-dashed border-white/10">
@@ -615,8 +615,8 @@ export const ProfilePage = () => {
                   <Grid size={32} />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-xl font-black text-white tracking-tight">Vazio Absoluto</h3>
-                  <p className="text-slate-500 text-xs font-bold leading-relaxed max-w-[220px]">Ainda não há ondas emitidas neste canal.</p>
+                  <h3 className="text-xl font-black text-white tracking-tight">Nenhuma publicação</h3>
+                  <p className="text-slate-500 text-xs font-bold leading-relaxed max-w-[220px]">Ainda não há publicações.</p>
                 </div>
               </div>
             ) : (

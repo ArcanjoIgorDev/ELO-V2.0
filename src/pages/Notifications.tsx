@@ -207,7 +207,7 @@ export const NotificationsPage = () => {
               </div>
               <div className="flex flex-col items-center gap-1">
                 <span className="text-xs font-black uppercase tracking-[0.3em] text-primary">Sincronizando</span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Buscando novas ondas</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Buscando notificações</span>
               </div>
             </div>
           ) : notifications.length === 0 ? (
@@ -216,9 +216,9 @@ export const NotificationsPage = () => {
                 <span className="material-symbols-outlined text-slate-700 text-[48px]">notifications_off</span>
               </div>
               <div className="flex flex-col gap-2">
-                <h3 className="text-2xl font-black text-white tracking-tight">Vazio Absoluto</h3>
+                <h3 className="text-2xl font-black text-white tracking-tight">Nenhuma notificação</h3>
                 <p className="text-slate-500 text-sm font-bold leading-relaxed max-w-[240px]">
-                  Tudo calmo no oceano. Novas interações aparecerão aqui.
+                  Você está em dia! Novas interações aparecerão aqui.
                 </p>
               </div>
             </div>
@@ -251,8 +251,8 @@ export const NotificationsPage = () => {
                             {actorName}
                           </span>
                           <span className="ml-1.5 opacity-80">
-                            {n.type === 'like_post' && 'curtiu sua onda.'}
-                            {n.type === 'comment' && 'comentou sua frequência.'}
+                            {n.type === 'like_post' && 'curtiu sua publicação.'}
+                            {n.type === 'comment' && 'comentou sua publicação.'}
                             {n.type === 'request_received' && 'quer se conectar.'}
                             {n.type === 'request_accepted' && 'aceitou sua conexão!'}
                             {n.type === 'request_accepted_by_me' && '• Conexão estabelecida.'}

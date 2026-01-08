@@ -48,7 +48,7 @@ export const CreatePost = () => {
 
       if (error) throw error;
 
-      showToast('Onda publicada com sucesso!', 'success');
+      showToast('Publicação criada com sucesso!', 'success');
       navigate('/feed');
     } catch (error) {
       console.error('Erro ao criar post:', error);
@@ -71,7 +71,7 @@ export const CreatePost = () => {
             <X size={20} />
           </button>
 
-          <h2 className="text-white text-lg font-bold tracking-tight">Nova Onda</h2>
+          <h2 className="text-white text-lg font-bold tracking-tight">Nova Publicação</h2>
 
           <button
             onClick={handleSubmit}
@@ -88,7 +88,7 @@ export const CreatePost = () => {
         <textarea
           autoFocus
           className="w-full h-full bg-transparent text-xl text-white placeholder:text-slate-600 border-none focus:ring-0 resize-none p-0 leading-relaxed"
-          placeholder="O que está acontecendo no seu oceano?"
+          placeholder="O que você gostaria de compartilhar?"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           maxLength={500}

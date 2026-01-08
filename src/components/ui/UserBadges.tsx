@@ -10,7 +10,7 @@ interface UserBadgesProps {
 
 const BADGE_CONFIG: { [key: string]: { label: string; Icon: React.ComponentType<{ size?: number }>; gradient: string; emoji: string; description: string } } = {
   first_post: {
-    label: 'Primeira Onda',
+    label: 'Primeira Publicação',
     Icon: Star,
     gradient: 'from-yellow-500 to-amber-500',
     emoji: '🌟',
@@ -24,7 +24,7 @@ const BADGE_CONFIG: { [key: string]: { label: string; Icon: React.ComponentType<
     description: 'Primeira conexão estabelecida'
   },
   popular_post: {
-    label: 'Onda Popular',
+    label: 'Publicação Popular',
     Icon: Flame,
     gradient: 'from-orange-500 to-red-500',
     emoji: '🔥',

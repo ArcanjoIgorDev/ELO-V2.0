@@ -277,10 +277,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
     try {
       await supabase.from('posts').delete().eq('id', post.id);
       if (onDelete) onDelete(post.id);
-      showToast('Onda removida com sucesso', 'success');
+      showToast('Publicação removida com sucesso', 'success');
     } catch (err) {
       setIsDeleting(false);
-      showToast('Erro ao remover onda', 'error');
+      showToast('Erro ao remover publicação', 'error');
     }
   };
 
@@ -342,14 +342,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 text-[10px] font-black uppercase tracking-widest transition-all"
                     >
                       {isDeleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={16} />}
-                      Apagar Onda
+                      Excluir Publicação
                     </button>
                   )}
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">
                     <Share2 size={16} /> Compartilhar
                   </button>
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all">
-                    <Bookmark size={16} /> Salvar Radar
+                    <Bookmark size={16} /> Salvar
                   </button>
                 </div>
               </>
@@ -398,7 +398,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
       {showComments && (
         <div className="border-t border-white/5 bg-midnight-950/40 backdrop-blur-2xl p-7 animate-slide-up flex flex-col gap-8">
           <div className="flex items-center justify-between">
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Respostas da Rede</h4>
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Comentários</h4>
             <div className="h-px flex-1 mx-4 bg-white/5" />
           </div>
 
@@ -408,7 +408,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                 <div className="size-16 rounded-full bg-white/5 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[24px]">stream</span>
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[150px] leading-relaxed">Nenhuma frequência detectada ainda</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] max-w-[150px] leading-relaxed">Ainda não há comentários</p>
               </div>
             ) : (
               comments.map((c, idx) => (
@@ -452,7 +452,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-[2rem] opacity-0 group-focus-within:opacity-100 transition-opacity duration-700" />
               <input
                 type="text"
-                placeholder="Adicionar sua frequência..."
+                placeholder="Escreva um comentário..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="w-full input-glass rounded-[1.8rem] pl-6 pr-14 py-5 text-sm font-bold text-white focus:outline-none relative z-10"
@@ -472,3 +472,4 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
   );
 };
 
+      

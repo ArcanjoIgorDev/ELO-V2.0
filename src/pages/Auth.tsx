@@ -122,7 +122,7 @@ export const Auth = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col ocean-bg overflow-x-hidden selection:bg-primary selection:text-white">
+    <div className="relative min-h-screen w-full flex flex-col bg-background-dark overflow-x-hidden selection:bg-primary selection:text-white">
       {/* Animated Background Blobs */}
       <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="fixed bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[80px] pointer-events-none z-0" />

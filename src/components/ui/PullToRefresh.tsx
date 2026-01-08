@@ -66,7 +66,7 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({ onRefresh, childre
       >
         <div className="bg-midnight-900 border border-white/10 rounded-full p-2 shadow-xl">
           <Loader2 
-            className={`text-ocean ${refreshing ? 'animate-spin' : ''}`} 
+            className={`text-primary ${refreshing ? 'animate-spin' : ''}`} 
             size={24} 
             style={{ transform: `rotate(${currentY * 2}deg)` }}
           />

@@ -23,13 +23,13 @@ export const CookieConsent = () => {
     <div className="fixed bottom-0 left-0 right-0 z-[100] animate-slide-up p-4 md:p-6 pb-safe">
       <div className="bg-midnight-950/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] max-w-2xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-5 ring-1 ring-white/5">
         
-        <div className="bg-ocean/10 p-3 rounded-xl shrink-0 hidden md:block">
-           <ShieldCheck className="text-ocean" size={24} />
+        <div className="bg-primary/10 p-3 rounded-xl shrink-0 hidden md:block">
+           <ShieldCheck className="text-primary" size={24} />
         </div>
         
         <div className="flex-1">
           <h4 className="text-white font-bold text-sm mb-1 flex items-center gap-2">
-            <ShieldCheck className="text-ocean md:hidden" size={16} />
+            <ShieldCheck className="text-primary md:hidden" size={16} />
             Privacidade e Dados
           </h4>
           <p className="text-xs text-slate-400 leading-relaxed text-justify">

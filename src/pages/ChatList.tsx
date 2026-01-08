@@ -111,7 +111,7 @@ export const ChatList = () => {
                 <Search className="absolute left-4 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
                 <input
                   type="text"
-                  placeholder="Pesquisar em frequências..."
+                  placeholder="Pesquisar conversas..."
                   className="w-full input-glass rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-white focus:outline-none placeholder:text-slate-600 transition-all"
                 />
               </div>
@@ -128,22 +128,22 @@ export const ChatList = () => {
                   <Loader2 className="animate-spin text-primary" size={28} />
                 </div>
               </div>
-              <span className="text-[10px] font-black tracking-[0.4em] uppercase text-primary animate-pulse">Sintonizando</span>
+              <span className="text-[10px] font-black tracking-[0.4em] uppercase text-primary animate-pulse">Carregando</span>
             </div>
           ) : conversations.length === 0 ? (
             <div className="py-24 text-center glass-card rounded-[3rem] border-dashed border-white/10 px-8 max-w-sm mx-auto animate-fade-in shadow-2xl">
               <div className="size-24 bg-midnight-900 rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-white/5 shadow-inner">
                 <span className="material-symbols-outlined text-slate-700 text-[48px] opacity-40">forum</span>
               </div>
-              <h3 className="text-2xl font-black text-white tracking-tight mb-3">Vazio Estelar</h3>
+              <h3 className="text-2xl font-black text-white tracking-tight mb-3">Nenhuma conversa</h3>
               <p className="text-slate-500 text-sm font-bold leading-relaxed mb-10 max-w-[200px] mx-auto uppercase tracking-wide">
-                Nenhuma mente conectada por perto no momento.
+                Conecte-se com pessoas para começar conversas.
               </p>
               <button
                 onClick={() => navigate('/discover')}
                 className="w-full py-5 bg-white text-midnight-950 rounded-[2rem] text-xs font-black uppercase tracking-[0.2em] shadow-2xl active:scale-95 transition-all"
               >
-                Ativar Radar
+                Descobrir Pessoas
               </button>
             </div>
           ) : (

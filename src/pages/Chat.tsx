@@ -183,8 +183,8 @@ export const ChatPage = () => {
         </div>
       </div>
       <div className="flex flex-col items-center gap-2">
-        <span className="text-xs font-black uppercase tracking-[0.4em] text-primary animate-pulse">Sintonizando</span>
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Conexão segura ELO</span>
+        <span className="text-xs font-black uppercase tracking-[0.4em] text-primary animate-pulse">Carregando</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">Mensagem criptografada</span>
       </div>
     </div>
   );
@@ -242,9 +242,9 @@ export const ChatPage = () => {
               <div className="size-24 glass-card rounded-[3rem] flex items-center justify-center mb-6 border-white/5 opacity-50">
                 <span className="material-symbols-outlined text-[48px] text-primary">chat_bubble</span>
               </div>
-              <h3 className="text-xl font-black text-white tracking-tight mb-2">Inicie a Frequência</h3>
+              <h3 className="text-xl font-black text-white tracking-tight mb-2">Nenhuma mensagem ainda</h3>
               <p className="text-slate-500 text-xs font-bold uppercase tracking-widest max-w-[200px] leading-relaxed">
-                Envie uma mensagem para sintonizar com @{friend.username}
+                Envie uma mensagem para @{friend.username}
               </p>
             </div>
           )}
@@ -316,7 +316,7 @@ export const ChatPage = () => {
                 e.target.style.height = 'auto';
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
               }}
-              placeholder="Escreva algo brilhante..."
+              placeholder="Digite sua mensagem..."
               className="flex-1 bg-white/5 border border-transparent rounded-[2rem] px-4 sm:px-6 py-3.5 sm:py-4 text-white focus:outline-none focus:bg-white/10 focus:border-primary/30 transition-all resize-none max-h-32 min-h-[52px] placeholder:text-slate-600 text-[14px] font-bold leading-relaxed overflow-y-auto scrollbar-hide"
               style={{ 
                 height: '52px',

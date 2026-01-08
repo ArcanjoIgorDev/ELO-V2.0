@@ -244,7 +244,7 @@ export const Discover = () => {
             <div className="flex flex-col gap-2">
               <h3 className="text-2xl font-black text-white">Nenhum sinal</h3>
               <p className="text-slate-500 text-sm font-bold leading-relaxed max-w-[240px]">
-                O usuário <span className="text-primary">"{query}"</span> não foi detectado no radar do ELO.
+                O usuário <span className="text-primary">"{query}"</span> não foi encontrado.
               </p>
             </div>
           </div>
@@ -259,7 +259,7 @@ export const Discover = () => {
             <div className="flex flex-col gap-3">
               <h2 className="text-2xl font-black text-white tracking-tight">Expandir Rede</h2>
               <p className="text-slate-500 text-sm font-bold leading-relaxed max-w-[280px]">
-                Busque por mentes inovadoras para conectar ao seu oceano exclusivo.
+                Busque por pessoas interessantes para se conectar.
               </p>
             </div>
           </div>

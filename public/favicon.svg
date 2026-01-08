@@ -1,170 +1,101 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="favicon-main" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60D5FF" />
-      <stop offset="25%" stop-color="#38BDF8" />
-      <stop offset="50%" stop-color="#0EA5E9" />
-      <stop offset="75%" stop-color="#3B82F6" />
-      <stop offset="100%" stop-color="#2563EB" />
+      <stop offset="0%" stop-color="#0EA5E9" />
+      <stop offset="50%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#6366F1" />
     </linearGradient>
     <linearGradient id="favicon-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7DD3FC" />
-      <stop offset="50%" stop-color="#60D5FF" />
+      <stop offset="0%" stop-color="#60D5FF" />
       <stop offset="100%" stop-color="#38BDF8" />
     </linearGradient>
-    <linearGradient id="favicon-wave" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#7DD3FC" stop-opacity="0.9" />
-      <stop offset="50%" stop-color="#38BDF8" stop-opacity="1" />
-      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.9" />
-    </linearGradient>
     <filter id="favicon-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+      <feGaussianBlur stdDeviation="3" result="coloredBlur" />
       <feMerge>
         <feMergeNode in="coloredBlur" />
         <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>
     <filter id="favicon-shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#38BDF8" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0EA5E9" flood-opacity="0.4"/>
     </filter>
-    <radialGradient id="favicon-particle" cx="50%" cy="50%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8" />
-      <stop offset="100%" stop-color="#60D5FF" stop-opacity="0.3" />
-    </radialGradient>
   </defs>
 
-  <!-- Fundo circular com gradiente -->
-  <circle cx="60" cy="60" r="58" fill="url(#favicon-main)" opacity="0.15" />
+  <!-- Fundo circular sutil -->
+  <circle cx="60" cy="60" r="56" fill="url(#favicon-main)" opacity="0.1" />
   
-  <!-- Anel decorativo duplo -->
-  <circle cx="60" cy="60" r="55" fill="none" stroke="url(#favicon-accent)" stroke-width="1.5" opacity="0.4" />
-  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#favicon-main)" stroke-width="1" opacity="0.3" />
+  <!-- Anel decorativo -->
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#favicon-main)" stroke-width="1" opacity="0.2" />
   
-  <!-- Ondas oceânicas -->
-  <g opacity="0.7">
-    <path
-      d="M 12 42 Q 22 37, 32 42 T 52 42 T 72 42 T 92 42 T 108 42"
-      stroke="url(#favicon-wave)"
-      stroke-width="3"
-      fill="none"
-      stroke-linecap="round"
-    />
-    <path
-      d="M 12 57 Q 22 52, 32 57 T 52 57 T 72 57 T 92 57 T 108 57"
-      stroke="url(#favicon-wave)"
-      stroke-width="3"
-      fill="none"
-      stroke-linecap="round"
-    />
-    <path
-      d="M 12 72 Q 22 67, 32 72 T 52 72 T 72 72 T 92 72 T 108 72"
-      stroke="url(#favicon-wave)"
-      stroke-width="3"
-      fill="none"
-      stroke-linecap="round"
-    />
-  </g>
-
-  <!-- Partículas decorativas -->
-  <g opacity="0.8">
-    <circle cx="25" cy="35" r="2" fill="url(#favicon-particle)" />
-    <circle cx="95" cy="25" r="2.5" fill="url(#favicon-particle)" />
-    <circle cx="105" cy="55" r="2" fill="url(#favicon-particle)" />
-    <circle cx="15" cy="65" r="2.5" fill="url(#favicon-particle)" />
-    <circle cx="100" cy="95" r="2" fill="url(#favicon-particle)" />
-    <circle cx="20" cy="90" r="2.5" fill="url(#favicon-particle)" />
-  </g>
-
-  <!-- Letra E - Design Premium com azul claro -->
+  <!-- Letra E - Design moderno e minimalista -->
   <g filter="url(#favicon-glow)">
-    <path
-      d="M 26 20 L 26 100"
-      stroke="url(#favicon-main)"
-      stroke-width="11"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+    <!-- Barra vertical esquerda -->
+    <rect
+      x="28"
+      y="22"
+      width="12"
+      height="76"
+      rx="6"
+      fill="url(#favicon-main)"
       filter="url(#favicon-shadow)"
     />
-    <path
-      d="M 26 20 L 26 100"
-      stroke="url(#favicon-accent)"
-      stroke-width="7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      opacity="0.6"
-    />
-    <path
-      d="M 26 20 Q 38 20, 48 20 L 84 20"
-      stroke="url(#favicon-main)"
-      stroke-width="11"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+    
+    <!-- Barra superior -->
+    <rect
+      x="28"
+      y="22"
+      width="54"
+      height="12"
+      rx="6"
+      fill="url(#favicon-main)"
       filter="url(#favicon-shadow)"
     />
-    <path
-      d="M 26 20 Q 38 20, 48 20 L 84 20"
-      stroke="url(#favicon-accent)"
-      stroke-width="7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      opacity="0.6"
-    />
-    <path
-      d="M 26 60 Q 36 60, 44 60 L 74 60"
-      stroke="url(#favicon-main)"
-      stroke-width="11"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+    
+    <!-- Barra do meio -->
+    <rect
+      x="28"
+      y="54"
+      width="42"
+      height="12"
+      rx="6"
+      fill="url(#favicon-main)"
       filter="url(#favicon-shadow)"
     />
-    <path
-      d="M 26 60 Q 36 60, 44 60 L 74 60"
-      stroke="url(#favicon-accent)"
-      stroke-width="7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      opacity="0.6"
-    />
-    <path
-      d="M 26 100 Q 38 100, 48 100 L 84 100"
-      stroke="url(#favicon-main)"
-      stroke-width="11"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+    
+    <!-- Barra inferior -->
+    <rect
+      x="28"
+      y="86"
+      width="54"
+      height="12"
+      rx="6"
+      fill="url(#favicon-main)"
       filter="url(#favicon-shadow)"
-    />
-    <path
-      d="M 26 100 Q 38 100, 48 100 L 84 100"
-      stroke="url(#favicon-accent)"
-      stroke-width="7"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      opacity="0.6"
     />
   </g>
 
-  <!-- Elementos de conexão -->
-  <g opacity="0.95">
-    <circle cx="94" cy="26" r="10" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="94" cy="26" r="7" fill="url(#favicon-main)" opacity="0.7" />
-    <circle cx="94" cy="94" r="10" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="94" cy="94" r="7" fill="url(#favicon-main)" opacity="0.7" />
-    <path
-      d="M 84 26 Q 84 46, 84 60 Q 84 74, 84 94"
+  <!-- Elementos de conexão - design minimalista -->
+  <g opacity="0.9">
+    <!-- Círculos de conexão -->
+    <circle cx="92" cy="28" r="8" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="92" cy="92" r="8" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    
+    <!-- Linha de conexão -->
+    <line
+      x1="86"
+      y1="28"
+      x2="86"
+      y2="92"
       stroke="url(#favicon-accent)"
-      stroke-width="4.5"
+      stroke-width="4"
       stroke-linecap="round"
-      fill="none"
       filter="url(#favicon-glow)"
     />
-    <circle cx="88" cy="46" r="4.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="88" cy="46" r="2.5" fill="#FFFFFF" opacity="0.9" />
-    <circle cx="88" cy="74" r="4.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="88" cy="74" r="2.5" fill="#FFFFFF" opacity="0.9" />
+    
+    <!-- Ponto central de conexão -->
+    <circle cx="86" cy="60" r="5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
   </g>
 
-  <!-- Brilho adicional -->
-  <circle cx="60" cy="60" r="48" fill="url(#favicon-accent)" opacity="0.08" />
-  <circle cx="60" cy="60" r="40" fill="url(#favicon-main)" opacity="0.05" />
-  <ellipse cx="60" cy="40" rx="35" ry="15" fill="url(#favicon-particle)" opacity="0.4" />
+  <!-- Reflexo de luz sutil -->
+  <ellipse cx="60" cy="35" rx="28" ry="8" fill="white" opacity="0.15" />
 </svg>

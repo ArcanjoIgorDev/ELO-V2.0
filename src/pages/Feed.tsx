@@ -357,7 +357,7 @@ export const Feed = () => {
                 <TrendingUp size={10} className="text-primary" />
                 <span className="text-[9px] font-black text-primary uppercase tracking-[0.1em]">Explorar</span>
               </div>
-              <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Ondas de hoje</span>
+              <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Publicações recentes</span>
             </div>
           </div>
           <button className="size-12 rounded-2xl glass-button flex items-center justify-center text-primary shadow-xl shadow-primary/5 border-white/10 transition-all hover:scale-110 active:scale-90">
@@ -381,7 +381,7 @@ export const Feed = () => {
             </div>
 
             <div className="flex-1 bg-white/[0.03] h-16 rounded-[1.5rem] flex items-center px-6 text-slate-400 text-sm font-bold border border-white/5 group-hover:bg-white/[0.07] group-hover:border-primary/30 transition-all tracking-tight">
-              Inicie uma nova frequência...
+              Escreva algo para compartilhar...
             </div>
 
             <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all shadow-xl shadow-primary/10">
@@ -400,7 +400,7 @@ export const Feed = () => {
               <AlertCircle size={48} className="text-red-400" />
             </div>
             <h3 className="text-2xl font-black text-white tracking-tight mb-2">Sinal Interrompido</h3>
-            <p className="text-slate-500 mb-4 text-sm font-bold leading-relaxed max-w-[240px]">O oceano está muito agitado no momento. Tente novamente.</p>
+            <p className="text-slate-500 mb-4 text-sm font-bold leading-relaxed max-w-[240px]">Ocorreu um erro ao carregar as publicações. Tente novamente.</p>
             {process.env.NODE_ENV === 'development' && (
               <p className="text-slate-600 mb-6 text-xs font-medium max-w-[240px]">
                 Verifique o console do navegador para mais detalhes.
@@ -421,17 +421,17 @@ export const Feed = () => {
             {posts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-32 px-8 text-center animate-slide-up glass-card rounded-[3rem] border-dashed border-white/5">
                 <div className="size-28 rounded-[3.5rem] bg-midnight-900 border border-white/5 flex items-center justify-center mb-10 rotate-3 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-                  <span className="material-symbols-outlined text-slate-700 text-[56px] opacity-40">waves</span>
+                  <span className="material-symbols-outlined text-slate-700 text-[56px] opacity-40">article</span>
                 </div>
-                <h3 className="text-3xl font-black text-white tracking-tighter mb-4">Oceano Calmo</h3>
+                <h3 className="text-3xl font-black text-white tracking-tighter mb-4">Nenhuma publicação</h3>
                 <p className="text-slate-500 max-w-[260px] leading-relaxed font-bold text-sm mb-10">
-                  Nenhuma onda detectada. Seja o pioneiro a impactar a rede hoje.
+                  Seja o primeiro a compartilhar algo com sua rede.
                 </p>
                 <button
                   onClick={() => navigate('/create')}
                   className="h-16 px-12 rounded-[2rem] bg-primary text-white font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-primary/30 hover:bg-sky-400 transition-all active:scale-95"
                 >
-                  Criar Onda
+                  Criar Publicação
                 </button>
               </div>
             ) : (

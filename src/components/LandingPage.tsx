@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Users, MessageCircle, TrendingUp, Shield } from 'lucide-react';
+import { ArrowRight, Sparkles, Users, MessageCircle, TrendingUp, Shield, CheckCircle2, Zap } from 'lucide-react';
 import { ELOLogo } from './ui/Logo';
 
 export const LandingPage = () => {
@@ -10,12 +9,12 @@ export const LandingPage = () => {
   const appFeatures = [
     {
       title: "Feed Inteligente",
-      description: "Conteúdo relevante e personalizado",
+      description: "Conteúdo relevante baseado nas suas conexões",
       icon: <TrendingUp size={20} className="text-primary" />
     },
     {
       title: "Conexões Reais",
-      description: "Networking de alto valor",
+      description: "Networking autêntico e de valor",
       icon: <Users size={20} className="text-violet-400" />
     },
     {
@@ -25,25 +24,32 @@ export const LandingPage = () => {
     }
   ];
 
+  const benefits = [
+    "Interface intuitiva e moderna",
+    "Privacidade garantida",
+    "Sem anúncios invasivos",
+    "Comunidade engajada"
+  ];
+
   return (
-    <div className="relative min-h-screen w-full flex flex-col ocean-bg overflow-x-hidden">
-      {/* Blobs de fundo mais sutis */}
+    <div className="relative min-h-screen w-full flex flex-col bg-background-dark overflow-x-hidden safe-area-inset">
+      {/* Background Blobs sutis */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
       <header className="sticky top-0 z-50 glass-panel border-b border-white/5 backdrop-blur-xl">
-        <div className="flex items-center justify-between p-5 px-6 max-w-6xl mx-auto w-full">
+        <div className="flex items-center justify-between p-4 sm:p-5 px-5 sm:px-6 max-w-6xl mx-auto w-full">
           <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 blur-xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <ELOLogo size={36} className="relative transition-transform duration-300 group-hover:scale-110" />
+              <ELOLogo size={32} className="relative transition-transform duration-300 group-hover:scale-110" />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-white bg-gradient-to-r from-white via-white to-slate-300 bg-clip-text text-transparent">ELO</span>
+            <span className="text-xl sm:text-2xl font-black tracking-tighter text-white">ELO</span>
           </div>
           <button
             onClick={() => navigate('/auth')}
-            className="h-11 px-6 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 transition-all text-white font-black text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95"
+            className="h-10 sm:h-11 px-5 sm:px-6 rounded-xl sm:rounded-2xl bg-primary hover:bg-sky-400 transition-all text-white font-bold text-xs sm:text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95"
           >
             Entrar
           </button>
@@ -51,31 +57,31 @@ export const LandingPage = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-grow flex flex-col items-center px-4 sm:px-5 pt-8 sm:pt-12 pb-10 w-full max-w-6xl mx-auto relative z-10">
+      <main className="flex-grow flex flex-col items-center px-4 sm:px-5 pt-6 sm:pt-12 pb-10 w-full max-w-6xl mx-auto relative z-10">
 
         {/* Hero Section - Mobile First */}
-        <section className="flex flex-col items-center gap-8 sm:gap-12 w-full mb-12 sm:mb-16">
+        <section className="flex flex-col items-center gap-6 sm:gap-12 w-full mb-12 sm:mb-16">
           {/* Text Content */}
-          <div className="flex-1 flex flex-col gap-5 sm:gap-6 text-center max-w-xl w-full">
+          <div className="flex-1 flex flex-col gap-4 sm:gap-6 text-center max-w-xl w-full">
 
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-white mb-3 sm:mb-4 px-2">
-              Conexões que{' '}
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.1] tracking-tight text-white mb-3 sm:mb-5 px-4">
+              Conecte-se com pessoas que{' '}
               <span className="relative inline-block">
                 <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-cyan-400 animate-gradient">
-                  importam
+                  compartilham seus valores
                 </span>
                 <span className="absolute inset-0 bg-primary/20 blur-2xl -z-0 opacity-60" />
               </span>
             </h1>
 
-            <p className="text-slate-300 text-base sm:text-lg md:text-xl leading-relaxed max-w-lg mx-auto font-medium px-4">
-              Uma rede social focada em qualidade, não quantidade. Conecte-se com pessoas que compartilham seus valores e objetivos.
+            <p className="text-slate-300 text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl mx-auto font-medium px-4">
+              Uma plataforma profissional onde qualidade importa mais que quantidade. Construa sua rede, compartilhe conhecimento e desenvolva relacionamentos que realmente importam.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 sm:mt-6 w-full sm:w-auto px-4 sm:px-0">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:mt-6 w-full sm:w-auto px-4 sm:px-0">
               <button
                 onClick={() => navigate('/auth')}
-                className="group relative h-14 sm:h-16 px-8 sm:px-10 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white font-black text-sm sm:text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all active:scale-95 flex items-center justify-center gap-3 overflow-hidden"
+                className="group relative h-12 sm:h-14 px-8 sm:px-10 rounded-xl sm:rounded-2xl bg-primary hover:bg-sky-400 text-white font-black text-sm sm:text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all active:scale-95 flex items-center justify-center gap-3 overflow-hidden"
               >
                 <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 <span className="relative z-10 flex items-center gap-3">
@@ -84,15 +90,25 @@ export const LandingPage = () => {
                 </span>
               </button>
               <button
-                onClick={() => navigate('/auth')}
-                className="h-14 sm:h-16 px-6 sm:px-8 rounded-2xl glass-button hover:bg-white/10 text-white font-bold text-sm sm:text-base transition-all border-white/10 hover:border-white/20 active:scale-95"
+                onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+                className="h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl glass-button hover:bg-white/10 text-white font-bold text-sm sm:text-base transition-all border-white/10 hover:border-white/20 active:scale-95"
               >
                 Saber Mais
               </button>
             </div>
 
+            {/* Benefits List - Mobile Optimized */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 sm:mt-8 px-4 sm:px-0">
+              {benefits.map((benefit, idx) => (
+                <div key={idx} className="flex items-center gap-2 glass-panel px-3 py-2 rounded-xl border border-white/5">
+                  <CheckCircle2 size={14} className="text-primary shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-slate-300 font-medium text-left">{benefit}</span>
+                </div>
+              ))}
+            </div>
+
             {/* Stats - Mobile Optimized */}
-            <div className="flex items-center gap-6 sm:gap-8 mt-8 sm:mt-10 justify-center">
+            <div className="flex items-center gap-4 sm:gap-8 mt-6 sm:mt-10 justify-center">
               <div className="flex flex-col gap-1">
                 <span className="text-2xl sm:text-3xl font-black text-white bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">1K+</span>
                 <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-widest font-bold">Usuários Ativos</span>
@@ -105,17 +121,14 @@ export const LandingPage = () => {
             </div>
           </div>
 
-          {/* App Preview - Screenshots Reais do App */}
-          <div className="flex-1 relative max-w-md w-full hidden md:block">
+          {/* App Preview - Mobile Hidden, Desktop Visible */}
+          <div className="flex-1 relative max-w-md w-full hidden lg:block">
             <div className="relative">
-              {/* Glow effect */}
               <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full animate-pulse-slow" />
 
-              {/* Phone mockup com design real do app */}
               <div className="relative glass-card rounded-[3rem] p-3 sm:p-4 shadow-2xl border-white/10 overflow-hidden">
-                {/* Phone frame */}
                 <div className="bg-midnight-950 rounded-[2.5rem] overflow-hidden relative">
-                  {/* Status bar realista */}
+                  {/* Status bar */}
                   <div className="h-10 sm:h-12 bg-midnight-900/50 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 border-b border-white/5">
                     <span className="text-[10px] sm:text-xs text-white/60 font-bold">9:41</span>
                     <div className="flex items-center gap-1">
@@ -125,20 +138,14 @@ export const LandingPage = () => {
                     </div>
                   </div>
 
-                  {/* Header do app */}
+                  {/* App header */}
                   <div className="px-4 sm:px-5 pt-6 pb-4 border-b border-white/5">
-                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tighter">Feed Principal</h2>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-                        <TrendingUp size={10} className="text-primary" />
-                        <span className="text-[9px] font-black text-primary uppercase tracking-[0.1em]">Explorar</span>
-                      </div>
-                    </div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tighter">Feed</h2>
                   </div>
 
-                  {/* App content preview - igual ao app real */}
+                  {/* App content preview */}
                   <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 bg-midnight-950">
-                    {/* Post card 1 - estilo real do app */}
+                    {/* Post card 1 */}
                     <div className="glass-card rounded-[2.5rem] p-5 sm:p-6 space-y-4 border-white/5 relative overflow-hidden">
                       <div className="absolute -top-24 -left-24 size-48 bg-primary/10 blur-[80px] rounded-full opacity-30" />
                       
@@ -166,18 +173,18 @@ export const LandingPage = () => {
                       </p>
 
                       <div className="flex items-center gap-2 pt-2 border-t border-white/5 relative z-10">
-                        <button className="flex items-center gap-2.5 h-12 px-5 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-                          <span className="material-symbols-outlined text-[22px] fill-1">favorite</span>
+                        <button className="flex items-center gap-2.5 h-10 sm:h-12 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                          <span className="material-symbols-outlined text-[20px] sm:text-[22px] fill-1">favorite</span>
                           <span className="text-xs font-black tracking-widest">24</span>
                         </button>
-                        <button className="flex items-center gap-2.5 h-12 px-5 rounded-2xl text-slate-500 hover:bg-white/5">
-                          <span className="material-symbols-outlined text-[22px]">forum</span>
+                        <button className="flex items-center gap-2.5 h-10 sm:h-12 px-4 sm:px-5 rounded-xl sm:rounded-2xl text-slate-500 hover:bg-white/5">
+                          <span className="material-symbols-outlined text-[20px] sm:text-[22px]">forum</span>
                           <span className="text-xs font-black tracking-widest">8</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Post card 2 - estilo real do app */}
+                    {/* Post card 2 */}
                     <div className="glass-card rounded-[2.5rem] p-5 sm:p-6 space-y-4 border-white/5 relative overflow-hidden">
                       <div className="absolute -top-24 -left-24 size-48 bg-violet-500/10 blur-[80px] rounded-full opacity-30" />
                       
@@ -205,12 +212,12 @@ export const LandingPage = () => {
                       </p>
 
                       <div className="flex items-center gap-2 pt-2 border-t border-white/5 relative z-10">
-                        <button className="flex items-center gap-2.5 h-12 px-5 rounded-2xl bg-primary/10 text-primary border border-primary/20">
-                          <span className="material-symbols-outlined text-[22px] fill-1">favorite</span>
+                        <button className="flex items-center gap-2.5 h-10 sm:h-12 px-4 sm:px-5 rounded-xl sm:rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                          <span className="material-symbols-outlined text-[20px] sm:text-[22px] fill-1">favorite</span>
                           <span className="text-xs font-black tracking-widest">42</span>
                         </button>
-                        <button className="flex items-center gap-2.5 h-12 px-5 rounded-2xl text-slate-500 hover:bg-white/5">
-                          <span className="material-symbols-outlined text-[22px]">forum</span>
+                        <button className="flex items-center gap-2.5 h-10 sm:h-12 px-4 sm:px-5 rounded-xl sm:rounded-2xl text-slate-500 hover:bg-white/5">
+                          <span className="material-symbols-outlined text-[20px] sm:text-[22px]">forum</span>
                           <span className="text-xs font-black tracking-widest">15</span>
                         </button>
                       </div>
@@ -218,18 +225,18 @@ export const LandingPage = () => {
                   </div>
 
                   {/* Bottom navigation preview */}
-                  <div className="h-16 bg-midnight-900/30 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2">
-                    <div className="size-10 rounded-2xl bg-primary/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-primary text-[20px]">home</span>
+                  <div className="h-14 sm:h-16 bg-midnight-900/30 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2">
+                    <div className="size-9 sm:size-10 rounded-xl sm:rounded-2xl bg-primary/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary text-[18px] sm:text-[20px]">home</span>
                     </div>
-                    <div className="size-10 rounded-2xl flex items-center justify-center text-slate-500">
-                      <span className="material-symbols-outlined text-[20px]">explore</span>
+                    <div className="size-9 sm:size-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500">
+                      <span className="material-symbols-outlined text-[18px] sm:text-[20px]">explore</span>
                     </div>
-                    <div className="size-10 rounded-2xl flex items-center justify-center text-slate-500">
-                      <span className="material-symbols-outlined text-[20px]">notifications</span>
+                    <div className="size-9 sm:size-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500">
+                      <span className="material-symbols-outlined text-[18px] sm:text-[20px]">notifications</span>
                     </div>
-                    <div className="size-10 rounded-2xl flex items-center justify-center text-slate-500">
-                      <span className="material-symbols-outlined text-[20px]">person</span>
+                    <div className="size-9 sm:size-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500">
+                      <span className="material-symbols-outlined text-[18px] sm:text-[20px]">person</span>
                     </div>
                   </div>
                 </div>
@@ -239,45 +246,50 @@ export const LandingPage = () => {
         </section>
 
         {/* Features Grid - Mobile Optimized */}
-        <section className="w-full max-w-4xl px-4 sm:px-0">
+        <section className="w-full max-w-4xl px-4 sm:px-0 mb-12 sm:mb-16">
           <div className="text-center mb-8 sm:mb-10">
-            <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 sm:mb-3">Por que escolher o ELO?</h2>
-            <p className="text-slate-400 text-sm sm:text-base md:text-lg">Recursos pensados para sua experiência</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 sm:mb-4">Tudo que você precisa em um só lugar</h2>
+            <p className="text-slate-400 text-sm sm:text-base md:text-lg max-w-2xl mx-auto">Recursos projetados para facilitar suas conexões e melhorar sua experiência</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             {appFeatures.map((feature, idx) => (
-              <div key={idx} className="glass-card p-5 sm:p-6 rounded-2xl hover:bg-white/5 transition-all group">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+              <div key={idx} className="glass-card p-6 sm:p-8 rounded-2xl sm:rounded-[2rem] hover:bg-white/5 transition-all group border border-white/5 hover:border-primary/20">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/20 to-blue-600/20 border border-primary/20 flex items-center justify-center mb-4 sm:mb-5 group-hover:scale-110 transition-transform shadow-lg shadow-primary/10">
                   {feature.icon}
                 </div>
-                <h3 className="text-white font-bold text-base sm:text-lg mb-1 sm:mb-2">{feature.title}</h3>
-                <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">{feature.description}</p>
+                <h3 className="text-white font-black text-lg sm:text-xl mb-2 sm:mb-3">{feature.title}</h3>
+                <p className="text-slate-400 text-sm sm:text-base leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
         </section>
 
         {/* CTA Final - Mobile Optimized */}
-        <section className="relative w-full max-w-3xl mt-16 sm:mt-24 glass-card rounded-[2.5rem] sm:rounded-[3rem] p-8 sm:p-10 md:p-12 text-center overflow-hidden mx-4 sm:mx-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-600/5 pointer-events-none" />
+        <section className="relative w-full max-w-3xl mt-8 sm:mt-16 glass-card rounded-[2rem] sm:rounded-[3rem] p-8 sm:p-12 md:p-16 text-center overflow-hidden mx-4 sm:mx-0 border border-white/5 shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-blue-600/10 pointer-events-none" />
           <div className="relative z-10">
             <div className="relative inline-block mb-6 sm:mb-8">
-              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-60 animate-pulse" />
-              <Shield size={48} className="sm:w-14 sm:h-14 text-primary mx-auto relative z-10 drop-shadow-lg" />
+              <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full opacity-50 animate-pulse" />
+              <div className="relative z-10">
+                <Zap size={48} className="sm:w-16 sm:h-16 text-primary mx-auto drop-shadow-2xl" />
+              </div>
             </div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 sm:mb-4 tracking-tight px-2">
-              Pronto para começar?
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 sm:mb-5 tracking-tight px-2">
+              Comece hoje mesmo
             </h2>
-            <p className="text-slate-300 text-base sm:text-lg md:text-xl mb-8 sm:mb-10 max-w-lg mx-auto font-medium leading-relaxed px-4">
-              Junte-se a milhares de profissionais que já fazem parte da nossa comunidade exclusiva.
+            <p className="text-slate-300 text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-xl mx-auto font-medium leading-relaxed px-4">
+              Junte-se a milhares de pessoas que já estão construindo conexões significativas na ELO.
             </p>
             <button
               onClick={() => navigate('/auth')}
-              className="group relative h-14 sm:h-16 px-8 sm:px-10 md:px-12 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white font-black text-sm sm:text-base shadow-2xl shadow-primary/30 hover:shadow-primary/40 transition-all active:scale-95 overflow-hidden"
+              className="group relative h-14 sm:h-16 px-10 sm:px-14 md:px-16 rounded-2xl bg-primary hover:bg-sky-400 text-white font-black text-base sm:text-lg shadow-2xl shadow-primary/40 hover:shadow-primary/50 transition-all active:scale-95 overflow-hidden"
             >
               <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-              <span className="relative z-10">Criar Conta Grátis</span>
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                Criar Conta Grátis
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </span>
             </button>
           </div>
         </section>
