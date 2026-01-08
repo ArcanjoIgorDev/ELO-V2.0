@@ -1,120 +1,170 @@
 <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="favicon-main" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0EA5E9" />
-      <stop offset="30%" stop-color="#3B82F6" />
-      <stop offset="70%" stop-color="#6366F1" />
-      <stop offset="100%" stop-color="#8B5CF6" />
+      <stop offset="0%" stop-color="#60D5FF" />
+      <stop offset="25%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#0EA5E9" />
+      <stop offset="75%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#2563EB" />
     </linearGradient>
     <linearGradient id="favicon-accent" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#38BDF8" />
-      <stop offset="50%" stop-color="#0EA5E9" />
-      <stop offset="100%" stop-color="#3B82F6" />
+      <stop offset="0%" stop-color="#7DD3FC" />
+      <stop offset="50%" stop-color="#60D5FF" />
+      <stop offset="100%" stop-color="#38BDF8" />
+    </linearGradient>
+    <linearGradient id="favicon-wave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7DD3FC" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#38BDF8" stop-opacity="1" />
+      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.9" />
     </linearGradient>
     <filter id="favicon-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+      <feGaussianBlur stdDeviation="5" result="coloredBlur" />
       <feMerge>
         <feMergeNode in="coloredBlur" />
         <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>
     <filter id="favicon-shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0EA5E9" flood-opacity="0.3"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#38BDF8" flood-opacity="0.5"/>
     </filter>
+    <radialGradient id="favicon-particle" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#60D5FF" stop-opacity="0.3" />
+    </radialGradient>
   </defs>
 
   <!-- Fundo circular com gradiente -->
-  <circle cx="60" cy="60" r="58" fill="url(#favicon-main)" opacity="0.12" />
+  <circle cx="60" cy="60" r="58" fill="url(#favicon-main)" opacity="0.15" />
   
-  <!-- Anel decorativo -->
-  <circle cx="60" cy="60" r="54" fill="none" stroke="url(#favicon-main)" stroke-width="1" opacity="0.2" />
+  <!-- Anel decorativo duplo -->
+  <circle cx="60" cy="60" r="55" fill="none" stroke="url(#favicon-accent)" stroke-width="1.5" opacity="0.4" />
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#favicon-main)" stroke-width="1" opacity="0.3" />
   
-  <!-- Ondas oceânicas decorativas -->
-  <g opacity="0.5">
+  <!-- Ondas oceânicas -->
+  <g opacity="0.7">
     <path
-      d="M 15 45 Q 25 40, 35 45 T 55 45 T 75 45 T 95 45 T 105 45"
-      stroke="url(#favicon-main)"
-      stroke-width="2.5"
+      d="M 12 42 Q 22 37, 32 42 T 52 42 T 72 42 T 92 42 T 108 42"
+      stroke="url(#favicon-wave)"
+      stroke-width="3"
       fill="none"
       stroke-linecap="round"
     />
     <path
-      d="M 15 60 Q 25 55, 35 60 T 55 60 T 75 60 T 95 60 T 105 60"
-      stroke="url(#favicon-main)"
-      stroke-width="2.5"
+      d="M 12 57 Q 22 52, 32 57 T 52 57 T 72 57 T 92 57 T 108 57"
+      stroke="url(#favicon-wave)"
+      stroke-width="3"
       fill="none"
       stroke-linecap="round"
     />
     <path
-      d="M 15 75 Q 25 70, 35 75 T 55 75 T 75 75 T 95 75 T 105 75"
-      stroke="url(#favicon-main)"
-      stroke-width="2.5"
+      d="M 12 72 Q 22 67, 32 72 T 52 72 T 72 72 T 92 72 T 108 72"
+      stroke="url(#favicon-wave)"
+      stroke-width="3"
       fill="none"
       stroke-linecap="round"
     />
   </g>
 
-  <!-- Letra E - Design Premium -->
+  <!-- Partículas decorativas -->
+  <g opacity="0.8">
+    <circle cx="25" cy="35" r="2" fill="url(#favicon-particle)" />
+    <circle cx="95" cy="25" r="2.5" fill="url(#favicon-particle)" />
+    <circle cx="105" cy="55" r="2" fill="url(#favicon-particle)" />
+    <circle cx="15" cy="65" r="2.5" fill="url(#favicon-particle)" />
+    <circle cx="100" cy="95" r="2" fill="url(#favicon-particle)" />
+    <circle cx="20" cy="90" r="2.5" fill="url(#favicon-particle)" />
+  </g>
+
+  <!-- Letra E - Design Premium com azul claro -->
   <g filter="url(#favicon-glow)">
-    <!-- Barra vertical esquerda -->
     <path
-      d="M 28 22 L 28 98"
+      d="M 26 20 L 26 100"
       stroke="url(#favicon-main)"
-      stroke-width="9"
+      stroke-width="11"
       stroke-linecap="round"
       stroke-linejoin="round"
       filter="url(#favicon-shadow)"
     />
-    
-    <!-- Barra superior -->
     <path
-      d="M 28 22 Q 40 22, 50 22 L 82 22"
+      d="M 26 20 L 26 100"
+      stroke="url(#favicon-accent)"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.6"
+    />
+    <path
+      d="M 26 20 Q 38 20, 48 20 L 84 20"
       stroke="url(#favicon-main)"
-      stroke-width="9"
+      stroke-width="11"
       stroke-linecap="round"
       stroke-linejoin="round"
       filter="url(#favicon-shadow)"
     />
-    
-    <!-- Barra do meio -->
     <path
-      d="M 28 60 Q 38 60, 46 60 L 72 60"
+      d="M 26 20 Q 38 20, 48 20 L 84 20"
+      stroke="url(#favicon-accent)"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.6"
+    />
+    <path
+      d="M 26 60 Q 36 60, 44 60 L 74 60"
       stroke="url(#favicon-main)"
-      stroke-width="9"
+      stroke-width="11"
       stroke-linecap="round"
       stroke-linejoin="round"
       filter="url(#favicon-shadow)"
     />
-    
-    <!-- Barra inferior -->
     <path
-      d="M 28 98 Q 40 98, 50 98 L 82 98"
+      d="M 26 60 Q 36 60, 44 60 L 74 60"
+      stroke="url(#favicon-accent)"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.6"
+    />
+    <path
+      d="M 26 100 Q 38 100, 48 100 L 84 100"
       stroke="url(#favicon-main)"
-      stroke-width="9"
+      stroke-width="11"
       stroke-linecap="round"
       stroke-linejoin="round"
       filter="url(#favicon-shadow)"
+    />
+    <path
+      d="M 26 100 Q 38 100, 48 100 L 84 100"
+      stroke="url(#favicon-accent)"
+      stroke-width="7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.6"
     />
   </g>
 
   <!-- Elementos de conexão -->
-  <g opacity="0.85">
-    <circle cx="92" cy="28" r="8" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="92" cy="92" r="8" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    
+  <g opacity="0.95">
+    <circle cx="94" cy="26" r="10" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="94" cy="26" r="7" fill="url(#favicon-main)" opacity="0.7" />
+    <circle cx="94" cy="94" r="10" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="94" cy="94" r="7" fill="url(#favicon-main)" opacity="0.7" />
     <path
-      d="M 84 28 Q 84 48, 84 60 Q 84 72, 84 92"
+      d="M 84 26 Q 84 46, 84 60 Q 84 74, 84 94"
       stroke="url(#favicon-accent)"
-      stroke-width="3.5"
+      stroke-width="4.5"
       stroke-linecap="round"
       fill="none"
       filter="url(#favicon-glow)"
     />
-    
-    <circle cx="88" cy="48" r="3.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
-    <circle cx="88" cy="72" r="3.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="88" cy="46" r="4.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="88" cy="46" r="2.5" fill="#FFFFFF" opacity="0.9" />
+    <circle cx="88" cy="74" r="4.5" fill="url(#favicon-accent)" filter="url(#favicon-glow)" />
+    <circle cx="88" cy="74" r="2.5" fill="#FFFFFF" opacity="0.9" />
   </g>
 
   <!-- Brilho adicional -->
-  <circle cx="60" cy="60" r="45" fill="url(#favicon-main)" opacity="0.05" />
+  <circle cx="60" cy="60" r="48" fill="url(#favicon-accent)" opacity="0.08" />
+  <circle cx="60" cy="60" r="40" fill="url(#favicon-main)" opacity="0.05" />
+  <ellipse cx="60" cy="40" rx="35" ry="15" fill="url(#favicon-particle)" opacity="0.4" />
 </svg>
