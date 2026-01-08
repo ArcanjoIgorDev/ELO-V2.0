@@ -9,6 +9,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../contexts/ToastContext';
+import { AdvancedReactions } from './ui/AdvancedReactions';
+import { PostVibe } from './ui/PostVibe';
+import { ActivityStatus } from './ui/ActivityStatus';
 
 interface PostCardProps {
   post: PostWithAuthor;
@@ -42,9 +45,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [postVibe, setPostVibe] = useState<any>(post.vibe || null);
 
   const isAuthor = user?.id === post.user_id;
   const viewRegistered = useRef(false);
+
+  // Buscar vibe do post
+  useEffect(() => {
+    const fetchVibe = async () => {
+      try {
+        const { data } = await supabase
+          .from('post_vibes')
+          .select('*')
+          .eq('post_id', post.id)
+          .maybeSingle();
+
+        if (data) {
+          setPostVibe(data);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar vibe:', err);
+      }
+    };
+
+    if (!postVibe) {
+      fetchVibe();
+    }
+  }, [post.id, postVibe]);
 
   useEffect(() => {
     if (user && !viewRegistered.current) {
@@ -288,6 +315,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                   {post.created_at ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: ptBR }) : 'agora'}
                 </span>
+                {post.user_id !== user?.id && (
+                  <>
+                    <span className="text-white/10">•</span>
+                    <ActivityStatus userId={post.user_id} size="sm" />
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -324,6 +357,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
           </div>
         </div>
 
+        {/* Vibe Indicator */}
+        {postVibe && (
+          <div className="flex items-start">
+            <PostVibe vibe={postVibe} compact />
+          </div>
+        )}
+
         {/* Content */}
         <div className="text-[16px] text-slate-100 leading-relaxed font-bold tracking-tight whitespace-pre-wrap break-words">
           {post.content.split('\n').map((line, i) => (
@@ -336,16 +376,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
 
         {/* Action Bar */}
         <div className="flex items-center gap-2 pt-2">
-          <button
-            onClick={handleLike}
-            disabled={isLiking}
-            className={`flex items-center gap-2.5 h-12 px-5 rounded-2xl transition-all active:scale-95 border ${hasLiked ? 'bg-primary/10 text-primary border-primary/20 shadow-lg shadow-primary/5' : 'text-slate-500 hover:bg-white/5 border-transparent'}`}
-          >
-            <span className={`material-symbols-outlined text-[22px] transition-transform ${hasLiked ? 'fill-1 scale-110' : ''}`}>
-              favorite
-            </span>
-            <span className="text-xs font-black tracking-widest">{likesCount}</span>
-          </button>
+          <AdvancedReactions postId={post.id} />
 
           <button
             onClick={toggleComments}

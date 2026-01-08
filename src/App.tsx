@@ -19,6 +19,7 @@ import { PWAInstallPrompt } from './components/ui/PWAInstallPrompt';
 import { ELOLogo } from './components/ui/Logo';
 import { Loader2 } from 'lucide-react';
 import { ToastProvider } from './contexts/ToastContext';
+import { useActivityTracker } from './hooks/useActivityTracker';
 
 // Componente de Loading Centralizado
 const FullScreenLoader = () => (
@@ -38,6 +39,9 @@ const FullScreenLoader = () => (
 const ProtectedLayout = () => {
   const { session, loading } = useAuth();
   const location = useLocation();
+  
+  // Rastrear atividade do usuário quando logado
+  useActivityTracker();
 
   if (loading) return <FullScreenLoader />;
 

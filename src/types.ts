@@ -231,6 +231,76 @@ export interface Database {
           content: string
         }
       }
+      user_activity: {
+        Row: {
+          user_id: string
+          is_online: boolean
+          last_seen: string
+          status_message: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          is_online?: boolean
+          last_seen?: string
+          status_message?: string | null
+          updated_at?: string
+        }
+        Update: {
+          is_online?: boolean
+          last_seen?: string
+          status_message?: string | null
+          updated_at?: string
+        }
+      }
+      post_reactions: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          reaction_type: 'like' | 'love' | 'fire' | 'mind_blown' | 'support' | 'insightful'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          reaction_type: 'like' | 'love' | 'fire' | 'mind_blown' | 'support' | 'insightful'
+          created_at?: string
+        }
+      }
+      post_vibes: {
+        Row: {
+          id: string
+          post_id: string
+          vibe_type: 'positive' | 'neutral' | 'contemplative' | 'energetic' | 'calm' | 'excited' | 'motivational' | 'curious'
+          confidence: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          vibe_type: 'positive' | 'neutral' | 'contemplative' | 'energetic' | 'calm' | 'excited' | 'motivational' | 'curious'
+          confidence?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      user_badges: {
+        Row: {
+          id: string
+          user_id: string
+          badge_type: 'first_post' | 'first_connection' | 'popular_post' | 'active_user' | 'early_adopter' | 'community_builder' | 'thought_leader'
+          earned_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          badge_type: 'first_post' | 'first_connection' | 'popular_post' | 'active_user' | 'early_adopter' | 'community_builder' | 'thought_leader'
+          earned_at?: string
+        }
+      }
     }
   }
 }
@@ -253,6 +323,15 @@ export interface PostWithAuthor extends Post {
   comments_count: number;
   views_count?: number;
   user_has_liked: boolean;
+  vibe?: {
+    vibe_type: string;
+    confidence: number;
+  };
+  reactions?: {
+    reaction_type: string;
+    count: number;
+  }[];
+  user_reactions?: string[];
 }
 
 export interface CommentWithAuthor extends Comment {
@@ -268,3 +347,8 @@ export interface EchoWithAuthor extends Echo {
   comments_count: number;
   user_has_liked: boolean;
 }
+
+export type UserActivity = Database['public']['Tables']['user_activity']['Row'];
+export type PostReaction = Database['public']['Tables']['post_reactions']['Row'];
+export type PostVibe = Database['public']['Tables']['post_vibes']['Row'];
+export type UserBadge = Database['public']['Tables']['user_badges']['Row'];

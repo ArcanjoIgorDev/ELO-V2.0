@@ -74,7 +74,8 @@ export const Feed = () => {
           *,
           author:profiles(*),
           likes(user_id),
-          comments(id)
+          comments(id),
+          post_vibes(*)
         `)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -95,17 +96,19 @@ export const Feed = () => {
           // Busca os dados relacionados manualmente
           const postsWithRelations = await Promise.all(
             simpleQuery.data.map(async (post: any) => {
-              const [authorResult, likesResult, commentsResult] = await Promise.all([
+              const [authorResult, likesResult, commentsResult, vibeResult] = await Promise.all([
                 supabase.from('profiles').select('*').eq('id', post.user_id).single(),
                 supabase.from('likes').select('user_id').eq('post_id', post.id),
-                supabase.from('comments').select('id').eq('post_id', post.id)
+                supabase.from('comments').select('id').eq('post_id', post.id),
+                supabase.from('post_vibes').select('*').eq('post_id', post.id).maybeSingle()
               ]);
 
               return {
                 ...post,
                 author: authorResult.data || null,
                 likes: likesResult.data || [],
-                comments: commentsResult.data || []
+                comments: commentsResult.data || [],
+                post_vibes: vibeResult.data ? [vibeResult.data] : []
               };
             })
           );
@@ -204,6 +207,7 @@ export const Feed = () => {
               user_has_liked: Array.isArray(post.likes) 
                 ? post.likes.some((like: any) => like.user_id === user?.id) 
                 : false,
+              vibe: post.post_vibes && post.post_vibes[0] ? post.post_vibes[0] : null,
             };
           }).filter((post): post is PostWithAuthor => post !== null);
 

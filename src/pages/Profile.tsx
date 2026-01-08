@@ -9,6 +9,8 @@ import { PostWithAuthor } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { useToast } from '../contexts/ToastContext';
+import { UserBadges } from '../components/ui/UserBadges';
+import { ActivityStatus } from '../components/ui/ActivityStatus';
 
 type ConnectionState = 'none' | 'sent_pending' | 'received_pending' | 'accepted' | 'blocked';
 
@@ -123,17 +125,17 @@ export const ProfilePage = () => {
     setLoadingPosts(true);
     const { data } = await supabase
       .from('posts')
-      .select(`*, author:profiles(*), likes(user_id), comments(count)`)
+      .select(`*, author:profiles(*), likes(user_id), comments(id)`)
       .eq('user_id', id)
       .order('created_at', { ascending: false });
 
     if (data) {
       const formatted: PostWithAuthor[] = data.map((post: any) => ({
         ...post,
-        likes_count: post.likes ? post.likes.length : 0,
-        comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
+        likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
+        comments_count: Array.isArray(post.comments) ? post.comments.length : 0,
         views_count: 0,
-        user_has_liked: post.likes ? post.likes.some((like: any) => like.user_id === user?.id) : false,
+        user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
       }));
       setPosts(formatted);
     }
@@ -551,6 +553,12 @@ export const ProfilePage = () => {
             <div className="flex items-center gap-2 mt-2">
               <p className="text-primary font-black text-xs uppercase tracking-[0.2em]">@{displayProfile.username}</p>
               <span className="material-symbols-outlined text-primary text-[14px] font-black">verified</span>
+              {!isOwnProfile && displayProfile.id && (
+                <>
+                  <span className="text-white/10">•</span>
+                  <ActivityStatus userId={displayProfile.id} size="sm" showText />
+                </>
+              )}
             </div>
           </div>
 
@@ -558,16 +566,12 @@ export const ProfilePage = () => {
             {displayProfile.bio || (isOwnProfile ? "Escreva algo sobre você..." : "Este membro prefere manter o mistério.")}
           </p>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-              <Award size={12} className="text-primary" />
-              <span className="text-[10px] font-black text-primary uppercase tracking-[0.1em]">Fundador ELO</span>
+          {/* Badges */}
+          {displayProfile.id && (
+            <div className="mb-2">
+              <UserBadges userId={displayProfile.id} compact />
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-              <Zap size={12} className="text-amber-500 fill-amber-500" />
-              <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.1em]">Membro Elite</span>
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="flex gap-4 mb-10">
@@ -624,6 +628,14 @@ export const ProfilePage = () => {
             )
           ) : (
             <div className="mt-2 space-y-6 px-1">
+              {/* Badges Section */}
+              {displayProfile.id && (
+                <div className="p-8 glass-card rounded-[3rem] border-white/10 flex flex-col gap-6">
+                  <UserBadges userId={displayProfile.id} />
+                </div>
+              )}
+
+              {/* Danger Zone */}
               <div className="p-8 glass-card rounded-[3rem] border-red-500/10 bg-red-500/5 flex flex-col gap-6">
                 <div className="flex items-center gap-4">
                   <div className="size-14 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
