@@ -62,3 +62,7 @@ out/
 *.bak
 *.swp
 *~
+
+# Arquivo de contexto privado (não compartilhar no GitHub)
+CONTEXT.md
+PROJECT_CONTEXT.md
