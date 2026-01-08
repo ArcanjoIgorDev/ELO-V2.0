@@ -38,7 +38,7 @@ export const ChatList = () => {
       const { data: lastMsg } = await supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${user.id})`)
+        .or(`and(sender_id.eq."${user.id}",receiver_id.eq."${friend.id}"),and(sender_id.eq."${friend.id}",receiver_id.eq."${user.id}")`)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -74,7 +74,7 @@ export const ChatList = () => {
       .channel('inbox_updates_list')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user?.id}` },
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq."${user?.id}"` },
         () => {
           fetchConversations();
         }

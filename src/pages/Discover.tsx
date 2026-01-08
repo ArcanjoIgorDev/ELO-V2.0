@@ -52,7 +52,7 @@ export const Discover = () => {
           const { data: conn } = await supabase
             .from('connections')
             .select('*')
-            .or(`and(requester_id.eq.${user.id},receiver_id.eq.${p.id}),and(requester_id.eq.${p.id},receiver_id.eq.${user.id})`)
+            .or(`and(requester_id.eq."${user.id}",receiver_id.eq."${p.id}"),and(requester_id.eq."${p.id}",receiver_id.eq."${user.id}")`)
             .maybeSingle();
 
           return { ...p, connection: conn as Connection | null };
@@ -74,7 +74,7 @@ export const Discover = () => {
       const { data: existing } = await supabase
         .from('connections')
         .select('id, status')
-        .or(`and(requester_id.eq.${user.id},receiver_id.eq.${receiverId}),and(requester_id.eq.${receiverId},receiver_id.eq.${user.id})`)
+        .or(`and(requester_id.eq."${user.id}",receiver_id.eq."${receiverId}"),and(requester_id.eq."${receiverId}",receiver_id.eq."${user.id}")`)
         .maybeSingle();
 
       if (existing) {

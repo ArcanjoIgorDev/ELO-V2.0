@@ -224,8 +224,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
         </div>
 
         {/* Content */}
-        <div className="text-[16px] text-slate-100 leading-relaxed font-bold tracking-tight whitespace-pre-wrap">
-          {post.content}
+        <div className="text-[16px] text-slate-100 leading-relaxed font-bold tracking-tight whitespace-pre-wrap break-words">
+          {post.content.split('\n').map((line, i) => (
+            <React.Fragment key={i}>
+              {line || <br />}
+              {i < post.content.split('\n').length - 1 && <br />}
+            </React.Fragment>
+          ))}
         </div>
 
         {/* Action Bar */}
@@ -296,8 +301,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onDelete }) => {
                         {formatDistanceToNow(new Date(c.created_at), { locale: ptBR })}
                       </span>
                     </div>
-                    <div className="glass-panel p-4 rounded-2xl rounded-tl-none border-white/5 text-sm text-slate-300 leading-relaxed font-medium">
-                      {c.content}
+                    <div className="glass-panel p-4 rounded-2xl rounded-tl-none border-white/5 text-sm text-slate-300 leading-relaxed font-medium break-words">
+                      {c.content.split('\n').map((line, i) => (
+                        <React.Fragment key={i}>
+                          {line || <br />}
+                          {i < c.content.split('\n').length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
                     </div>
                   </div>
                 </div>

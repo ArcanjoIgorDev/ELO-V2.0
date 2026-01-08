@@ -101,7 +101,7 @@ export const NotificationsPage = () => {
     if (!user) return;
     const channel = supabase
       .channel('notifications_feed')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq."${user.id}"` }, fetchData)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);

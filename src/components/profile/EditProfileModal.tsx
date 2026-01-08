@@ -49,9 +49,25 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ onClose, cur
 
   const handleCoverUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0 || !user) return;
-    setUploadingCover(true);
+    
     const file = event.target.files[0];
-    const fileExt = file.name.split('.').pop();
+    
+    // Validação de tipo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showToast('Apenas imagens (JPG, PNG, WEBP) são permitidas.', 'error');
+      return;
+    }
+    
+    // Validação de tamanho (10MB máximo para capas)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      showToast('Imagem muito grande. Máximo de 10MB.', 'error');
+      return;
+    }
+    
+    setUploadingCover(true);
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const fileName = `${user.id}-cover-${Date.now()}.${fileExt}`;
     try {
       await supabase.storage.from('avatars').upload(fileName, file, { upsert: true });

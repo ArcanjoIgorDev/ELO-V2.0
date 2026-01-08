@@ -32,15 +32,18 @@ export const LandingPage = () => {
       <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 glass-panel border-b-0">
-        <div className="flex items-center justify-between p-4 px-5 max-w-6xl mx-auto w-full">
-          <div className="flex items-center gap-2.5">
-            <ELOLogo size={32} />
-            <span className="text-xl font-bold tracking-tight text-white">ELO</span>
+      <header className="sticky top-0 z-50 glass-panel border-b border-white/5 backdrop-blur-xl">
+        <div className="flex items-center justify-between p-5 px-6 max-w-6xl mx-auto w-full">
+          <div className="flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <ELOLogo size={36} className="relative transition-transform duration-300 group-hover:scale-110" />
+            </div>
+            <span className="text-2xl font-black tracking-tighter text-white bg-gradient-to-r from-white via-white to-slate-300 bg-clip-text text-transparent">ELO</span>
           </div>
           <button
             onClick={() => navigate('/auth')}
-            className="h-10 px-5 rounded-xl glass-button hover:bg-white/10 transition-all text-white font-bold text-sm"
+            className="h-11 px-6 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 transition-all text-white font-black text-sm shadow-lg shadow-primary/20 hover:shadow-primary/30 active:scale-95"
           >
             Entrar
           </button>
@@ -59,40 +62,49 @@ export const LandingPage = () => {
               <span className="text-xs font-bold text-primary uppercase tracking-wider">Versão Beta</span>
             </div>
 
-            <h1 className="text-5xl lg:text-6xl font-black leading-tight tracking-tight text-white">
-              Conexões que <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">importam</span>
+            <h1 className="text-5xl lg:text-7xl font-black leading-[1.1] tracking-tight text-white mb-4">
+              Conexões que{' '}
+              <span className="relative inline-block">
+                <span className="relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-cyan-400 animate-gradient">
+                  importam
+                </span>
+                <span className="absolute inset-0 bg-primary/20 blur-2xl -z-0 opacity-60" />
+              </span>
             </h1>
 
-            <p className="text-slate-400 text-lg leading-relaxed max-w-md mx-auto lg:mx-0">
+            <p className="text-slate-300 text-xl leading-relaxed max-w-lg mx-auto lg:mx-0 font-medium">
               Uma rede social focada em qualidade, não quantidade. Conecte-se com pessoas que compartilham seus valores e objetivos.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full sm:w-auto">
               <button
                 onClick={() => navigate('/auth')}
-                className="h-14 px-8 rounded-xl bg-primary hover:bg-sky-400 text-white font-bold text-base shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                className="group relative h-14 px-10 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white font-black text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all active:scale-95 flex items-center justify-center gap-3 overflow-hidden"
               >
-                Começar Agora
-                <ArrowRight size={20} />
+                <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <span className="relative z-10 flex items-center gap-3">
+                  Começar Agora
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </span>
               </button>
               <button
                 onClick={() => navigate('/auth')}
-                className="h-14 px-8 rounded-xl glass-button hover:bg-white/10 text-white font-bold text-base transition-all"
+                className="h-14 px-8 rounded-2xl glass-button hover:bg-white/10 text-white font-bold text-base transition-all border-white/10 hover:border-white/20 active:scale-95"
               >
                 Saber Mais
               </button>
             </div>
 
             {/* Stats */}
-            <div className="flex items-center gap-8 mt-6 justify-center lg:justify-start">
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white">1K+</span>
-                <span className="text-xs text-slate-500 uppercase tracking-wider">Usuários Ativos</span>
+            <div className="flex items-center gap-8 mt-10 justify-center lg:justify-start">
+              <div className="flex flex-col gap-1">
+                <span className="text-3xl font-black text-white bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">1K+</span>
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Usuários Ativos</span>
               </div>
-              <div className="w-px h-10 bg-white/10" />
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white">5K+</span>
-                <span className="text-xs text-slate-500 uppercase tracking-wider">Conexões Feitas</span>
+              <div className="w-px h-12 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+              <div className="flex flex-col gap-1">
+                <span className="text-3xl font-black text-white bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">5K+</span>
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Conexões Feitas</span>
               </div>
             </div>
           </div>
@@ -201,18 +213,27 @@ export const LandingPage = () => {
         </section>
 
         {/* CTA Final */}
-        <section className="w-full max-w-2xl mt-20 glass-card rounded-3xl p-10 text-center">
-          <Shield size={48} className="text-primary mx-auto mb-6" />
-          <h2 className="text-3xl font-black text-white mb-4">Pronto para começar?</h2>
-          <p className="text-slate-400 text-lg mb-8 max-w-md mx-auto">
-            Junte-se a milhares de profissionais que já fazem parte da nossa comunidade.
-          </p>
-          <button
-            onClick={() => navigate('/auth')}
-            className="h-14 px-10 rounded-xl bg-primary hover:bg-sky-400 text-white font-bold text-base shadow-lg shadow-primary/20 transition-all active:scale-95"
-          >
-            Criar Conta Grátis
-          </button>
+        <section className="relative w-full max-w-3xl mt-24 glass-card rounded-[3rem] p-12 text-center overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-600/5 pointer-events-none" />
+          <div className="relative z-10">
+            <div className="relative inline-block mb-8">
+              <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-60 animate-pulse" />
+              <Shield size={56} className="text-primary mx-auto relative z-10 drop-shadow-lg" />
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight">
+              Pronto para começar?
+            </h2>
+            <p className="text-slate-300 text-xl mb-10 max-w-lg mx-auto font-medium leading-relaxed">
+              Junte-se a milhares de profissionais que já fazem parte da nossa comunidade exclusiva.
+            </p>
+            <button
+              onClick={() => navigate('/auth')}
+              className="group relative h-16 px-12 rounded-2xl bg-gradient-to-r from-primary to-blue-500 hover:from-sky-400 hover:to-blue-400 text-white font-black text-base shadow-2xl shadow-primary/30 hover:shadow-primary/40 transition-all active:scale-95 overflow-hidden"
+            >
+              <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <span className="relative z-10">Criar Conta Grátis</span>
+            </button>
+          </div>
         </section>
       </main>
 

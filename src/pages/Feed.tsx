@@ -55,7 +55,7 @@ export const Feed = () => {
     }
 
     try {
-      if (!isRefresh && posts.length === 0 && isMounted.current) {
+      if (!isRefresh && isMounted.current) {
         setLoading(true);
       }
 
@@ -101,7 +101,7 @@ export const Feed = () => {
     } finally {
       if (isMounted.current) setLoading(false);
     }
-  }, [user, posts.length]);
+  }, [user]);
 
   useEffect(() => {
     fetchPosts();

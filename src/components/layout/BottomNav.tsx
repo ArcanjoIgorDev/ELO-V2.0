@@ -57,14 +57,14 @@ export const BottomNav = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const channel = supabase.channel('badges_realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq."${user.id}"` },
         () => {
           setUnreadMessagesCount(p => p + 1);
           fetchBadges();
         })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `receiver_id=eq."${user.id}"` },
         () => fetchBadges())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq."${user.id}"` },
         () => setHasUnreadNotifs(true))
       .subscribe();
 

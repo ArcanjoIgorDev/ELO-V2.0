@@ -64,7 +64,7 @@ export const ChatPage = () => {
         const { data: msgs } = await supabase
           .from('messages')
           .select('*')
-          .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`)
+          .or(`and(sender_id.eq."${user.id}",receiver_id.eq."${userId}"),and(sender_id.eq."${userId}",receiver_id.eq."${user.id}")`)
           .order('created_at', { ascending: true });
 
         if (msgs) setMessages(msgs);
@@ -84,7 +84,7 @@ export const ChatPage = () => {
         event: 'INSERT',
         schema: 'public',
         table: 'messages',
-        filter: `receiver_id=eq.${user.id}`
+        filter: `receiver_id=eq."${user.id}"`
       }, async (payload) => {
         const msg = payload.new as any;
 
@@ -220,7 +220,7 @@ export const ChatPage = () => {
             </div>
           )}
 
-          {messages.map((msg, idx) => {
+                  {messages.map((msg, idx) => {
             const isMe = msg.sender_id === user?.id;
             const prevMsg = messages[idx - 1];
             const nextMsg = messages[idx + 1];
@@ -247,7 +247,12 @@ export const ChatPage = () => {
                     ${msg.pending ? 'opacity-50 scale-95 blur-[2px]' : 'opacity-100 scale-100'}
                   `}
                 >
-                  {msg.content}
+                  {msg.content.split('\n').map((line, i) => (
+                    <React.Fragment key={i}>
+                      {line || <br />}
+                      {i < msg.content.split('\n').length - 1 && <br />}
+                    </React.Fragment>
+                  ))}
                 </div>
 
                 {isLastInSequence && isMe && !msg.pending && (
