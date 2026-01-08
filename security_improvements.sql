@@ -6,25 +6,37 @@
 
 -- Validar conteúdo de posts (não vazio, máximo 500 caracteres)
 ALTER TABLE public.posts 
+  DROP CONSTRAINT IF EXISTS posts_content_length;
+ALTER TABLE public.posts 
   ADD CONSTRAINT posts_content_length CHECK (char_length(content) > 0 AND char_length(content) <= 500);
 
 -- Validar conteúdo de comentários (não vazio, máximo 500 caracteres)
+ALTER TABLE public.comments 
+  DROP CONSTRAINT IF EXISTS comments_content_length;
 ALTER TABLE public.comments 
   ADD CONSTRAINT comments_content_length CHECK (char_length(content) > 0 AND char_length(content) <= 500);
 
 -- Validar conteúdo de mensagens (não vazio, máximo 1000 caracteres)
 ALTER TABLE public.messages 
+  DROP CONSTRAINT IF EXISTS messages_content_length;
+ALTER TABLE public.messages 
   ADD CONSTRAINT messages_content_length CHECK (char_length(content) > 0 AND char_length(content) <= 1000);
 
 -- Validar bio (máximo 160 caracteres)
+ALTER TABLE public.profiles 
+  DROP CONSTRAINT IF EXISTS profiles_bio_length;
 ALTER TABLE public.profiles 
   ADD CONSTRAINT profiles_bio_length CHECK (bio IS NULL OR char_length(bio) <= 160);
 
 -- Validar full_name (máximo 50 caracteres)
 ALTER TABLE public.profiles 
+  DROP CONSTRAINT IF EXISTS profiles_full_name_length;
+ALTER TABLE public.profiles 
   ADD CONSTRAINT profiles_full_name_length CHECK (full_name IS NULL OR char_length(full_name) <= 50);
 
 -- Validar echos (máximo 60 caracteres)
+ALTER TABLE public.echos 
+  DROP CONSTRAINT IF EXISTS echos_content_length;
 ALTER TABLE public.echos 
   ADD CONSTRAINT echos_content_length CHECK (char_length(content) > 0 AND char_length(content) <= 60);
 
@@ -109,11 +121,15 @@ CREATE POLICY "Gestão de arquivos próprios" ON storage.objects
 -- 8. ADICIONAR VALIDAÇÃO DE TIPO DE NOTIFICAÇÃO
 
 ALTER TABLE public.notifications 
+  DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE public.notifications 
   ADD CONSTRAINT notifications_type_check 
   CHECK (type IN ('like_post', 'like_comment', 'comment', 'request_received', 'request_accepted', 'request_declined', 'message'));
 
 -- 9. ADICIONAR VALIDAÇÃO DE STATUS DE CONEXÃO
 
+ALTER TABLE public.connections 
+  DROP CONSTRAINT IF EXISTS connections_status_check;
 ALTER TABLE public.connections 
   ADD CONSTRAINT connections_status_check 
   CHECK (status IN ('pending', 'accepted', 'declined', 'blocked'));

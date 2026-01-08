@@ -67,7 +67,7 @@ export const Feed = () => {
           *,
           author:profiles(*),
           likes(user_id),
-          comments(count)
+          comments(id)
         `)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -75,8 +75,23 @@ export const Feed = () => {
       if (dbError) {
         console.error('Erro ao buscar posts:', dbError);
         // Só marca como erro se não for um erro de "tabela não existe" ou similar
-        if (dbError.code !== 'PGRST116' && isMounted.current) {
+        // Também ignora erros de timeout ou conexão temporária
+        const ignorableErrors = ['PGRST116', 'PGRST301', 'PGRST302'];
+        const isNetworkError = dbError.message?.includes('fetch') || 
+                              dbError.message?.includes('network') ||
+                              dbError.message?.includes('timeout') ||
+                              dbError.message?.includes('Failed to fetch');
+        
+        if (!ignorableErrors.includes(dbError.code || '') && !isNetworkError && isMounted.current) {
           setError(true);
+        } else if (isNetworkError && isMounted.current) {
+          // Para erros de rede, tenta novamente após um delay
+          setTimeout(() => {
+            if (isMounted.current) {
+              fetchPosts(true);
+            }
+          }, 2000);
+          return;
         }
         if (isMounted.current) {
           setPosts([]);
@@ -89,14 +104,32 @@ export const Feed = () => {
         const formattedPosts: PostWithAuthor[] = data.map((post: any) => ({
           ...post,
           likes_count: Array.isArray(post.likes) ? post.likes.length : 0,
-          comments_count: post.comments && post.comments[0] ? post.comments[0].count : 0,
+          comments_count: Array.isArray(post.comments) ? post.comments.length : 0,
           views_count: 0,
           user_has_liked: Array.isArray(post.likes) ? post.likes.some((like: any) => like.user_id === user?.id) : false,
         }));
         setPosts(formattedPosts);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Feed error:", err);
+      // Verifica se é um erro de rede/conexão
+      const isNetworkError = err?.message?.includes('fetch') || 
+                            err?.message?.includes('network') ||
+                            err?.message?.includes('timeout') ||
+                            err?.message?.includes('Failed to fetch') ||
+                            err?.name === 'NetworkError' ||
+                            err?.name === 'TypeError';
+      
+      if (isNetworkError && isMounted.current) {
+        // Para erros de rede, tenta novamente após um delay
+        setTimeout(() => {
+          if (isMounted.current) {
+            fetchPosts(true);
+          }
+        }, 2000);
+        return;
+      }
+      
       if (isMounted.current) setError(true);
     } finally {
       if (isMounted.current) setLoading(false);
@@ -132,7 +165,7 @@ export const Feed = () => {
             *,
             author:profiles(*),
             likes(user_id),
-            comments(count)
+            comments(id)
           `)
           .eq('id', newPost.id)
           .single();
@@ -141,7 +174,7 @@ export const Feed = () => {
           const formattedPost: PostWithAuthor = {
             ...postData,
             likes_count: Array.isArray(postData.likes) ? postData.likes.length : 0,
-            comments_count: postData.comments && postData.comments[0] ? postData.comments[0].count : 0,
+            comments_count: Array.isArray(postData.comments) ? postData.comments.length : 0,
             views_count: 0,
             user_has_liked: Array.isArray(postData.likes) ? postData.likes.some((like: any) => like.user_id === user?.id) : false,
           };

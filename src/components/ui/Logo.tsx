@@ -22,8 +22,13 @@ export const ELOLogo = ({ size = 32, className = "" }: { size?: number, classNam
                     <stop offset="0%" stopColor="#38BDF8" />
                     <stop offset="100%" stopColor="#0EA5E9" />
                 </linearGradient>
+                <linearGradient id={`${uniqueId}-wave`} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#0EA5E9" stopOpacity="0.6" />
+                    <stop offset="50%" stopColor="#3B82F6" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#6366F1" stopOpacity="0.6" />
+                </linearGradient>
                 <filter id={`${uniqueId}-glow`} x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                     <feMerge>
                         <feMergeNode in="coloredBlur" />
                         <feMergeNode in="SourceGraphic" />
@@ -31,59 +36,84 @@ export const ELOLogo = ({ size = 32, className = "" }: { size?: number, classNam
                 </filter>
             </defs>
 
-            {/* Fundo com gradiente suave */}
-            <circle cx="60" cy="60" r="55" fill={`url(#${uniqueId}-main)`} opacity="0.12" />
+            {/* Fundo com gradiente suave e ondas */}
+            <circle cx="60" cy="60" r="56" fill={`url(#${uniqueId}-main)`} opacity="0.15" />
             
-            {/* Círculo de borda */}
-            <circle cx="60" cy="60" r="50" fill="none" stroke={`url(#${uniqueId}-main)`} strokeWidth="1.2" opacity="0.2" />
+            {/* Ondas decorativas no fundo */}
+            <path
+                d="M 20 50 Q 30 45, 40 50 T 60 50 T 80 50 T 100 50"
+                stroke={`url(#${uniqueId}-wave)`}
+                strokeWidth="2"
+                fill="none"
+                opacity="0.4"
+            />
+            <path
+                d="M 20 70 Q 30 65, 40 70 T 60 70 T 80 70 T 100 70"
+                stroke={`url(#${uniqueId}-wave)`}
+                strokeWidth="2"
+                fill="none"
+                opacity="0.3"
+            />
+            
+            {/* Círculo de borda com gradiente */}
+            <circle cx="60" cy="60" r="50" fill="none" stroke={`url(#${uniqueId}-main)`} strokeWidth="1.5" opacity="0.25" />
 
-            {/* Letra E estilizada - design mais orgânico */}
+            {/* Letra E estilizada - design moderno e fluido */}
             <g filter={`url(#${uniqueId}-glow)`}>
-                {/* Barra vertical esquerda */}
+                {/* Barra vertical esquerda com gradiente */}
                 <path
-                    d="M 32 28 L 32 92"
+                    d="M 30 25 L 30 95"
                     stroke={`url(#${uniqueId}-main)`}
-                    strokeWidth="7"
+                    strokeWidth="8"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
                 
-                {/* Barra superior - com curva suave */}
+                {/* Barra superior - curva suave e moderna */}
                 <path
-                    d="M 32 28 Q 45 28 55 28 L 75 28"
+                    d="M 30 25 Q 42 25, 52 25 L 78 25"
                     stroke={`url(#${uniqueId}-main)`}
-                    strokeWidth="7"
+                    strokeWidth="8"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
                 
-                {/* Barra do meio */}
+                {/* Barra do meio - mais curta e elegante */}
                 <path
-                    d="M 32 60 Q 42 60 50 60 L 65 60"
+                    d="M 30 60 Q 40 60, 48 60 L 68 60"
                     stroke={`url(#${uniqueId}-main)`}
-                    strokeWidth="7"
+                    strokeWidth="8"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
                 
-                {/* Barra inferior - com curva suave */}
+                {/* Barra inferior - curva suave */}
                 <path
-                    d="M 32 92 Q 45 92 55 92 L 75 92"
+                    d="M 30 95 Q 42 95, 52 95 L 78 95"
                     stroke={`url(#${uniqueId}-main)`}
-                    strokeWidth="7"
+                    strokeWidth="8"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
             </g>
 
-            {/* Elementos decorativos - ondas/conexões */}
-            <circle cx="88" cy="35" r="6" fill={`url(#${uniqueId}-accent)`} opacity="0.8" />
-            <circle cx="88" cy="85" r="6" fill={`url(#${uniqueId}-accent)`} opacity="0.8" />
+            {/* Elementos decorativos - ondas/conexões melhoradas */}
+            <circle cx="90" cy="32" r="7" fill={`url(#${uniqueId}-accent)`} opacity="0.9" />
+            <circle cx="90" cy="88" r="7" fill={`url(#${uniqueId}-accent)`} opacity="0.9" />
             
-            {/* Linha de conexão com curva */}
+            {/* Linha de conexão com curva suave */}
             <path
-                d="M 82 35 Q 82 60 82 85"
+                d="M 83 32 Q 83 50, 83 60 Q 83 70, 83 88"
                 stroke={`url(#${uniqueId}-accent)`}
-                strokeWidth="2.5"
+                strokeWidth="3"
                 strokeLinecap="round"
-                opacity="0.5"
+                opacity="0.6"
+                fill="none"
             />
+            
+            {/* Pequenos pontos de conexão */}
+            <circle cx="86" cy="50" r="2.5" fill={`url(#${uniqueId}-accent)`} opacity="0.7" />
+            <circle cx="86" cy="70" r="2.5" fill={`url(#${uniqueId}-accent)`} opacity="0.7" />
         </svg>
     );
 };
